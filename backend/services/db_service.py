@@ -1,0 +1,1300 @@
+"""
+数据库服务层 - SQLite 持久化存储
+使用 aiosqlite 提供异步访问能力
+
+表结构:
+  - users          系统用户 (登录账号密码)
+  - system_config  系统配置项 (键值对: MQTT/WIFI凭证等)
+  - templates      显示模板定义 (名称/描述/适用屏幕)
+  - template_fields 模板字段 (动态可变，支持手动增删改)
+  - operation_logs 操作审计日志
+"""
+import os
+import logging
+import hashlib
+import json
+import aiosqlite
+
+from config import settings
+
+logger = logging.getLogger(__name__)
+
+# 数据库文件路径 (backend/data/ 目录下)
+_DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+_DB_PATH = os.path.join(_DB_DIR, "wifi_esl.db")
+
+# 全局数据库连接
+_db: aiosqlite.Connection | None = None
+
+
+def _get_db_path() -> str:
+    """获取数据库路径，确保目录存在"""
+    os.makedirs(_DB_DIR, exist_ok=True)
+    return _DB_PATH
+
+
+async def get_db() -> aiosqlite.Row:
+    """获取全局数据库连接 (懒初始化)"""
+    global _db
+    if _db is None:
+        db_path = _get_db_path()
+        _db = await aiosqlite.connect(db_path)
+        # 返回 dict-like Row
+        _db.row_factory = aiosqlite.Row
+        # 启用外键约束
+        await _db.execute("PRAGMA foreign_keys = ON")
+        logger.info(f"数据库已连接: {db_path}")
+    return _db
+
+
+async def init_db():
+    """创建表结构（如果不存在）并插入默认数据"""
+    db = await get_db()
+
+    # ── 用户表 ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT    NOT NULL UNIQUE,
+            password    TEXT    NOT NULL,
+            role        TEXT    NOT NULL DEFAULT 'operator',
+            avatar      TEXT    DEFAULT '',
+            status      TEXT    NOT NULL DEFAULT 'active',
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+    """)
+
+    # ── 系统配置表 (key-value) ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS system_config (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            category    TEXT    NOT NULL DEFAULT 'general',
+            key         TEXT    NOT NULL UNIQUE,
+            value       TEXT,
+            description TEXT    DEFAULT '',
+            is_secret   INTEGER NOT NULL DEFAULT 0,
+            updated_by  TEXT,
+            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+    """)
+
+    # ── 操作日志表 ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS operation_logs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT,
+            action      TEXT    NOT NULL,
+            target_type TEXT,
+            target_id   TEXT,
+            detail      TEXT,
+            result      TEXT    DEFAULT 'success',
+            ip_address  TEXT,
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+
+        -- 索引优化查询
+        CREATE INDEX IF NOT EXISTS idx_logs_action ON operation_logs(action);
+        CREATE INDEX IF NOT EXISTS idx_logs_time ON operation_logs(created_at);
+    """)
+
+    # ── 模板表 ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS templates (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            tid         TEXT    NOT NULL UNIQUE,
+            tname       TEXT    NOT NULL,
+            description TEXT    DEFAULT '',
+            screen_type TEXT    DEFAULT '',
+            status      TEXT    NOT NULL DEFAULT 'active',
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS template_fields (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+            field_key   TEXT    NOT NULL,
+            field_label TEXT    NOT NULL,
+            field_type  TEXT    NOT NULL DEFAULT 'text',
+            required    INTEGER NOT NULL DEFAULT 0,
+            default_value TEXT DEFAULT '',
+            placeholder TEXT DEFAULT '',
+            options     TEXT    DEFAULT '[]',
+            sort_order  INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            UNIQUE(template_id, field_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_template_fields_tid ON template_fields(template_id);
+    """)
+
+    # ── 设备状态表 (存储每个设备的最新实时状态) ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS devices (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            mac             TEXT    NOT NULL UNIQUE,
+            name            TEXT    DEFAULT '',
+            ip              TEXT    DEFAULT '',
+            is_online       INTEGER NOT NULL DEFAULT 0,
+            voltage         INTEGER,
+            rssi            INTEGER,
+            device_type     TEXT    DEFAULT '',
+            screen_type     TEXT    DEFAULT '',
+            firmware_ver    TEXT    DEFAULT '',
+            last_seen_at    TEXT,
+            first_seen_at   TEXT    DEFAULT (datetime('now', 'localtime')),
+            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+
+        -- 查询索引
+        CREATE INDEX IF NOT EXISTS idx_devices_online ON devices(is_online);
+        CREATE INDEX IF NOT EXISTS idx_devices_mac ON devices(mac);
+        CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen_at);
+    """)
+
+    # ── 设备事件记录表 (MQTT消息历史) ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS device_events (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            mac         TEXT    NOT NULL,
+            event_type  TEXT    NOT NULL,           -- online/offline/button/battery_reply/led_reply/reboot_reply/display_reply
+            payload     TEXT,                        -- JSON格式的原始数据
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+
+        -- 索引: 按MAC和时间查询最常见
+        CREATE INDEX IF NOT EXISTS idx_events_mac ON device_events(mac);
+        CREATE INDEX IF NOT EXISTS idx_events_type ON device_events(event_type);
+        CREATE INDEX IF NOT EXISTS idx_events_time ON device_events(created_at);
+        CREATE INDEX IF NOT EXISTS idx_events_mac_time ON device_events(mac, created_at DESC);
+    """)
+
+    # ── 模板-设备关联表 (数据更新页面的设备选择持久化) ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS template_device_bindings (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            tid         TEXT    NOT NULL,
+            mac         TEXT    NOT NULL,
+            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            UNIQUE(tid, mac)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bind_tid ON template_device_bindings(tid);
+        CREATE INDEX IF NOT EXISTS idx_bind_mac ON template_device_bindings(mac);
+    """)
+
+    # ── 更新任务主表 ──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS update_tasks (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            name            TEXT    NOT NULL DEFAULT '',
+            tid             TEXT    NOT NULL,
+            tname           TEXT    DEFAULT '',
+            default_data    TEXT    DEFAULT '{}',
+            status          TEXT    NOT NULL DEFAULT 'draft',
+            total_devices   INTEGER NOT NULL DEFAULT 0,
+            success_count   INTEGER NOT NULL DEFAULT 0,
+            failed_count    INTEGER NOT NULL DEFAULT 0,
+            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            sent_at         TEXT,
+            completed_at    TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_utasks_tid ON update_tasks(tid);
+        CREATE INDEX IF NOT EXISTS idx_utasks_status ON update_tasks(status);
+    """)
+
+    # ── 任务-设备明细表（每台设备的独立状态）═══
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS task_devices (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id         INTEGER NOT NULL REFERENCES update_tasks(id) ON DELETE CASCADE,
+            mac             TEXT    NOT NULL,
+            custom_data     TEXT    DEFAULT '{}',
+            update_status   TEXT    NOT NULL DEFAULT 'pending',
+            error_msg       TEXT    DEFAULT '',
+            retry_count     INTEGER NOT NULL DEFAULT 0,
+            sent_at         TEXT,
+            finished_at     TEXT,
+            updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            UNIQUE(task_id, mac)
+        );
+        CREATE INDEX IF NOT EXISTS idx_tdevices_task ON task_devices(task_id);
+        CREATE INDEX IF NOT EXISTS idx_tdevices_mac ON task_devices(mac);
+        CREATE INDEX IF NOT EXISTS idx_tdevices_status ON task_devices(update_status);
+    """)
+
+    await db.commit()
+
+    # ═══ 兼容旧数据库：确保 task_devices 有新列 ═══
+    try:
+        # SQLite 不支持 IF NOT EXISTS 加列，先查 PRAGMA
+        existing = (await db.execute("PRAGMA table_info(task_devices)")).fetchall()
+        col_names = {row[1] for row in existing}
+        if 'sent_at' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN sent_at TEXT")
+            print("[DB] 已添加列 task_devices.sent_at")
+        if 'finished_at' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN finished_at TEXT")
+            print("[DB] 已添加列 task_devices.finished_at")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
+
+    # ── 插入默认数据 (仅当表为空时) ──
+    await _seed_default_data(db)
+    logger.info("数据库表结构初始化完成")
+
+
+async def close_db():
+    """关闭数据库连接"""
+    global _db
+    if _db is not None:
+        await _db.close()
+        _db = None
+        logger.info("数据库连接已关闭")
+
+
+# ============================================================
+# 默认种子数据
+# ============================================================
+
+async def _seed_default_data(db: aiosqlite.Connection):
+    """首次启动时写入默认用户和系统配置"""
+
+    # 默认管理员账号 (密码 admin123 的 SHA256 哈希)
+    default_pwd_hash = hash_password("admin123")
+    cursor = await db.execute("SELECT COUNT(*) as cnt FROM users")
+    row = await cursor.fetchone()
+    if row and row["cnt"] == 0:
+        await db.execute(
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+            ("admin", default_pwd_hash, "admin"),
+        )
+        logger.info("已创建默认管理员账号: admin / admin123")
+
+    # 默认系统配置 (从 .env 导入初始值)
+    cursor = await db.execute("SELECT COUNT(*) as cnt FROM system_config")
+    row = await cursor.fetchone()
+    if row and row["cnt"] == 0:
+        defaults = [
+            # category, key, value, description, is_secret
+            ("wifi",     "base_url",    settings.wifi_base_url,           "WIFI标签系统地址",             0),
+            ("wifi",     "username",    settings.wifi_username,            "WIFI系统登录用户名",            0),
+            ("wifi",     "password",    settings.wifi_password,            "WIFI系统登录密码",              1),
+            ("wifi",     "apikey",      settings.wifi_apikey,              "WIFI系统 API Key",             1),
+            ("mqtt",     "broker_host", settings.mqtt_broker_host,         "MQTT Broker 地址",             0),
+            ("mqtt",     "broker_port", str(settings.mqtt_broker_port),    "MQTT Broker 端口",             0),
+            ("mqtt",     "tls_enable",  str(int(settings.mqtt_tls_enable)),"MQTT TLS 开关(1开/0关)",       0),
+            ("mqtt",     "tls_insecure",str(int(settings.mqtt_tls_insecure)), "MQTT跳过证书验证(1是/0否)", 0),
+            ("jwt",      "secret",      settings.jwt_secret,               "JWT 签名密钥",                 1),
+            ("jwt",      "expire_hours", str(settings.jwt_expire_hours),    "JWT 有效期(小时)",              0),
+            ("system",   "site_name",   "WIFI标签管理系统",                "站点名称",                      0),
+        ]
+        for cat, key, val, desc, secret in defaults:
+            await db.execute(
+                "INSERT INTO system_config (category, key, value, description, is_secret) VALUES (?, ?, ?, ?, ?)",
+                (cat, key, val, desc, secret),
+            )
+        logger.info(f"已导入 {len(defaults)} 条默认系统配置")
+
+    # 默认模板 (从现有 MOCK 数据导入)
+    cursor = await db.execute("SELECT COUNT(*) as cnt FROM templates")
+    row = await cursor.fetchone()
+    if row and row["cnt"] == 0:
+        seed_templates = [
+            # tid, tname, description
+            ("tpl_001", "商品价格标签", "零售商品电子价签，含名称/价格/条码"),
+            ("tpl_002", "促销活动标签", "促销活动信息展示"),
+            ("tpl_003", "库存状态标签", "仓库库存管理标签"),
+            ("tpl_004", "货架标识牌", "货架/区域标识牌"),
+        ]
+        seed_fields = {
+            # template_index: [(key, label, type, required, default_val, placeholder, options_json, sort_order), ...]
+            0: [
+                ("product_name",   "product_name", "text",     1, "", "如：可口可乐330ml", "[]", 0),
+                ("price",          "price(元)",       "text",     1, "", "如：3.50",          "[]", 1),
+                ("original_price", "原价(元)",       "text",     0, "", "如：5.00",          "[]", 2),
+                ("barcode",        "barcode",        "qrcode",   0, "", "",                  "[]", 3),
+            ],
+            1: [
+                ("promo_title",    "promo_title",    "text",     1, "", "如：限时特惠",      "[]", 0),
+                ("discount",       "折扣",           "text",     1, "", "如：8折",          "[]", 1),
+                ("valid_until",    "有效期至",       "date",     0, "", "",                  "[]", 2),
+                ("promo_image",    "促销图",         "image",    0, "", "",                  "[]", 3),
+            ],
+            2: [
+                ("sku_code",       "sku_code",       "text",     1, "", "SKU编码",           "[]", 0),
+                ("stock_qty",      "stock_qty",      "number",   1, "", "数量",             "[]", 1),
+                ("location",       "location",       "text",     0, "", "库位号",            "[]", 2),
+            ],
+            3: [
+                ("shelf_no",       "shelf_no",       "text",     1, "", "A-01-03",          "[]", 0),
+                ("category",       "category",       "text",     1, "", "饮料/食品/日化",     "[]", 1),
+                ("floor",          "floor",          "text",     0, "", "1F/2F/3F",         "[]", 2),
+            ],
+        }
+
+        for tpl_idx, (tid, tname, desc) in enumerate(seed_templates):
+            cur = await db.execute(
+                "INSERT INTO templates (tid, tname, description) VALUES (?, ?, ?)",
+                (tid, tname, desc),
+            )
+            tpl_id = cur.lastrowid
+            for fk, fl, ft, req, dv, ph, opts, so in seed_fields[tpl_idx]:
+                await db.execute(
+                    """INSERT INTO template_fields 
+                       (template_id, field_key, field_label, field_type, required, 
+                        default_value, placeholder, options, sort_order) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (tpl_id, fk, fl, ft, req, dv, ph, opts, so),
+                )
+        logger.info(f"已导入 {len(seed_templates)} 个默认模板")
+
+    await db.commit()
+
+
+# ============================================================
+# 工具函数
+# ============================================================
+
+def hash_password(password: str) -> str:
+    """密码哈希 (SHA-256)"""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """验证密码"""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest() == hashed
+
+
+# ============================================================
+# Users 表操作
+# ============================================================
+
+async def get_user_by_name(username: str) -> dict | None:
+    """根据用户名查找用户"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM users WHERE username = ? AND status = 'active'", (username,)
+    )
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def get_all_users() -> list[dict]:
+    """获取所有用户(不含密码哈希)"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, username, role, avatar, status, created_at, updated_at FROM users ORDER BY id"
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def create_user(username: str, password: str, role: str = "operator") -> int:
+    """创建新用户, 返回新用户ID"""
+    db = await get_db()
+    pwd_hash = hash_password(password)
+    cursor = await db.execute(
+        "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+        (username, pwd_hash, role),
+    )
+    await db.commit()
+    return cursor.lastrowid
+
+
+async def update_user(user_id: int, **kwargs):
+    """更新用户信息 (支持 username/password/role/avatar/status)"""
+    db = await get_db()
+    if "password" in kwargs:
+        kwargs["password"] = hash_password(kwargs.pop("password"))
+    kwargs["updated_at"] = "datetime('now','localtime')"
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    values = list(kwargs.values()) + [user_id]
+    await db.execute(f"UPDATE users SET {sets} WHERE id = ?", values)
+    await db.commit()
+
+
+async def delete_user(user_id: int):
+    """软删除用户 (设为 disabled)"""
+    db = await get_db()
+    await db.execute(
+        "UPDATE users SET status = 'disabled', updated_at = datetime('now','localtime') WHERE id = ?",
+        (user_id,),
+    )
+    await db.commit()
+
+
+# ============================================================
+# System Config 操作
+# ============================================================
+
+async def get_config(key: str | None = None) -> dict | str | None:
+    """
+    获取配置值
+    - key=None → 返回全部配置 {category: {key: value}}
+    - key=具体键 → 返回对应值字符串
+    """
+    db = await get_db()
+    if key:
+        cursor = await db.execute("SELECT value FROM system_config WHERE key = ?", (key,))
+        row = await cursor.fetchone()
+        return row["value"] if row else None
+    else:
+        cursor = await db.execute(
+            "SELECT category, key, value, description, is_secret, updated_at FROM system_config ORDER BY category, key"
+        )
+        rows = await cursor.fetchall()
+        result = {}
+        for r in rows:
+            d = dict(r)
+            cat = d.pop("category")
+            if cat not in result:
+                result[cat] = {}
+            result[cat][d.pop("key")] = d
+        return result
+
+
+async def set_config(key: str, value: str, updated_by: str = "system"):
+    """
+    设置单个配置项 (不存在则自动创建)
+    """
+    db = await get_db()
+    await db.execute("""
+        INSERT INTO system_config (key, value, updated_by, updated_at)
+        VALUES (?, ?, ?, datetime('now','localtime'))
+        ON CONFLICT(key) DO UPDATE SET
+            value = excluded.value,
+            updated_by = excluded.updated_by,
+            updated_at = datetime('now','localtime')
+    """, (key, value, updated_by))
+    await db.commit()
+
+
+async def set_configs(pairs: dict[str, str], updated_by: str = "system"):
+    """批量设置配置"""
+    db = await get_db()
+    for key, value in pairs.items():
+        await db.execute("""
+            INSERT INTO system_config (key, value, updated_by, updated_at)
+            VALUES (?, ?, ?, datetime('now','localtime'))
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_by = excluded.updated_by,
+                updated_at = datetime('now','localtime')
+        """, (key, value, updated_by))
+    await db.commit()
+
+
+async def get_config_category(category: str) -> dict:
+    """获取某个分类下的所有配置"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT key, value, description, is_secret FROM system_config WHERE category = ? ORDER BY key",
+        (category,)
+    )
+    rows = await cursor.fetchall()
+    return {r["key"]: {"value": r["value"], "description": r["description"], "is_secret": bool(r["is_secret"])} for r in rows}
+
+
+# ============================================================
+# Operation Logs 操作
+# ============================================================
+
+async def add_log(
+    username: str,
+    action: str,
+    target_type: str = "",
+    target_id: str = "",
+    detail: str = "",
+    result: str = "success",
+    ip_address: str = "",
+):
+    """记录一条操作日志"""
+    db = await get_db()
+    await db.execute("""
+        INSERT INTO operation_logs (username, action, target_type, target_id, detail, result, ip_address)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (username, action, target_type, target_id, detail, result, ip_address))
+    await db.commit()
+
+
+async def get_logs(
+    page: int = 1,
+    page_size: int = 20,
+    action: str = "",
+) -> tuple[list[dict], int]:
+    """
+    分页查询操作日志
+    Returns: (items列表, total总数)
+    """
+    db = await get_db()
+
+    where = ""
+    params: list = []
+    if action:
+        where = "WHERE action LIKE ?"
+        params.append(f"%{action}%")
+
+    # 总数
+    cnt_sql = f"SELECT COUNT(*) as total FROM operation_logs {where}"
+    cursor = await db.execute(cnt_sql, params)
+    total_row = await cursor.fetchone()
+    total = total_row["total"]
+
+    # 分页数据
+    offset = (page - 1) * page_size
+    sql = f"""
+        SELECT * FROM operation_logs {where}
+        ORDER BY created_at DESC LIMIT ? OFFSET ?
+    """
+    cursor = await db.execute(sql, params + [page_size, offset])
+    rows = await cursor.fetchall()
+    items = [dict(r) for r in rows]
+
+    return items, total
+
+
+# ============================================================
+# Templates + TemplateFields 操作
+# ============================================================
+
+async def get_all_templates() -> list[dict]:
+    """获取所有模板(含字段列表) — 返回前端期望的格式"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, tid, tname, description, screen_type, status, created_at, updated_at FROM templates WHERE status='active' ORDER BY id"
+    )
+    tpl_rows = await cursor.fetchall()
+    result = []
+    for t in tpl_rows:
+        td = dict(t)
+        # 获取该模板的所有字段
+        fcur = await db.execute(
+            "SELECT field_key, field_label, field_type, required, default_value, placeholder, options, sort_order "
+            "FROM template_fields WHERE template_id=? ORDER BY sort_order",
+            (td["id"],),
+        )
+        fields = []
+        for f in await fcur.fetchall():
+            fd = dict(f)
+            fd["required"] = bool(fd["required"])
+            fd["options"] = json.loads(fd["options"]) if fd.get("options") else []
+            fields.append(fd)
+        td["fields"] = fields
+        result.append(td)
+    return result
+
+
+async def get_template_by_tid(tid: str) -> dict | None:
+    """根据tid获取单个模板详情"""
+    templates = await get_all_templates()
+    for t in templates:
+        if t["tid"] == tid:
+            return t
+    return None
+
+
+async def create_template(
+    tid: str,
+    tname: str,
+    description: str = "",
+    screen_type: str = "",
+    fields: list[dict] | None = None,
+) -> int:
+    """
+    创建或更新模板（upsert：tid 存在则更新，否则创建）
+    fields 格式: [{key, label, type, required, default_value, placeholder, options, sort_order}, ...]
+    返回模板ID
+    """
+    db = await get_db()
+
+    # 检查 tid 是否已存在
+    cur = await db.execute("SELECT id FROM templates WHERE tid=?", (tid,))
+    row = await cur.fetchone()
+
+    tpl_id: int
+
+    if row:
+        # ── 更新已有模板 ──
+        tpl_id = row["id"]
+        await db.execute(
+            """UPDATE templates SET tname=?, description=?, screen_type=?,
+               status='active', updated_at=datetime('now','localtime')
+               WHERE tid=?""",
+            (tname, description, screen_type, tid),
+        )
+        # 删除旧字段，后续重新插入
+        await db.execute("DELETE FROM template_fields WHERE template_id=?", (tpl_id,))
+        logger.info(f"更新已有模板: {tid} (id={tpl_id})")
+    else:
+        # ── 创建新模板 ──
+        cur = await db.execute(
+            "INSERT INTO templates (tid, tname, description, screen_type) VALUES (?, ?, ?, ?)",
+            (tid, tname, description, screen_type),
+        )
+        tpl_id = cur.lastrowid
+        logger.info(f"创建新模板: {tid} (id={tpl_id})")
+
+    # 写入字段定义
+    if fields:
+        for idx, f in enumerate(fields):
+            opts_json = json.dumps(f.get("options", []), ensure_ascii=False)
+            await db.execute(
+                """INSERT INTO template_fields 
+                   (template_id, field_key, field_label, field_type, required,
+                    default_value, placeholder, options, sort_order) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (tpl_id,
+                 f.get("key", f.get("field_key", "")),
+                 f.get("label", f.get("field_label", "")),
+                 f.get("type", f.get("field_type", "text")),
+                 int(bool(f.get("required", False))),
+                 f.get("default_value", f.get("default_value", "")),
+                 f.get("placeholder", f.get("placeholder", "")),
+                 opts_json,
+                 f.get("sort_order", f.get("order", idx))),
+            )
+
+    await db.commit()
+    return tpl_id
+
+
+async def update_template(tid: str, **kwargs):
+    """
+    更新模板信息 (tname/description/screen_type/status) 和/或字段列表
+    传入 fields=[...] 时会替换全部字段
+    """
+    db = await get_db()
+    # 更新模板主表
+    update_cols = {k: v for k, v in kwargs.items() if k != "fields"}
+    if update_cols:
+        update_cols["updated_at"] = "datetime('now','localtime')"
+        sets = ", ".join(f"{k} = ?" for k in update_cols)
+        vals = list(update_cols.values()) + [tid]
+        await db.execute(f"UPDATE templates SET {sets} WHERE tid=?", vals)
+
+    # 替换字段
+    if "fields" in kwargs and kwargs["fields"] is not None:
+        # 先获取模板id
+        cur = await db.execute("SELECT id FROM templates WHERE tid=?", (tid,))
+        row = await cur.fetchone()
+        if row:
+            tpl_id = row["id"]
+            await db.execute("DELETE FROM template_fields WHERE template_id=?", (tpl_id,))
+            for idx, f in enumerate(kwargs["fields"]):
+                opts_json = json.dumps(f.get("options", []), ensure_ascii=False)
+                await db.execute(
+                    """INSERT INTO template_fields 
+                       (template_id, field_key, field_label, field_type, required,
+                        default_value, placeholder, options, sort_order) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (tpl_id,
+                     f.get("key", f.get("field_key", "")),
+                     f.get("label", f.get("field_label", "")),
+                     f.get("type", f.get("field_type", "text")),
+                     int(bool(f.get("required", False))),
+                     f.get("default_value", f.get("default_value", "")),
+                     f.get("placeholder", f.get("placeholder", "")),
+                     opts_json,
+                     f.get("sort_order", f.get("order", idx))),
+                )
+
+    await db.commit()
+
+
+async def delete_template(tid: str):
+    """删除模板 (级联删除所有字段)"""
+    db = await get_db()
+    await db.execute("DELETE FROM templates WHERE tid=?", (tid,))
+    await db.commit()
+
+
+# ============================================================
+# Devices 表操作
+# ============================================================
+
+async def upsert_device(mac: str, **fields) -> dict:
+    """
+    新增或更新设备状态 (UPSERT)
+    fields: is_online/voltage/rssi/device_type/screen_type/firmware_ver/name/ip/last_seen_at
+    返回更新后的完整记录
+    """
+    db = await get_db()
+    # 检查是否已存在
+    cur = await db.execute("SELECT id FROM devices WHERE mac=?", (mac,))
+    row = await cur.fetchone()
+
+    if row:
+        # UPDATE: 只传入的字段 + updated_at
+        sets = ", ".join(f"{k} = ?" for k in fields)
+        vals = list(fields.values()) + [mac]
+        if fields:
+            sets += ", updated_at = datetime('now','localtime')"
+            await db.execute(f"UPDATE devices SET {sets} WHERE mac=?", vals)
+    else:
+        # INSERT: 新设备
+        cols = ["mac"] + list(fields.keys())
+        placeholders = ",".join(["?" for _ in cols])
+        vals = [mac] + list(fields.values())
+        await db.execute(
+            f"INSERT INTO devices ({','.join(cols)}) VALUES ({placeholders})",
+            vals,
+        )
+
+    await db.commit()
+
+    # 返回最新记录
+    cur = await db.execute("SELECT * FROM devices WHERE mac=?", (mac,))
+    result = await cur.fetchone()
+    return dict(result)
+
+
+async def get_all_devices(online_only: bool = False) -> list[dict]:
+    """获取所有设备列表"""
+    db = await get_db()
+    if online_only:
+        cursor = await db.execute("SELECT * FROM devices WHERE is_online=1 ORDER BY last_seen_at DESC")
+    else:
+        cursor = await db.execute("SELECT * FROM devices ORDER BY last_seen_at DESC")
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_device_by_mac(mac: str) -> dict | None:
+    """根据 MAC 查找单个设备"""
+    db = await get_db()
+    cursor = await db.execute("SELECT * FROM devices WHERE mac=?", (mac,))
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def get_device_stats() -> dict:
+    """获取设备统计摘要 (在线数/离线数/总数等)"""
+    db = await get_db()
+    total_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices")
+    online_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1")
+    low_battery_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL")
+
+    total = (await total_cur.fetchone())["cnt"]
+    online = (await online_cur.fetchone())["cnt"]
+    low_battery = (await low_battery_cur.fetchone())["cnt"]
+
+    return {
+        "total": total,
+        "online": online,
+        "offline": total - online,
+        "low_battery": low_battery,
+        "online_rate": round((online / total * 100), 1) if total > 0 else 0,
+    }
+
+
+# ============================================================
+# DeviceEvents 表操作
+# ============================================================
+
+async def add_device_event(mac: str, event_type: str, payload: dict | None = None):
+    """记录一条设备事件"""
+    db = await get_db()
+    payload_json = json.dumps(payload, ensure_ascii=False) if payload else None
+    await db.execute(
+        "INSERT INTO device_events (mac, event_type, payload) VALUES (?, ?, ?)",
+        (mac, event_type, payload_json),
+    )
+    await db.commit()
+
+
+async def get_device_events(
+    mac: str | None = None,
+    event_type: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
+) -> tuple[list[dict], int]:
+    """
+    分页查询设备事件
+    Returns: (事件列表, 总数)
+    """
+    db = await get_db()
+    where_parts = []
+    params: list = []
+
+    if mac:
+        where_parts.append("mac = ?")
+        params.append(mac)
+    if event_type:
+        where_parts.append("event_type = ?")
+        params.append(event_type)
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+    # 总数
+    cnt_sql = f"SELECT COUNT(*) as total FROM device_events {where_sql}"
+    cur = await db.execute(cnt_sql, params)
+    total = (await cur.fetchone())["total"]
+
+    # 分页数据
+    offset = (page - 1) * page_size
+    sql = f"""SELECT * FROM device_events {where_sql} 
+              ORDER BY created_at DESC LIMIT ? OFFSET ?"""
+    cur = await db.execute(sql, params + [page_size, offset])
+    rows = await cur.fetchall()
+
+    return [dict(r) for r in rows], total
+
+
+async def get_recent_events(limit: int = 100) -> list[dict]:
+    """获取最近的N条设备事件 (用于仪表盘展示)"""
+    db = await get_db()
+    cur = await db.execute(
+        f"SELECT * FROM device_events ORDER BY created_at DESC LIMIT ?",
+        (limit,),
+    )
+    rows = await cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def cleanup_old_events(days: int = 30):
+    """清理 N 天前的事件记录，返回清理数量"""
+    db = await get_db()
+    cur = await db.execute(
+        "DELETE FROM device_events WHERE created_at < datetime('now', 'localtime', ? || ' days')",
+        (str(-days),),
+    )
+    deleted = cur.rowcount
+    await db.commit()
+    return deleted
+
+
+# ============================================================
+# TemplateDeviceBindings 表操作（模板-设备关联持久化）
+# ============================================================
+
+async def save_template_bindings(tid: str, macs: list[str]) -> int:
+    """
+    批量保存模板-设备绑定关系 (UPSERT)
+    传入完整的 macs 列表，会：
+      - 新增不在表中的记录
+      - 保留已在表中的记录（更新 updated_at）
+      - 移除不再列表中的旧记录（如果 tid 已有其他 mac 绑定）
+    返回保存的记录数
+    """
+    db = await get_db()
+    saved = 0
+
+    async with db.execute("BEGIN") as _cur:
+        # Upsert 每个 mac
+        for mac in macs:
+            await db.execute("""
+                INSERT INTO template_device_bindings (tid, mac, created_at, updated_at)
+                VALUES (?, ?, datetime('now','localtime'), datetime('now','localtime'))
+                ON CONFLICT(tid, mac) DO UPDATE SET
+                    updated_at = datetime('now','localtime')
+            """, (tid, mac))
+            saved += 1
+
+        # 清理不在新列表中的旧绑定（可选：是否要自动清理未选的？这里保留，由前端显式删除）
+        # 不做自动清理，让 remove_template_binding 显式控制
+
+        await db.commit()
+
+    logger.info(f"已保存 {saved} 条模板-设备绑定 (tid={tid})")
+    return saved
+
+
+async def get_template_bound_macs(tid: str) -> list[str]:
+    """查询某模板绑定的所有设备 MAC 地址列表"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT mac FROM template_device_bindings WHERE tid=? ORDER BY created_at",
+        (tid,),
+    )
+    rows = await cursor.fetchall()
+    return [r["mac"] for r in rows]
+
+
+async def remove_template_binding(tid: str, mac: str) -> bool:
+    """删除单条模板-设备绑定，返回是否成功"""
+    db = await get_db()
+    cur = await db.execute(
+        "DELETE FROM template_device_bindings WHERE tid=? AND mac=?",
+        (tid, mac),
+    )
+    await db.commit()
+    removed = cur.rowcount > 0
+    if removed:
+        logger.info(f"已移除绑定: tid={tid}, mac={mac}")
+    return removed
+
+
+# ============================================================
+# UpdateTasks 表操作（更新任务主表）
+# ============================================================
+
+async def create_update_task(name: str, tid: str, tname: str = "") -> int:
+    """创建新更新任务，返回 task_id"""
+    db = await get_db()
+    cursor = await db.execute(
+        """INSERT INTO update_tasks (name, tid, tname, status, created_at, updated_at)
+           VALUES (?, ?, ?, 'draft', datetime('now','localtime'), datetime('now','localtime'))""",
+        (name, tid, tname),
+    )
+    await db.commit()
+    task_id = cursor.lastrowid
+    logger.info(f"创建更新任务: id={task_id}, name={name}, tid={tid}")
+    return task_id
+
+
+async def get_task_list(
+    page: int = 1,
+    page_size: int = 20,
+    status_filter: str = "",
+) -> tuple[list[dict], int]:
+    """
+    分页查询更新任务列表（含摘要统计）
+    Returns: (items列表, total总数)
+    """
+    db = await get_db()
+
+    where_parts = []
+    params: list = []
+    if status_filter:
+        where_parts.append("status = ?")
+        params.append(status_filter)
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+    cnt_sql = f"SELECT COUNT(*) as total FROM update_tasks {where_sql}"
+    cursor = await db.execute(cnt_sql, params)
+    total = (await cursor.fetchone())["total"]
+
+    offset = (page - 1) * page_size
+    sql = f"""SELECT * FROM update_tasks {where_sql}
+              ORDER BY updated_at DESC LIMIT ? OFFSET ?"""
+    cursor = await db.execute(sql, params + [page_size, offset])
+    rows = await cursor.fetchall()
+
+    items = [dict(r) for r in rows]
+    return items, total
+
+
+async def get_task_detail(task_id: int) -> dict | None:
+    """获取单个任务详情（含设备列表和状态统计）"""
+    db = await get_db()
+
+    # 主表信息
+    cursor = await db.execute("SELECT * FROM update_tasks WHERE id=?", (task_id,))
+    row = await cursor.fetchone()
+    if not row:
+        return None
+
+    task = dict(row)
+
+    # 设备明细
+    dcur = await db.execute(
+        "SELECT * FROM task_devices WHERE task_id=? ORDER BY created_at",
+        (task_id,),
+    )
+    devices = [dict(d) for d in await dcur.fetchall()]
+    task["devices"] = devices
+
+    # 状态统计
+    task["progress"] = {
+        "pending": sum(1 for d in devices if d["update_status"] == "pending"),
+        "sent": sum(1 for d in devices if d["update_status"] == "sent"),
+        "success": sum(1 for d in devices if d["update_status"] == "success"),
+        "failed": sum(1 for d in devices if d["update_status"] == "failed"),
+    }
+
+    return task
+
+
+async def update_task(task_id: int, **kwargs) -> bool:
+    """更新任务字段（name/default_data/status/total_devices/success_count/failed_count/sent_at/completed_at）"""
+    db = await get_db()
+    kwargs["updated_at"] = "datetime('now','localtime')"
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    values = list(kwargs.values()) + [task_id]
+    await db.execute(f"UPDATE update_tasks SET {sets} WHERE id=?", values)
+    await db.commit()
+    return True
+
+
+async def delete_task(task_id: int) -> bool:
+    """删除任务（级联删除所有设备明细），返回是否成功"""
+    db = await get_db()
+    # 先删除关联的设备明细（外键级联应该自动处理，但显式确保）
+    await db.execute("DELETE FROM task_devices WHERE task_id=?", (task_id,))
+    cur = await db.execute("DELETE FROM update_tasks WHERE id=?", (task_id,))
+    await db.commit()
+    deleted = cur.rowcount > 0
+    if deleted:
+        logger.info(f"已删除任务: id={task_id}")
+    return deleted
+
+
+# ============================================================
+# TaskDevices 表操作（任务-设备明细）
+# ============================================================
+
+async def add_task_devices(
+    task_id: int,
+    macs: list[str],
+    custom_data_map: dict | None = None,
+) -> int:
+    """
+    批量添加设备到任务中，跳过已存在的
+    custom_data_map: {mac: {...}} 可选，为每台设备预设自定义数据
+    返回新增数量
+    """
+    db = await get_db()
+    added = 0
+    for mac in macs:
+        custom_json = json.dumps(custom_data_map.get(mac), ensure_ascii=False) if (custom_data_map and mac in custom_data_map) else '{}'
+        try:
+            await db.execute(
+                """INSERT OR IGNORE INTO task_devices (task_id, mac, custom_data)
+                   VALUES (?, ?, ?)""",
+                (task_id, mac, custom_json),
+            )
+            added += 1
+        except Exception:
+            pass  # 已存在则跳过
+
+    # 更新任务的 total_devices
+    ccur = await db.execute("SELECT COUNT(*) as cnt FROM task_devices WHERE task_id=?", (task_id,))
+    total = (await ccur.fetchone())["cnt"]
+    await db.execute("UPDATE update_tasks SET total_devices=?, updated_at=datetime('now','localtime') WHERE id=?", (total, task_id))
+
+    await db.commit()
+    logger.info(f"任务 {task_id} 新增 {added} 台设备 (当前共{total}台)")
+    return added
+
+
+async def remove_task_device(task_id: int, mac: str) -> bool:
+    """从任务中移除单台设备"""
+    db = await get_db()
+    cur = await db.execute(
+        "DELETE FROM task_devices WHERE task_id=? AND mac=?",
+        (task_id, mac),
+    )
+
+    # 更新任务的 total_devices
+    ccur = await db.execute("SELECT COUNT(*) as cnt FROM task_devices WHERE task_id=?", (task_id,))
+    total = (await ccur.fetchone())["cnt"]
+    await db.execute("UPDATE update_tasks SET total_devices=?, updated_at=datetime('now','localtime') WHERE id=?", (total, task_id))
+
+    await db.commit()
+    removed = cur.rowcount > 0
+    if removed:
+        logger.info(f"从任务 {task_id} 移除设备: mac={mac}")
+    return removed
+
+
+async def get_task_device_list(task_id: int) -> list[dict]:
+    """获取任务的所有设备列表"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM task_devices WHERE task_id=? ORDER BY created_at",
+        (task_id,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def update_task_device_custom_data(task_id: int, mac: str, custom_data: dict) -> bool:
+    """更新单台设备的自定义数据"""
+    db = await get_db()
+    custom_json = json.dumps(custom_data, ensure_ascii=False)
+    await db.execute(
+        """UPDATE task_devices SET custom_data=?, updated_at=datetime('now','localtime')
+           WHERE task_id=? AND mac=?""",
+        (custom_json, task_id, mac),
+    )
+    await db.commit()
+    return True
+
+
+async def update_task_device_status(
+    task_id: int,
+    mac: str,
+    status: str,
+    error_msg: str = "",
+) -> bool:
+    """
+    更新单台设备的推送状态（核心回调接口）
+    status: pending / sent / success / failed
+    """
+    db = await get_db()
+    now_col = "datetime('now','localtime')"
+
+    if status in ("sent",):
+        sql = f"""UPDATE task_devices SET update_status=?, sent_at=datetime('now','localtime')
+                  WHERE task_id=? AND mac=?"""
+        await db.execute(sql, (status, task_id, mac))
+    elif status in ("success", "failed"):
+        sql = f"""UPDATE task_devices SET update_status=?, error_msg=?,
+                  finished_at=datetime('now','localtime')
+                  WHERE task_id=? AND mac=?"""
+        await db.execute(sql, (status, error_msg or "", task_id, mac))
+    else:
+        await db.execute(
+            "UPDATE task_devices SET update_status=? WHERE task_id=? AND mac=?",
+            (status, task_id, mac),
+        )
+
+    await db.commit()
+    return True
+
+
+async def update_device_status_by_mac(
+    mac: str,
+    status: str,
+    error_msg: str = "",
+) -> int:
+    """
+    根据 MAC 地址批量更新所有任务中该设备的状态
+    只更新 update_status='sent' 的记录（避免重复标记已完成的设备）
+    status: success / failed
+    Returns: 更新的行数
+    """
+    db = await get_db()
+    await db.execute(
+        """UPDATE task_devices SET update_status=?, error_msg=?,
+           finished_at=datetime('now','localtime')
+           WHERE mac=? AND update_status='sent'""",
+        (status, error_msg or "", mac),
+    )
+    await db.commit()
+
+    # 查找受影响的 task_id 并刷新任务汇总
+    cur = await db.execute(
+        "SELECT DISTINCT task_id FROM task_devices WHERE mac=? AND update_status IN ('success', 'failed')",
+        (mac,),
+    )
+    rows = await cur.fetchall()
+    for row in rows:
+        await _refresh_task_summary(db, row[0])
+
+    # 返回影响行数
+    cnt_cur = await db.execute("SELECT changes()")
+    cnt_row = await cnt_cur.fetchone()
+    return cnt_row[0] if cnt_row else 0
+
+
+async def _refresh_task_summary(db, task_id: int):
+    """根据 task_devices 各状态计数刷新 tasks 主表的状态"""
+    cursor = await db.execute(
+        """SELECT update_status, COUNT(*) as cnt FROM task_devices
+           WHERE task_id=? GROUP BY update_status""",
+        (task_id,),
+    )
+    counts = {"pending": 0, "sent": 0, "success": 0, "failed": 0}
+    async for row in cursor:
+        counts[row[0]] = row[1]
+
+    total = sum(counts.values())
+    if total == 0:
+        return
+
+    all_done = counts["sent"] == 0  # 没有 sent 说明全部有结果了
+    if all_done and total > 0:
+        new_task_status = "completed"
+    elif counts["sent"] > 0:
+        new_task_status = "sent"
+    else:
+        new_task_status = "pending"
+
+    await db.execute(
+        """UPDATE update_tasks SET status=?, success_count=?, failed_count=?
+           WHERE id=?""",
+        (new_task_status, counts["success"], counts["failed"], task_id),
+    )
+    await db.commit()
+
+
+async def get_task_progress(task_id: int) -> dict:
+    """获取任务各状态计数统计"""
+    db = await get_db()
+    cursor = await db.execute(
+        """SELECT update_status, COUNT(*) as cnt
+           FROM task_devices WHERE task_id=?
+           GROUP BY update_status""",
+        (task_id,),
+    )
+    rows = await cursor.fetchall()
+    progress = {"pending": 0, "sent": 0, "success": 0, "failed": 0}
+    for r in rows:
+        progress[r["update_status"]] = r["cnt"]
+    return progress
+
+
+async def batch_update_device_statuses(
+    task_id: int,
+    results: list[dict],  # [{mac, success, error?}]
+) -> dict:
+    """
+    批量更新设备状态并汇总任务状态（执行推送后调用）
+    Returns: {success_count, failed_count, pending_count}
+    """
+    db = await get_db()
+    success_cnt = 0
+    failed_cnt = 0
+
+    async with db.execute("BEGIN") as _cur:
+        for r in results:
+            mac = r.get("mac", "")
+            ok = r.get("success", False)
+            err = r.get("error", "")
+            if ok:
+                status = "success"
+                success_cnt += 1
+            else:
+                status = "failed"
+                failed_cnt += 1
+
+            await db.execute(
+                """UPDATE task_devices SET update_status=?, error_msg=?,
+                   finished_at=datetime('now','localtime')
+                   WHERE task_id=? AND mac=?""",
+                (status, err or "", task_id, mac),
+            )
+
+        # 更新任务主表状态
+        all_done = (success_cnt + failed_cnt) >= len(results)
+        new_task_status = "completed" if all_done else "sent"
+        sent_at_val = "datetime('now','localtime')" if new_task_status == "sent" else None
+        completed_at_val = "datetime('now','localtime')" if new_task_status == "completed" else None
+
+        set_parts = ["status=?", "success_count=?", "failed_count=?"]
+        vals: list = [new_task_status, success_cnt, failed_cnt]
+        if sent_at_val:
+            set_parts.append("sent_at=datetime('now','localtime')")
+        if completed_at_val:
+            set_parts.append("completed_at=datetime('now','localtime')")
+        set_parts.append("updated_at=datetime('now','localtime')")
+
+        await db.execute(
+            f"UPDATE update_tasks SET {','.join(set_parts)} WHERE id=?",
+            vals + [task_id],
+        )
+
+        await db.commit()
+
+    logger.info(f"任务 {task_id} 推送结果: 成功{success_cnt} 失败{failed_cnt}")
+
+    pending_cursor = await db.execute(
+        "SELECT COUNT(*) as cnt FROM task_devices WHERE task_id=? AND update_status='pending'",
+        (task_id,),
+    )
+    pending_cnt = (await pending_cursor.fetchone())["cnt"]
+
+    return {
+        "success_count": success_cnt,
+        "failed_count": failed_cnt,
+        "pending_count": pending_cnt,
+    }

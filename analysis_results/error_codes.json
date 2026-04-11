@@ -1,0 +1,176 @@
+[
+  {
+    "page": 4,
+    "code": "4",
+    "description": "3D:39:17:2A:84\",",
+    "type": "other_error"
+  },
+  {
+    "page": 5,
+    "code": "4",
+    "description": "3D:39:17:2A:84\",",
+    "type": "other_error"
+  },
+  {
+    "page": 5,
+    "code": "4",
+    "description": "3D:39:17:2A:84\",",
+    "type": "other_error"
+  },
+  {
+    "page": 6,
+    "code": "4",
+    "description": "3D:39:17:2A:84\",",
+    "type": "other_error"
+  },
+  {
+    "page": 6,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 7,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 7,
+    "code": "9",
+    "description": "00-12:00\"",
+    "type": "other_error"
+  },
+  {
+    "page": 7,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 8,
+    "code": "4",
+    "description": "3D:39:17:42:F6\"",
+    "type": "other_error"
+  },
+  {
+    "page": 8,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 9,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 9,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 10,
+    "code": "4",
+    "description": "3D:39:17:42:F6\"]",
+    "type": "other_error"
+  },
+  {
+    "page": 10,
+    "code": "4",
+    "description": "3D:39:17:42:F6\",",
+    "type": "other_error"
+  },
+  {
+    "page": 11,
+    "code": "153",
+    "description": "4000/user/api/login\")",
+    "type": "other_error"
+  },
+  {
+    "page": 12,
+    "code": "4",
+    "description": "3D:39:1C:E4:CA\",",
+    "type": "other_error"
+  },
+  {
+    "page": 12,
+    "code": "4",
+    "description": "3D:39:1C:8C:C4\",",
+    "type": "other_error"
+  },
+  {
+    "page": 12,
+    "code": "4",
+    "description": "3D:39:1C:64:2C\",",
+    "type": "other_error"
+  },
+  {
+    "page": 13,
+    "code": "153",
+    "description": "4000/user/api/rest/devices?query=mac,ip\")",
+    "type": "other_error"
+  },
+  {
+    "page": 13,
+    "code": "153",
+    "description": "4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/led\")",
+    "type": "other_error"
+  },
+  {
+    "page": 14,
+    "code": "4",
+    "description": "3D:39:1C:64:2C\"",
+    "type": "other_error"
+  },
+  {
+    "page": 15,
+    "code": "153",
+    "description": "4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/display\")",
+    "type": "other_error"
+  },
+  {
+    "page": 15,
+    "code": "4",
+    "description": "3D:39:1C:64:2C\"",
+    "type": "other_error"
+  },
+  {
+    "page": 15,
+    "code": "153",
+    "description": "4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/reboot\")",
+    "type": "other_error"
+  },
+  {
+    "page": 16,
+    "code": "4",
+    "description": "3D:39:1C:64:2C\"",
+    "type": "other_error"
+  },
+  {
+    "page": 16,
+    "code": "4",
+    "description": "3D:39:1C:8C:C4",
+    "type": "other_error"
+  },
+  {
+    "page": 16,
+    "code": "9",
+    "description": "00-12:00\"",
+    "type": "other_error"
+  },
+  {
+    "page": 17,
+    "code": "153",
+    "description": "4000/user/api/mqtt/publish/D4:3D:39:1C:8C:C4/template/63",
+    "type": "other_error"
+  },
+  {
+    "page": 17,
+    "code": "4",
+    "description": "3D:39:1C:8C:C4\",",
+    "type": "other_error"
+  }
+]

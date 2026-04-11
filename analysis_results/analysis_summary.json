@@ -1,0 +1,191 @@
+{
+  "document_info": {
+    "file_name": "WIFI标签系统API接口Ver1.0.6.pdf",
+    "total_pages": 17,
+    "extracted_pages": 17,
+    "text_length": 17725
+  },
+  "structure_analysis": {
+    "total_sections": 48,
+    "section_types": {
+      "request_section": 2,
+      "protocol_section": 1,
+      "other_section": 36,
+      "version_section": 5,
+      "api_section": 4
+    },
+    "main_sections": [
+      {
+        "page": 2,
+        "line_number": 2,
+        "content": "1.1.WIFI参数配置.....................................................................................................................1",
+        "type": "request_section"
+      },
+      {
+        "page": 2,
+        "line_number": 3,
+        "content": "1.2.MQTT参数配置..................................................................................................................1",
+        "type": "request_section"
+      },
+      {
+        "page": 2,
+        "line_number": 6,
+        "content": "3.1. 客户端MQTT协议总览....................................................................................................2",
+        "type": "protocol_section"
+      },
+      {
+        "page": 2,
+        "line_number": 11,
+        "content": "3.6. 客户端发布更新设备屏幕消息........................................................................................4",
+        "type": "version_section"
+      },
+      {
+        "page": 2,
+        "line_number": 12,
+        "content": "3.7. 客户端订阅更新设备屏幕反馈结果消息........................................................................5",
+        "type": "version_section"
+      },
+      {
+        "page": 2,
+        "line_number": 15,
+        "content": "3.10. 客户端发布更新设备LED状态消息..............................................................................6",
+        "type": "version_section"
+      },
+      {
+        "page": 2,
+        "line_number": 16,
+        "content": "3.11. 客户端订阅更新设备LED状态反馈结果消息..............................................................7",
+        "type": "version_section"
+      },
+      {
+        "page": 2,
+        "line_number": 20,
+        "content": "4.1.HTTP协议接口总览............................................................................................................9",
+        "type": "api_section"
+      },
+      {
+        "page": 2,
+        "line_number": 25,
+        "content": "4.6. 通过HTTP更新设备屏幕图片.......................................................................................12",
+        "type": "version_section"
+      },
+      {
+        "page": 2,
+        "line_number": 27,
+        "content": "4.8. 通过HTTP调用模板显示接口.......................................................................................14",
+        "type": "api_section"
+      },
+      {
+        "page": 11,
+        "line_number": 21,
+        "content": "API接口",
+        "type": "api_section"
+      },
+      {
+        "page": 12,
+        "line_number": 7,
+        "content": "API接口",
+        "type": "api_section"
+      }
+    ]
+  },
+  "api_analysis": {
+    "total_apis": 12,
+    "api_summary": [
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "未知",
+        "description": ""
+      },
+      {
+        "page": 11,
+        "interface_name": "未命名接口",
+        "method": "未知",
+        "path": "//192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:8C:C4/template/63",
+        "description": ""
+      }
+    ]
+  },
+  "error_code_analysis": {
+    "total_error_codes": 29,
+    "error_types": {
+      "other_error": 29
+    }
+  },
+  "key_findings": [
+    "文档包含'AP'相关内容",
+    "通信协议: ...........................................................................................2"
+  ]
+}

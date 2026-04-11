@@ -1,0 +1,75 @@
+// ============================================
+// WIFI标签管理系统 - 设计变量 (Design Tokens)
+// ============================================
+
+// ==================== 颜色系统 ====================
+$primary-color: #6366f1;
+$primary-light: #818cf8;
+$primary-dark: #4f46e5;
+$primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+// 功能色
+$success-color: #10b981;
+$warning-color: #f59e0b;
+$danger-color: #ef4444;
+$info-color: #3b82f6;
+
+// ==================== 间距系统 (8px基准) ================
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// ==================== 圆角系统 ====================
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 16px;
+$radius-xl: 24px;
+
+// ==================== 阴影系统 ====================
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+$shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+
+// ==================== 字体系统 ====================
+$font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+  'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-2xl: 20px;
+$font-size-3xl: 24px;
+$font-size-4xl: 30px;
+
+// ==================== 断点系统(响应式) ====================
+$breakpoint-xs: 480px;
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+$breakpoint-2xl: 1536px;
+
+// ==================== 过渡动画 ====================
+$transition-fast: 150ms ease;
+$transition-base: 250ms ease;
+$transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+// ==================== 侧边栏 ====================
+$sidebar-width: 240px;
+$sidebar-collapsed-width: 64px;
+$header-height: 56px;
+
+// :export { 导出给JS使用 }
+:export {
+  primaryColor: $primary-color;
+  primaryLight: $primary-light;
+  primaryDark: $primary-dark;
+  sidebarWidth: $sidebar-width;
+  headerHeight: $header-height;
+}

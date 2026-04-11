@@ -1,0 +1,663 @@
+
+--- 第 1 页 ---
+WIFI 标签系统 API 接口
+Version 1.0.6
+版本 创建 审核
+V1.0.2
+V1.0.3
+V1.0.4
+V1.0.5
+V1.0.6
+--- 第 2 页 ---
+目录
+1. 参数配置.......................................................................................................................................1
+1.1.WIFI参数配置.....................................................................................................................1
+1.2.MQTT参数配置..................................................................................................................1
+2. 设备数据管理...............................................................................................................................1
+3. 客户端与服务器的MQTT交互协议...........................................................................................2
+3.1. 客户端MQTT协议总览....................................................................................................2
+3.2. 客户端订阅设备上线消息................................................................................................2
+3.3. 客户端订阅设备下线消息................................................................................................3
+3.4. 客户端订阅设备USB状态反馈消息...............................................................................3
+3.5. 客户端订阅设备按键反馈消息........................................................................................3
+3.6. 客户端发布更新设备屏幕消息........................................................................................4
+3.7. 客户端订阅更新设备屏幕反馈结果消息........................................................................5
+3.8. 客户端发布获取设备电池电压消息................................................................................5
+3.9. 客户端订阅获取设备电池电压反馈结果消息................................................................6
+3.10. 客户端发布更新设备LED状态消息..............................................................................6
+3.11. 客户端订阅更新设备LED状态反馈结果消息..............................................................7
+3.12. 客户端发布设备重启消息..............................................................................................8
+3.13. 客户端订阅设备重启反馈结果消息..............................................................................8
+4. 客户端HTTP协议.........................................................................................................................9
+4.1.HTTP协议接口总览............................................................................................................9
+4.2. 通过HTTP登录系统..........................................................................................................9
+4.3. 通过HTTP获取所有设备信息.......................................................................................10
+4.4. 通过HTTP设置设备RGB灯状态...................................................................................11
+4.5. 通过HTTP获取设备电池电压.......................................................................................12
+4.6. 通过HTTP更新设备屏幕图片.......................................................................................12
+4.7. 通过HTTP重启设备........................................................................................................13
+4.8. 通过HTTP调用模板显示接口.......................................................................................14
+--- 第 3 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+参数配置
+1.
+参数配置
+1.1.WIFI
+序号 名称 描述 默认值
+1 SSID APSSID
+2 password APpassword
+参数配置
+1.2.MQTT
+序号 名称 描述 默认值
+1 BrokerIP MQTTBrokerIPaddress
+2 PORT MQTTBrokerPort 8883
+3 username MQTTLoginusername
+4 password MQTTLoginpassword
+5 clientid MQTTclientID
+设备数据管理
+2.
+序号 名称 描述 类型 默认值
+1 MAC 设备的MAC地址 String
+2 IP 设备的IP地址 String
+3 Voltage 设备电池电量 Integer
+4 Station.RSSI 设备的信号强度 Integer
+5 Station.SSID APSSID String
+6 Station.Password APpassword String
+7 Mqtt.Broker MQTTBrokerIPaddress String
+8 Mqtt.PORT MQTTBrokerPort Integer 8883
+9 Mqtt.Username MQTTLoginusername String
+10 Mqtt.Password MQTTLoginpassword String
+11 Status 设备状态 Boolean
+12 DeviceType 设备类型 Object
+13 ScreenType 屏幕类型 Object
+14 SN 序列号 String
+15 SW 软件版本号 Integer
+16 HW 硬件版本号 Integer
+17 UsbState USB的状态 Integer
+1
+--- 第 4 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+18 Product 所属产品 Object
+19 Algorithm 图像算法 Object
+客户端与服务器的 交互协议
+3. MQTT
+客户端 协议总览
+3.1. MQTT
+序号 Topic 描述 参考章节
+1 /client/${ApiKey}/action/online 订阅设备上线消息
+2 /client/${ApiKey}/action/offline 订阅设备下线消息
+3 /client/${ApiKey}/action/usb_state 订阅设备USB状态消息
+4 /client/${ApiKey}/action/button 订阅设备按键消息
+5 /client/${ApiKey}/action/display 发布设备更新屏幕消息
+6 /client/${ApiKey}/action/display_reply 订阅设备更新屏幕结果消息
+7 /client/${ApiKey}/action/battery 发布获取设备电池电压消息
+8 /client/${ApiKey}/action/battery_reply 订阅设备电池电压结果消息
+9 /client/${ApiKey}/action/led 发布更新LED状态消息
+10 /client/${ApiKey}/action/led_reply 订阅更新LED状态结果消息
+11 /client/${ApiKey}/action/reboot 发布重启消息
+12 /client/${ApiKey}/action/reboot_reply 订阅重启结果消息
+注意：MQTT 消息内容都是 base64 进行编码
+收到的消息类似下面的
+ewoJIm1hYyI6ICJENDozRDozOToxNzoyQTo4NCIsCgkibXNnSWQiOiAiMTY1MTIxMTE4NTQ2MiIKfQ
+==
+客户端订阅设备上线消息
+3.2.
+客户端订阅设备上线消息TOPIC格式形式为
+/client/${ApiKey}/action/online
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/online
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:2A:84",
+"msgId":"1651211185462"
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2
+--- 第 5 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+2 msgId String 时间戳 标记唯一
+客户端订阅设备下线消息
+3.3.
+客户端订阅设备下线消息TOPIC格式形式为
+/client/${ApiKey}/action/offline
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/offline
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:2A:84",
+"msgId":"1651211185462"
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+客户端订阅设备 状态反馈消息
+3.4. USB
+客户端订阅设备USB状态消息TOPIC格式形式为
+/client/${ApiKey}/action/usb_state
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/usb_state
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:2A:84",
+"msgId":"1651211185462",
+"state": 1
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+3 state Integer 1/0 插入/拔出
+客户端订阅设备按键反馈消息
+3.5.
+客户端订阅设备按键消息TOPIC格式形式为
+/client/${ApiKey}/action/button
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+3
+--- 第 6 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+/client/61a3bd3d4c10ad03f1b15a99/action/button
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:2A:84",
+"msgId":"1651211185462",
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+客户端发布更新设备屏幕消息
+3.6.
+客户端发布更新设备屏幕消息TOPIC格式形式为
+/client/${ApiKey}/action/display
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/display
+Message信息的内容格式如下
+{
+"method": "display",
+"msgId": "1651211643524",
+"apiKey": "61a3bd3d4c10ad03f1b15a99",
+"version": 1,
+"message": {
+"mac": "D4:3D:39:17:42:F6",
+"imgsrc":
+"https://t7.baidu.com/it/u=1575628574,1150213623&fm=193&f=GIF"
+}
+}
+消息字段说明
+序号 字段 值类型 值 选项 描述
+1 method String display 必选 方法
+2 msgId String 时间戳 必选 标记唯一
+4 version Integer 1 必选 版本号
+5 message.mac String Mac 必选 设备MAC地址
+6 message.imgsrc String 可选 1. 如果没有，则系统默认图片
+2. 图片转成base64格式
+3. 图片下载地址
+7 message.template Object 可选 imgsrc和template二选一
+8 apiKey String 必选 ApiKey
+注意：imgsrc和template字段只能够二选一
+通过模板来更新屏幕
+{
+4
+--- 第 7 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+"method": "display",
+"apiKey": "61a3bd3d4c10ad03f1b15a99",
+"msgId": "1651211643524",
+"version": 1,
+"message": {
+"mac": "D4:3D:39:17:42:F6",
+"template": {
+"tid": "6347e877ac6dda127fb5fd11",
+"tname": "会议模板",
+"data": {
+"标题": "A2107",
+"网址": "www.xxxx.cn",
+"内容": "成小明：9:00-12:00"
+}
+}
+}
+}
+注意：字段template为模板导出接口的json对象
+客户端订阅更新设备屏幕反馈结果消息
+3.7.
+客户端订阅设备屏幕更新结果反馈消息TOPIC格式形式为
+/client/${ApiKey}/action/display_reply
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/display_reply
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:42:F6",
+"msgId": "1651211643524",
+"result": 200
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+3 result Integer 200/400/401 成功/失败/其他
+客户端发布获取设备电池电压消息
+3.8.
+客户端发布获取设备电池电压消息TOPIC格式形式为
+/client/${ApiKey}/action/battery
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+5
+--- 第 8 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+/client/61a3bd3d4c10ad03f1b15a99/action/battery
+Message信息的内容格式如下
+{
+"method": "battery",
+"msgId": "1651211849119",
+"apiKey": "61a3bd3d4c10ad03f1b15a99",
+"version": 1,
+"message": {
+"mac": "D4:3D:39:17:42:F6"
+}
+}
+消息字段说明
+序号 字段 值类型 值 选项 描述
+1 method String battery 必选 方法
+2 msgId String 时间戳 必选 标记唯一
+4 version Integer 1 必选 版本号
+5 message.mac String Mac 必选 设备MAC地址
+6 apiKey String 必选 ApiKey
+客户端订阅获取设备电池电压反馈结果消息
+3.9.
+客户端订阅获取设备电池电压结果消息TOPIC格式形式为
+/client/${ApiKey}/action/battery_reply
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/battery_reply
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:42:F6",
+"msgId": "1651211849119",
+"voltage": 410
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+3 voltage Integer 电池电压的100倍
+客户端发布更新设备 状态消息
+3.10. LED
+客户端发布更新LED状态消息TOPIC格式形式为
+/client/${ApiKey}/action/led
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+6
+--- 第 9 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+/client/61a3bd3d4c10ad03f1b15a99/action/led
+Message信息的内容格式如下
+{
+"method": "led",
+"msgId": "1651211844116",
+"apiKey": "61a3bd3d4c10ad03f1b15a99",
+"version": 1,
+"message": {
+"mac": "D4:3D:39:17:42:F6",
+"red": 255,
+"green": 0,
+"blue": 255,
+}
+}
+消息字段说明
+序号 字段 值类型 值 选项 描述
+1 method String led 必选 方法
+2 msgId String 时间戳 必选 标记唯一
+4 version Integer 1 必选 版本号
+5 message.mac String Mac 必选 设备MAC地址
+6 message.red Integer 0/255 可选 红灯灭/亮
+7 message.green Integer 0/255 可选 绿灯灭/亮
+8 message.blue Integer 0/255 可选 蓝灯灭/亮
+9 apiKey String 必选 ApiKey
+客户端订阅更新设备 状态反馈结果消息
+3.11. LED
+客户端订阅更新LED状态结果消息TOPIC格式形式为
+/client/${ApiKey}/action/led_reply
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/led_reply
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:42:F6",
+"msgId": "1651211844116",
+"result": 200
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+3 result Integer 200/400 成功/失败
+7
+--- 第 10 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+客户端发布设备重启消息
+3.12.
+客户端发布设备重启消息TOPIC格式形式为
+/client/${ApiKey}/action/reboot
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/reboot
+Message信息的内容格式如下
+{
+"method": "reboot",
+"msgId": "1651211843741",
+"apiKey": "61a3bd3d4c10ad03f1b15a99",
+"version": 1,
+"message": {
+"mac": ["D4:3D:39:17:42:F6"]
+}
+}
+消息字段说明
+序号 字段 值类型 值 选项 描述
+1 method String reboot 必选 方法
+2 msgId String 时间戳 必选 标记唯一
+4 version Integer 1 必选 版本号
+5 message.mac ARRAY Mac 必选 设备MAC地址
+6 apiKey String 必选 ApiKey
+客户端订阅设备重启反馈结果消息
+3.13.
+客户端订阅设备重启结果消息TOPIC格式形式为
+/client/${ApiKey}/action/reboot_reply
+例如用户ApiKey为61a3bd3d4c10ad03f1b15a99，订阅TOPIC格式如下所示
+/client/61a3bd3d4c10ad03f1b15a99/action/reboot_reply
+Message信息的内容格式如下
+{
+"mac": "D4:3D:39:17:42:F6",
+"msgId": "1651211843741",
+"result": 200
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 mac String 设备MAC地址
+2 msgId String 时间戳 标记唯一
+3 result Integer 200/400 成功/失败
+8
+--- 第 11 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+客户端 协议
+4. HTTP
+协议接口总览
+4.1.HTTP
+通过HTTP协议发送设置消息
+序号 Api method 描述
+1 /user/api/login POST 登录系统
+2 /user/api/rest/devices GET 获取所有设备信息
+3 /user/api/rest/devices/:id GET 根据id获取单个设备信息
+4 /user/api/rest/devices POST 添加设备
+5 /user/api/rest/devices/:id DELETE 删除设备
+6 /user/api/rest/devices/:id PUT 更新设备信息
+7 /user/api/rest/devices/mac/:mac GET 根据MAC地址获取设备
+8 /user/api/mqtt/publish/:mac/led POST 设置设备RGB灯状态
+9 /user/api/mqtt/publish/:mac/battery POST 获取设备电池电量
+10 /user/api/mqtt/publish/:mac/display POST 更新屏幕图片
+11 /user/api/mqtt/publish/:mac/reboot POST 重启设备
+12 /user/api/mqtt/publish/{:mac}/template/{:templateId} POST 模板调用接口
+通过 登录系统
+4.2. HTTP
+API接口
+/user/api/login
+JAVA示例
+OkHttpClientclient=newOkHttpClient().newBuilder()
+.build();
+MediaTypemediaType=MediaType.parse("application/json");
+RequestBodybody=RequestBody.create(mediaType,"{\r\n \"username\":\"admin\",\r\n
+\"password\":\"admin123\"\r\n}");
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/login")
+.method("POST",body)
+.addHeader("Content-Type","application/json")
+.build();
+Responseresponse=client.newCall(request).execute();
+返回结果
+{
+"code":20000,
+"data":{
+"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZjY1NmM2MDVjMTI2NjBk
+9
+--- 第 12 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+ZWQyN2JmMyIsImlhdCI6MTY3MTAwOTU1MH0.-nURPZNLx65-D6wJ1Lgf27Ckr4pLMBLE3_7Cb6Bt
+paI"
+}
+}
+通过 获取所有设备信息
+4.3. HTTP
+API接口
+/user/api/rest/devices
+获取所有设备的MAC地址
+/user/api/rest/devices?query=mac,ip
+返回例程
+{
+"code":20000,
+"data":{
+"items":[
+{
+"_id":"630333b92f655aed61849d00",
+"mac":"D4:3D:39:1C:E4:CA",
+"ip":"192.168.1.123"
+},
+{
+"_id":"6341242ec977ff50b3d47106",
+"mac":"D4:3D:39:1C:8C:C4",
+"ip":"192.168.1.6"
+},
+{
+"_id":"636091515df509d3871e2f35",
+"mac":"D4:3D:39:1C:64:2C",
+"ip":"192.168.1.110"
+}
+],
+"total":3
+}
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 code Integer 结果
+2 data.items Array 查询的数据数组
+3 data.total Integer 查询总数值
+JAVA示例
+10
+--- 第 13 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+OkHttpClientclient=newOkHttpClient().newBuilder()
+.build();
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/rest/devices?query=mac,ip")
+.method("GET",null)
+.addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZj
+Y1NmM2MDVjMTI2NjBkZWQyN2JmMyIsImlhdCI6MTY3MTAwOTU1MH0.-nURPZNLx65-D6wJ1Lgf
+27Ckr4pLMBLE3_7Cb6BtpaI")
+.build();
+Responseresponse=client.newCall(request).execute();
+通过 设置设备 灯状态
+4.4. HTTP RGB
+URL格式为
+/user/api/mqtt/publish/:mac/led
+JSON数据
+{
+"red":0,
+"green":0,
+"blue":0,
+}
+JSON字段说明
+序号 字段 值类型 值 选项 描述
+1 red Integer 0/255 可选 红色灯灭/亮
+2 green Integer 0/255 可选 绿色灯灭/亮
+3 blue Integer 0/255 可选 蓝色灯灭/亮
+备注：:mac为设备MAC地址
+JAVA示例
+OkHttpClientclient=newOkHttpClient().newBuilder()
+.build();
+MediaTypemediaType=MediaType.parse("application/json");
+RequestBodybody=RequestBody.create(mediaType,"{\r\n \"red\":255,\r\n \"green\":
+0,\r\n \"blue\":0\r\n}");
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/led")
+.method("POST",body)
+.addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZj
+Y1NmM2MDVjMTI2NjBkZWQyN2JmMyIsImlhdCI6MTY3MTAwOTU1MH0.-nURPZNLx65-D6wJ1Lgf
+27Ckr4pLMBLE3_7Cb6BtpaI")
+.addHeader("Content-Type","application/json")
+.build();
+11
+--- 第 14 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+Responseresponse=client.newCall(request).execute();
+反馈结果
+{
+"code":20000,
+"data":{
+"msgId":"1671010167925",
+"mac":"D4:3D:39:1C:64:2C"
+}
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 code Integer 结果
+2 data.msgId String 消息唯一标识
+3 data.mac String 设备MAC地址
+通过 获取设备电池电压
+4.5. HTTP
+URL格式为
+/user/api/mqtt/publish/:mac/battery
+JSON数据无
+备注：:mac为设备MAC地址
+通过 更新设备屏幕图片
+4.6. HTTP
+URL格式为
+/user/api/mqtt/publish/:mac/display
+JSON数据
+{
+"algorithm":"floyd-steinberg",
+"imgsrc":"https://t7.baidu.com/it/u=2141219545,3103086273&fm=193&f=GIF"
+}
+JSON字段说明
+序号 字段 值类型 值 选项 描述
+1 algorithm String 可选 如果没有，则系统默认算法
+2 imgsrc String 可选 1.如果没有，则系统默认图片
+2.图片转成base64格式
+3.图片下载地址
+备注：:mac为设备MAC地址
+JAVA示例
+OkHttpClientclient=newOkHttpClient().newBuilder()
+12
+--- 第 15 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+.build();
+MediaTypemediaType=MediaType.parse("application/json");
+RequestBodybody=RequestBody.create(mediaType,"{\r\n\"algorithm\":\"floyd-steinberg\
+",\r\n\"imgsrc\":\"https://t7.baidu.com/it/u=2141219545,3103086273&fm=193&f=GIF\"\r\n}");
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/display")
+.method("POST",body)
+.addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZj
+Y1NmM2MDVjMTI2NjBkZWQyN2JmMyIsImlhdCI6MTY3MTAwOTU1MH0.-nURPZNLx65-D6wJ1Lgf
+27Ckr4pLMBLE3_7Cb6BtpaI")
+.addHeader("Content-Type","application/json")
+.build();
+Responseresponse=client.newCall(request).execute();
+返回结果
+{
+"code":20000,
+"data":{
+"msgId":"1671010491574",
+"mac":"D4:3D:39:1C:64:2C"
+}
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 code Integer 结果
+2 data.msgId String 消息唯一标识
+3 data.mac String 设备MAC地址
+通过 重启设备
+4.7. HTTP
+URL格式为
+/user/api/mqtt/publish/:mac/reboot
+JSON数据无
+备注：:mac为设备MAC地址
+JAVA示例
+OkHttpClientclient=newOkHttpClient().newBuilder()
+.build();
+MediaTypemediaType=MediaType.parse("text/plain");
+RequestBodybody=RequestBody.create(mediaType,"");
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:64:2C/reboot")
+.method("POST",body)
+13
+--- 第 16 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+.addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZj
+Y1NmM2MDVjMTI2NjBkZWQyN2JmMyIsImlhdCI6MTY3MTAwOTU1MH0.-nURPZNLx65-D6wJ1Lgf
+27Ckr4pLMBLE3_7Cb6BtpaI")
+.build();
+Responseresponse=client.newCall(request).execute();
+返回结果
+{
+"code":20000,
+"data":{
+"msgId":"1671010699826",
+"mac":"D4:3D:39:1C:64:2C"
+}
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 code Integer 结果
+2 data.msgId String 消息唯一标识
+3 data.mac String 设备MAC地址
+通过 调用模板显示接口
+4.8. HTTP
+URL格式为
+/user/api/mqtt/publish/{:mac}/template/{:templateId}
+a).mac为标签的MAC地址，例如：D4:3D:39:1C:8C:C4
+b).templateId为制作的模板的ID号，例如：6347e877ac6dda127fb5fd11
+JSON数据
+{
+"tid":"6347e877ac6dda127fb5fd11",
+"tname":"会议模板",
+"data":{
+"标题":"A2107",
+"网址":"www.xxxx.cn",
+"内容":"成小明：9:00-12:00"
+}
+}
+JSON字段说明
+序号 字段 值类型 值 描述
+1 tid String 模板的ID
+2 tname String 模板名称
+3 data Object 模板数据
+JAVA示例
+14
+--- 第 17 页 ---
+WIFI 标签系统 API 接口Version 1.0.6
+OkHttpClientclient=newOkHttpClient().newBuilder()
+.build();
+MediaTypemediaType=MediaType.parse("application/json");
+RequestBody body = RequestBody.create(mediaType, "{\"tid\":\"637212b0c75c505d708074
+00\",\"tname\":\"测试模板\",\"data\":{\"text-0\":\"张三丰\",\"text-0-1\":\"深圳某某有限责任
+公司\"}}");
+Requestrequest=newRequest.Builder()
+.url("http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:8C:C4/template/63
+7212b0c75c505d70807400")
+.method("POST",body)
+.addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZj
+Y1NmM2MDVjMTI2NjBkZWQyN2JmMyIsImlhdCI6MTY2NjI1NjAyOX0.cB4_tWv7i6JK5HGPjCyQ0Yq
+9NIvGrhS0hll3iqAm9hE")
+.addHeader("Content-Type","application/json")
+.build();
+Responseresponse=client.newCall(request).execute();
+返回结果
+{
+"code":20000,
+"data":{
+"mac":"D4:3D:39:1C:8C:C4",
+"msgId":"1666259624740"
+}
+}
+消息字段说明
+序号 字段 值类型 值 描述
+1 code Integer 结果
+2 data.msgId String 消息唯一标识
+3 data.mac String 设备MAC地址
+15

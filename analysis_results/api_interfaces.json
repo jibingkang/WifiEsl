@@ -1,0 +1,113 @@
+[
+  {
+    "page": 11,
+    "line_start": 7,
+    "details": {}
+  },
+  {
+    "page": 11,
+    "line_start": 8,
+    "details": {}
+  },
+  {
+    "page": 11,
+    "line_start": 9,
+    "details": {
+      "3 /user/api/rest/devices/": "id GET 根据id获取单个设备信息"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 10,
+    "details": {}
+  },
+  {
+    "page": 11,
+    "line_start": 11,
+    "details": {
+      "5 /user/api/rest/devices/": "id DELETE 删除设备"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 12,
+    "details": {
+      "6 /user/api/rest/devices/": "id PUT 更新设备信息"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 13,
+    "details": {
+      "7 /user/api/rest/devices/mac/": "mac GET 根据MAC地址获取设备"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 14,
+    "details": {
+      "8 /user/api/mqtt/publish/": "mac/led POST 设置设备RGB灯状态"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 15,
+    "details": {
+      "9 /user/api/mqtt/publish/": "mac/battery POST 获取设备电池电量"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 16,
+    "details": {
+      "10 /user/api/mqtt/publish/": "mac/display POST 更新屏幕图片"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 17,
+    "details": {
+      "11 /user/api/mqtt/publish/": "mac/reboot POST 重启设备"
+    }
+  },
+  {
+    "page": 11,
+    "line_start": 18,
+    "details": {
+      "12 /user/api/mqtt/publish/{": "mac}/template/{:templateId} POST 模板调用接口",
+      "RequestBodybody=RequestBody.create(mediaType,\"{\\r\\n \\\"username\\\"": "\\\"admin\\\",\\r\\n",
+      "\\\"password\\\"": "\\\"admin123\\\"\\r\\n}\");",
+      ".url(\"http": "//192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:1C:8C:C4/template/63",
+      "\"code\"": "20000,",
+      "\"data\"": "{",
+      "\"token\"": "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYyZjY1NmM2MDVjMTI2NjBk",
+      "\"items\"": "[",
+      "\"_id\"": "\"636091515df509d3871e2f35\",",
+      "\"mac\"": "\"D4:3D:39:1C:8C:C4\",",
+      "\"ip\"": "\"192.168.1.110\"",
+      "\"total\"": "3",
+      "/user/api/mqtt/publish/": "mac/reboot",
+      "\"red\"": "0,",
+      "\"green\"": "0,",
+      "\"blue\"": "0,",
+      "备注": ":mac为设备MAC地址",
+      "RequestBodybody=RequestBody.create(mediaType,\"{\\r\\n \\\"red\\\"": "255,\\r\\n \\\"green\\\":",
+      "0,\\r\\n \\\"blue\\\"": "0\\r\\n}\");",
+      "\"msgId\"": "\"1666259624740\"",
+      "\"algorithm\"": "\"floyd-steinberg\",",
+      "\"imgsrc\"": "\"https://t7.baidu.com/it/u=2141219545,3103086273&fm=193&f=GIF\"",
+      "RequestBodybody=RequestBody.create(mediaType,\"{\\r\\n\\\"algorithm\\\"": "\\\"floyd-steinberg\\",
+      "\",\\r\\n\\\"imgsrc\\\"": "\\\"https://t7.baidu.com/it/u=2141219545,3103086273&fm=193&f=GIF\\\"\\r\\n}\");",
+      "/user/api/mqtt/publish/{": "mac}/template/{:templateId}",
+      "a).mac为标签的MAC地址，例如": "D4:3D:39:1C:8C:C4",
+      "b).templateId为制作的模板的ID号，例如": "6347e877ac6dda127fb5fd11",
+      "\"tid\"": "\"6347e877ac6dda127fb5fd11\",",
+      "\"tname\"": "\"会议模板\",",
+      "\"标题\"": "\"A2107\",",
+      "\"网址\"": "\"www.xxxx.cn\",",
+      "\"内容\"": "\"成小明：9:00-12:00\"",
+      "RequestBody body = RequestBody.create(mediaType, \"{\\\"tid\\\"": "\\\"637212b0c75c505d708074",
+      "00\\\",\\\"tname\\\"": "\\\"测试模板\\\",\\\"data\\\":{\\\"text-0\\\":\\\"张三丰\\\",\\\"text-0-1\\\":\\\"深圳某某有限责任"
+    }
+  }
+]

@@ -1,0 +1,151 @@
+// ============================================
+// 全局样式
+// ============================================
+
+@use './variables' as *;
+
+/* ==================== 基础重置 ==================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: $font-size-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-family;
+  color: var(--el-text-color-primary);
+  background-color: var(--el-bg-color-page);
+  transition: background-color $transition-base, color $transition-base;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+a {
+  color: $primary-color;
+  text-decoration: none;
+
+  &:hover {
+    color: $primary-light;
+  }
+}
+
+/* ==================== 滚动条美化 ==================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--el-border-color);
+  border-radius: 3px;
+
+  &:hover {
+    background: var(--el-border-color-darker);
+  }
+}
+
+/* ==================== Element Plus 覆盖 ==================== */
+.el-button--primary {
+  background: $primary-gradient;
+  border: none;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  
+  &:hover,
+  &:focus {
+    opacity: 0.9;
+  }
+}
+
+.el-card {
+  border-radius: $radius-md;
+  border-color: var(--el-border-color-lighter);
+  box-shadow: $shadow-sm;
+  transition: all $transition-base;
+  
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+/* 表格优化 */
+.el-table {
+  border-radius: $radius-md;
+  overflow: hidden;
+  
+  th.el-table__cell {
+    font-weight: 600;
+    font-size: $font-size-sm;
+    color: var(--el-text-color-secondary) !important;
+    letter-spacing: 0.3px;
+  }
+}
+
+/* 输入框聚焦 */
+.el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 1px $primary-color inset !important;
+}
+
+/* ==================== 页面过渡动画 ==================== */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity $transition-base;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active {
+  transition: all $transition-slow;
+}
+
+.slide-fade-leave-active {
+  transition: all $transition-fast;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
+}
+
+/* ==================== NProgress 加载条 ==================== */
+#nprogress .bar {
+  background: $primary-gradient !important;
+  height: 3px !important;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px $primary-color, 0 0 5px $primary-color !important;
+}
+
+/* ==================== 工具类 ==================== */
+.text-gradient {
+  background: $primary-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
