@@ -47,6 +47,7 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     name: str | None = None
+    tid: str | None = None
     default_data: dict | None = None
     status: str | None = None
 
@@ -110,6 +111,8 @@ async def update_task_info(task_id: int, body: TaskUpdate):
     kwargs = {}
     if body.name is not None:
         kwargs["name"] = body.name
+    if body.tid is not None:
+        kwargs["tid"] = body.tid
     if body.default_data is not None:
         kwargs["default_data"] = json.dumps(body.default_data, ensure_ascii=False)
     if body.status is not None:

@@ -48,20 +48,44 @@ class WifiSystemProxy:
         POST /user/api/login → 返回 {token, apiKey, user}
         """
         client = get_wifi_client()
+        
+        # 详细的日志记录
+        logger.info(f"[登录WIFI系统] ========== 开始登录 ==========")
+        logger.info(f"[登录WIFI系统] 目标地址: {settings.wifi_base_url}/user/api/login")
+        logger.info(f"[登录WIFI系统] 传入的用户名: {username}")
+        logger.info(f"[登录WIFI系统] 传入的密码长度: {len(password)} 字符")
+        logger.info(f"[登录WIFI系统] 密码哈希表示: {'*' * min(10, len(password))}")
+        
+        # 打印完整的请求体
+        request_body = {"username": username, "password": password}
+        logger.info(f"[登录WIFI系统] 完整请求体: {json.dumps(request_body, ensure_ascii=False)}")
+        
         try:
+            logger.debug(f"[登录WIFI系统] 发送POST请求...")
             resp = await client.post(
                 "/user/api/login",
                 json={"username": username, "password": password},
             )
+            
+            logger.info(f"[登录WIFI系统] 响应状态码: {resp.status_code}")
+            logger.debug(f"[登录WIFI系统] 响应头: {dict(resp.headers)}")
+            logger.debug(f"[登录WIFI系统] 响应内容: {resp.text[:200]}")
+            
             resp.raise_for_status()
             data = resp.json()
-            logger.info(f"登录成功, 用户: {username}")
+            
+            logger.info(f"[登录WIFI系统] 登录成功, 用户: {username}")
+            logger.debug(f"[登录WIFI系统] 返回数据: apiKey={data.get('apiKey', '')[:8]}..., token={data.get('token', '')[:8]}...")
+            
             return data
         except httpx.HTTPStatusError as e:
-            logger.error(f"登录失败: {e.response.status_code} - {e.response.text}")
+            logger.error(f"[登录WIFI系统] HTTP错误 {e.response.status_code}: {e.response.text}")
+            logger.error(f"[登录WIFI系统] 请求URL: {e.request.url}")
             raise Exception(f"WIFI系统登录失败: {e.response.status_code}")
         except Exception as e:
-            logger.error(f"登录异常: {e}")
+            import traceback
+            logger.error(f"[登录WIFI系统] 异常: {type(e).__name__}: {e}")
+            logger.error(f"[登录WIFI系统] 异常堆栈: {traceback.format_exc()}")
             raise Exception(f"无法连接WIFI系统: {e}")
 
     @staticmethod
@@ -79,20 +103,44 @@ class WifiSystemProxy:
         params = {"page": page, "page_size": page_size}
         if query:
             params["query"] = query
+        
+        # 详细的日志记录
+        logger.info(f"[获取设备列表] 开始调用WIFI系统接口")
+        logger.info(f"[获取设备列表] 目标地址: {settings.wifi_base_url}/user/api/rest/devices")
+        logger.info(f"[获取设备列表] API Key: {api_key[:8]}... (长度: {len(api_key)})")
+        logger.info(f"[获取设备列表] 请求参数: page={page}, page_size={page_size}, query={query}")
+        
         try:
+            logger.debug(f"[获取设备列表] 发送GET请求...")
             resp = await client.get(
                 "/user/api/rest/devices",
                 headers=_headers(api_key),
                 params=params,
             )
+            
+            logger.info(f"[获取设备列表] 响应状态码: {resp.status_code}")
+            logger.debug(f"[获取设备列表] 响应头: {dict(resp.headers)}")
+            
+            # 记录响应内容（前200字符）
+            response_text = resp.text
+            logger.debug(f"[获取设备列表] 响应内容 (前500字符): {response_text[:500]}")
+            
             resp.raise_for_status()
-            return resp.json()
+            
+            result = resp.json()
+            logger.info(f"[获取设备列表] 成功获取设备列表，设备数量: {result.get('total', 0)}")
+            logger.debug(f"[获取设备列表] 完整响应: {json.dumps(result, ensure_ascii=False)[:300]}")
+            
+            return result
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP {e.response.status_code}: {e.response.text}")
+            logger.error(f"[获取设备列表] HTTP错误 {e.response.status_code}: {e.response.text}")
+            logger.error(f"[获取设备列表] 请求URL: {e.request.url}")
+            logger.error(f"[获取设备列表] 请求头: {dict(e.request.headers)}")
             raise Exception(f"获取设备列表失败: {e.response.status_code} - {e.response.text[:200]}")
         except Exception as e:
             import traceback
-            logger.error(f"设备列表请求异常: {type(e).__name__}: {e}\n{traceback.format_exc()}")
+            logger.error(f"[获取设备列表] 异常: {type(e).__name__}: {e}")
+            logger.error(f"[获取设备列表] 异常堆栈: {traceback.format_exc()}")
             raise Exception(f"设备列表请求异常: {type(e).__name__}: {e}")
 
     @staticmethod

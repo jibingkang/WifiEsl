@@ -8,6 +8,7 @@
 import jwt
 import time
 import logging
+import json
 from typing import Optional
 
 from config import settings
@@ -35,23 +36,62 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         await add_log(username, "LOGIN_FAILED", detail="用户名或密码错误", result="failed", ip_address=ip)
         raise ValueError("用户名或密码错误")
 
-    # Step 2: 调用真实WIFI系统登录获取 apiKey
+    # Step 2: 调用真实WIFI系统登录获取 JWT token
+    logger.info(f"[AUTH] ========== 开始登录WIFI系统获取JWT token ==========")
+    logger.info(f"[AUTH] WIFI系统地址: {settings.wifi_base_url}")
+    logger.info(f"[AUTH] WIFI用户名: {settings.wifi_username}")
+    logger.info(f"[AUTH] WIFI密码: {'*' * len(settings.wifi_password)}")
+    logger.info(f"[AUTH] 当前配置中的WIFI_APIKEY: {settings.wifi_apikey[:8]}... (长度: {len(settings.wifi_apikey)})")
+    logger.info(f"[AUTH] API Key用途: 用于MQTT订阅区分客户")
+    
+    # 检查是否真的会调用WIFI系统登录
+    logger.info(f"[AUTH] 即将调用 wifi_proxy.login()...")
+    
+    api_key = None
     try:
         wifi_result = await wifi_proxy.login(
             username=settings.wifi_username,
             password=settings.wifi_password,
         )
+        
+        logger.info(f"[AUTH] ✅ WIFI系统登录调用成功!")
+        logger.info(f"[AUTH]   响应类型: {type(wifi_result).__name__}")
+        logger.info(f"[AUTH]   响应是否字典: {isinstance(wifi_result, dict)}")
+        if isinstance(wifi_result, dict):
+            logger.info(f"[AUTH]   响应键: {list(wifi_result.keys())}")
+            logger.info(f"[AUTH]   响应数据 (前200字符): {json.dumps(wifi_result, ensure_ascii=False)[:200]}")
+        
         wifi_data = wifi_result.get("data", wifi_result) if isinstance(wifi_result, dict) else {}
+        
+        # 尝试从不同字段获取token
         api_key = (
             wifi_data.get("token")
             or wifi_data.get("apikey")
             or wifi_data.get("apiKey")
             or wifi_data.get("api_key")
-            or settings.wifi_apikey
         )
+        
+        if api_key:
+            logger.info(f"[AUTH] ✅ 成功获取JWT token")
+            logger.info(f"[AUTH]    token开头: {api_key[:8]}...")
+            logger.info(f"[AUTH]    token长度: {len(api_key)} 字符")
+            logger.info(f"[AUTH]    JWT格式: {'✅ 标准JWT (eyJ开头)' if api_key.startswith('eyJ') else '⚠️  非标准格式'}")
+            logger.debug(f"[AUTH]    完整token: {api_key}")
+        else:
+            logger.warning(f"[AUTH] ❌ 登录响应中没有找到token，使用配置中的WIFI_APIKEY作为后备")
+            logger.warning(f"[AUTH]    配置文件中的WIFI_APIKEY: {settings.wifi_apikey[:8]}... (长度: {len(settings.wifi_apikey)})")
+            api_key = settings.wifi_apikey
+            
     except Exception as e:
-        logger.error(f"WIFI系统登录失败(不影响本地认证): {e}")
+        import traceback
+        logger.error(f"[AUTH] ❌ WIFI系统登录失败: {type(e).__name__}: {e}")
+        logger.error(f"[AUTH] 异常堆栈: {traceback.format_exc()}")
+        logger.warning(f"[AUTH] 使用配置中的WIFI_APIKEY作为后备: {settings.wifi_apikey}")
         api_key = settings.wifi_apikey
+    
+    if not api_key:
+        logger.critical(f"[AUTH] 🚨 严重: 无法获取任何API Key")
+        raise ValueError("无法获取WIFI系统API Key")
 
     # Step 3: 生成JWT token
     token = _create_jwt_token(username, api_key)

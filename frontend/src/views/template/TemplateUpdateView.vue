@@ -5,11 +5,21 @@
       <div class="toolbar-left">
         <!-- 任务选择器 -->
         <div class="task-switcher">
-          <ListTodo :size="16" />
+          <div class="selector-label">
+            <ListTodo :size="16" />
+            <span class="label-text">选择任务：</span>
+            <el-tooltip
+              content="选择一个已创建的更新任务，或创建新任务。任务用于管理批量设备推送"
+              placement="bottom"
+              effect="light"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </div>
           <el-select
             v-model="currentTaskId"
             size="default"
-            placeholder="选择或新建任务"
+            placeholder="请选择一个任务或创建新任务"
             clearable
             @change="handleTaskChange"
           >
@@ -30,12 +40,21 @@
 
         <!-- 模板切换 -->
         <div v-if="availableTemplates.length > 0" class="tpl-switcher" style="margin-left: 12px; padding-left: 12px; border-left: 1px solid #e2e8f0;">
-          <LayoutTemplate :size="16" />
+          <div class="selector-label">
+            <LayoutTemplate :size="16" />
+            <span class="label-text">选择模板：</span>
+            <el-tooltip
+              content="选择要推送到设备的模板，模板定义了设备屏幕显示的内容格式"
+              placement="bottom"
+              effect="light"
+            >
+              <el-icon><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </div>
           <el-select
             v-model="selectedTid"
             size="default"
-            placeholder="选择模板"
-            :disabled="!!currentTaskId"
+            placeholder="请选择要使用的模板"
             @change="handleTemplateChange"
           >
             <el-option
@@ -87,11 +106,12 @@
           </template>
 
           <div class="collapse-content-wrap">
-            <WorkspaceForm
-              :template-info="selectedTemplate!"
-              :default-data="defaultData"
-              @update:default-data="defaultData = $event"
-            />
+          <WorkspaceForm
+            :key="selectedTemplate?.tid || 'no-template'"
+            :template-info="selectedTemplate!"
+            :default-data="defaultData"
+            @update:default-data="defaultData = $event"
+          />
             <div class="form-footer-tip">
               <Info :size="13" />
               <span>下方表格可为每台设备单独修改不同数据</span>
@@ -220,9 +240,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElNotification, ElMessage, ElMessageBox } from 'element-plus'
+import { QuestionFilled } from '@element-plus/icons-vue'
 import {
   Clock, Files, LayoutTemplate, Plus, Pencil, Smartphone,
   Send, Info, ListTodo,
@@ -274,6 +295,12 @@ window.addEventListener('resize', () => {
 // ── 表单数据 ──
 const defaultData = ref<Record<string, any>>({})
 const customOverrides = ref<Record<string, Record<string, any>>>({})
+
+// ── 模板数据缓存 (为每个模板单独存储数据) ──
+const templateDataCache = ref<Record<string, {
+  defaultData: Record<string, any>,
+  customOverrides: Record<string, Record<string, any>>
+}>>({})
 
 // ── 折叠面板 ──
 const activeCollapse = ref<string[]>([])
@@ -471,6 +498,15 @@ async function loadTaskDetail(taskId: number) {
     }
     customOverrides.value = overrides
 
+    // ⭐ 重要：将加载的数据保存到模板缓存
+    if (selectedTemplate.value?.tid) {
+      templateDataCache.value[selectedTemplate.value.tid] = {
+        defaultData: { ...defaultData.value },
+        customOverrides: { ...customOverrides.value }
+      }
+      console.log(`任务加载: 保存模板 ${selectedTemplate.value.tid} 的数据到缓存`)
+    }
+
     // ⭐ 重要：清空勾选状态，不要默认全选
     checkedMacs.value = []
     // 清空筛选关键词
@@ -567,19 +603,185 @@ async function createNewTask() {
 
 // ════════════ 模板切换 ════════════
 
-function handleTemplateChange(tid: string) {
+async function handleTemplateChange(tid: string) {
+  console.log(`=== 开始模板切换: ${tid} ===`)
   const tpl = availableTemplates.value.find(t => t.tid === tid)
   if (!tpl) return
-  selectedTemplate.value = tpl
-  resetFormData(tpl)
+  
+  // 检查是否正在切换模板
+  if (selectedTemplate.value?.tid !== tid) {
+    console.log(`从模板 ${selectedTemplate.value?.tid || '(无)'} 切换到 ${tid}`)
+    
+    // 有任务时，确认是否切换模板
+    if (currentTaskId.value) {
+      try {
+        await ElMessageBox.confirm(
+          `切换模板将会影响所有设备的数据。确定要将模板从「${selectedTemplate.value?.tname || ''}」切换到「${tpl.tname}」吗？`,
+          '切换模板确认',
+          {
+            confirmButtonText: '确认切换',
+            cancelButtonText: '取消',
+            type: 'warning',
+            distinguishCancelAndClose: true
+          }
+        )
+      } catch {
+        // 用户取消切换，恢复原来的tid
+        selectedTid.value = selectedTemplate.value?.tid || ''
+        return
+      }
+    }
+    
+    // 1. 保存当前模板的数据到缓存
+    if (selectedTemplate.value?.tid) {
+      console.log(`保存当前模板 ${selectedTemplate.value.tid} 的数据到缓存`)
+      console.log('保存的数据:', defaultData.value)
+      templateDataCache.value[selectedTemplate.value.tid] = {
+        defaultData: { ...defaultData.value },
+        customOverrides: { ...customOverrides.value }
+      }
+    } else {
+      console.log('当前没有选中模板，无需保存缓存')
+    }
+    
+    // 2. 检查目标模板是否有缓存数据
+    let targetDefaultData: Record<string, any> = {}
+    let targetCustomOverrides: Record<string, Record<string, any>> = {}
+    
+    if (templateDataCache.value[tid]) {
+      // 从缓存恢复数据
+      console.log(`从缓存恢复模板 ${tid} 的数据`)
+      console.log('缓存中的数据:', templateDataCache.value[tid].defaultData)
+      targetDefaultData = { ...templateDataCache.value[tid].defaultData }
+      targetCustomOverrides = { ...templateDataCache.value[tid].customOverrides }
+    } else {
+      // 没有缓存，使用新模板的默认值初始化
+      console.log(`模板 ${tid} 没有缓存数据，使用默认值初始化`)
+      const fields = tpl.fields || []
+      console.log(`模板有 ${fields.length} 个字段`)
+      for (const field of fields) {
+        if (field.default_value != null && field.default_value !== '') {
+          targetDefaultData[field.key] = field.default_value
+        }
+      }
+    }
+    
+    console.log('目标数据准备完成:', targetDefaultData)
+    
+    // 3. 更新模板，使用新的对象引用确保组件重新渲染
+    selectedTemplate.value = { ...tpl }
+    
+    // 4. 应用数据 - 使用更激进的方式确保数据更新
+    // 创建全新的响应式对象，确保引用变化
+    const newDefaultData = { ...targetDefaultData }
+    const newCustomOverrides = { ...targetCustomOverrides }
+    
+    console.log('设置新数据:')
+    console.log('新数据对象:', newDefaultData)
+    console.log('当前数据:', defaultData.value)
+    
+    // 关键步骤：先清空，再设置，确保变化被检测到
+    defaultData.value = {}
+    customOverrides.value = {}
+    
+    // 等待一个tick，确保清空操作生效
+    await nextTick()
+    
+    // 然后设置新数据
+    defaultData.value = newDefaultData
+    customOverrides.value = newCustomOverrides
+    
+    // 再次等待DOM更新
+    await nextTick()
+    
+    // 强制触发一次额外更新，确保WorkspaceForm能获取到数据
+    if (Object.keys(newDefaultData).length > 0) {
+      console.log('强制触发数据更新检查...')
+      const temp = { ...defaultData.value }
+      defaultData.value = {}
+      await nextTick()
+      defaultData.value = temp
+    }
+    
+    console.log('最终数据状态:', defaultData.value)
+    
+    console.log(`模板切换完成: ${tpl.tname}`)
+    console.log(`设置的数据:`, { ...targetDefaultData })
+    console.log(`缓存状态:`, templateDataCache.value)
+    
+    // 5. 如果有任务，更新任务中的模板信息
+    if (currentTaskId.value) {
+      try {
+        await taskApi.updateTask(currentTaskId.value, { 
+          tid: tid,
+          default_data: defaultData.value 
+        })
+        
+        // 更新每台设备的自定义数据
+        for (const [mac, overrides] of Object.entries(customOverrides.value)) {
+          try {
+            await taskApi.updateTaskDeviceData(currentTaskId.value, mac, overrides)
+          } catch (e) {
+            console.warn(`保存设备 ${mac} 的数据失败:`, e)
+          }
+        }
+        
+        ElMessage.success('模板已切换，数据已恢复并保存')
+      } catch (e: any) {
+        console.warn('更新任务模板失败:', e)
+        ElMessage.warning('模板已切换但任务更新失败')
+      }
+    } else {
+      ElMessage.success('模板已切换，数据已恢复')
+    }
+  }
+}
+
+
+
+/** 自动选中第一个可用的任务 */
+function autoSelectTask() {
+  if (taskList.value.length > 0) {
+    const firstTask = taskList.value.sort((a: TaskSummary, b: TaskSummary) => b.id - a.id)[0] // 按ID倒序，选最新的任务
+    currentTaskId.value = firstTask.id
+    loadTaskDetail(firstTask.id)
+    console.log(`自动选中任务: ${firstTask.name || firstTask.id}`)
+  }
 }
 
 /** 自动选中第一个模板 */
 function autoSelectTemplate() {
-  if (availableTemplates.value.length > 0) {
+  if (availableTemplates.value.length > 0 && !currentTaskId.value) {
     const first = availableTemplates.value[0]
     selectedTid.value = first.tid
     handleTemplateChange(first.tid)
+    console.log(`自动选中模板: ${first.tname}`)
+  }
+}
+
+/** 调试函数：打印当前模板和数据状态 */
+function debugTemplateState() {
+  console.log('=== 模板状态调试 ===')
+  console.log('当前模板ID:', selectedTemplate.value?.tid)
+  console.log('当前模板名称:', selectedTemplate.value?.tname)
+  console.log('默认数据:', defaultData.value)
+  console.log('自定义覆盖数据:', customOverrides.value)
+  console.log('缓存中的模板ID:', Object.keys(templateDataCache.value))
+  
+  if (selectedTemplate.value?.tid && templateDataCache.value[selectedTemplate.value.tid]) {
+    console.log('当前模板缓存数据:', templateDataCache.value[selectedTemplate.value.tid])
+  }
+  
+  // 检查WorkspaceForm是否能看到数据
+  console.log('=== WorkspaceForm数据检查 ===')
+  const workspaceFormData = defaultData.value
+  console.log('传递到WorkspaceForm的数据:', workspaceFormData)
+  
+  if (selectedTemplate.value?.fields) {
+    console.log('模板字段数量:', selectedTemplate.value.fields.length)
+    selectedTemplate.value.fields.forEach(field => {
+      console.log(`字段 [${field.key}]: ${workspaceFormData[field.key] || '(空)'}`)
+    })
   }
 }
 
@@ -984,23 +1186,33 @@ onMounted(async () => {
       if (exists) {
         currentTaskId.value = lastId
         await loadTaskDetail(lastId)
+        console.log(`恢复上次编辑的任务: ${lastId}`)
+        // 恢复成功，设置自动保存并返回
+        autoSaveTimer = setInterval(autoSave, 30000)
+        return
       }
     }
   }
 
-  // URL 参数预选
-  if (preSelectedMacs.value.length > 0 && !currentTaskId.value) {
-    // 有URL参数但没任务时，尝试从旧逻辑兼容处理
-  }
-
-  // 降级：恢复 localStorage 草稿
-  if (!currentTaskId.value) {
+  // 如果没有上次编辑的任务，则自动选择一个任务
+  if (taskList.value.length > 0) {
+    autoSelectTask()
+  } else {
+    // 没有任务时，使用模板选择和草稿恢复逻辑
+    // URL 参数预选
+    if (preSelectedMacs.value.length > 0) {
+      // 有URL参数，尝试兼容处理
+      // selectedMacs是计算属性，无法直接赋值，需要在任务中处理
+      console.log(`URL参数包含设备: ${preSelectedMacs.value.join(', ')}`)
+    }
+    
+    // 降级：恢复 localStorage 草稿
     restoreDraft()
-  }
-
-  // 自动选模板（如果还没选）
-  if (!selectedTemplate.value) {
-    autoSelectTemplate()
+    
+    // 自动选模板（如果还没选）
+    if (!selectedTemplate.value && availableTemplates.value.length > 0) {
+      autoSelectTemplate()
+    }
   }
 
   // 自动保存（30秒）
@@ -1026,6 +1238,16 @@ watch(() => selectedTemplate.value?.tid, async (tid) => {
 let dbAutoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 watch([defaultData, customOverrides], () => {
+  // 1. 更新当前模板的数据缓存
+  if (selectedTemplate.value?.tid) {
+    templateDataCache.value[selectedTemplate.value.tid] = {
+      defaultData: { ...defaultData.value },
+      customOverrides: { ...customOverrides.value }
+    }
+    console.log(`数据变化: 更新模板 ${selectedTemplate.value.tid} 的缓存`)
+  }
+  
+  // 2. 如果有任务，自动保存到数据库
   if (!currentTaskId.value) return
   // 防抖：数据变化后 2 秒自动保存到 DB
   if (dbAutoSaveTimer) clearTimeout(dbAutoSaveTimer)
@@ -1079,24 +1301,44 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
 }
+/* 选择器标签样式 */
+.selector-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  
+  .label-text {
+    color: #1e293b;
+    white-space: nowrap;
+  }
+  
+  .el-icon {
+    color: #94a3b8;
+    cursor: help;
+    font-size: 12px;
+    
+    &:hover {
+      color: #6366f1;
+    }
+  }
+}
+
 /* 任务选择器 */
 .task-switcher {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #6366f1;
-  font-size: 13.5px;
-  font-weight: 500;
 
   .el-select { width: 200px; }
 }
 .tpl-switcher {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #475569;
-  font-size: 13.5px;
-  font-weight: 500;
 
   .el-select { width: 180px; }
 }

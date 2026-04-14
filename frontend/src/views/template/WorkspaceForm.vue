@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onUpdated } from 'vue'
 import { Pencil, Info } from 'lucide-vue-next'
 import type { TemplateInfo } from '@/types'
 
@@ -110,7 +110,14 @@ var _updatingFromProp = false
 var localData = ref<Record<string, any>>({})
 
 // 从 prop 同步到本地（仅当 prop 引用变化时，避免回写死循环）
-watch(() => props.defaultData, (v) => {
+watch(() => props.defaultData, (v, oldV) => {
+  // 检查是否真的有变化，避免不必要的更新
+  const hasChanged = JSON.stringify(v) !== JSON.stringify(oldV)
+  if (!hasChanged && oldV !== undefined) {
+    console.log('WorkspaceForm: 数据没有实际变化，跳过更新')
+    return
+  }
+  
   _updatingFromProp = true
   var copy: Record<string, any> = {}
   if (v) {
@@ -118,19 +125,44 @@ watch(() => props.defaultData, (v) => {
     for (var i = 0; i < keys.length; i++) { copy[keys[i]] = v[keys[i]] }
   }
   localData.value = copy
+  console.log('WorkspaceForm: 从父组件同步数据', copy)
   // 延迟重置标志，确保当前 tick 内不再响应 localData 的变化
   nextTick(function() { _updatingFromProp = false })
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
-// 本地变化向上通知父组件（仅当非从 prop 同步时）
-watch(localData, function(v) {
-  if (_updatingFromProp) return
-  emit('update:defaultData', v)
-}, { deep: true })
+  // 本地变化向上通知父组件（仅当非从 prop 同步时）
+  watch(localData, function(v) {
+    if (_updatingFromProp) return
+    emit('update:defaultData', v)
+  }, { deep: true })
+  
+  // 特殊处理：当模板变化时，强制同步数据
+  watch(() => props.templateInfo.tid, (newTid, oldTid) => {
+    if (newTid !== oldTid && oldTid) {
+      console.log(`WorkspaceForm: 模板ID从 ${oldTid} 变为 ${newTid}，强制同步数据`)
+      // 强制同步数据
+      _updatingFromProp = true
+      var copy: Record<string, any> = {}
+      if (props.defaultData) {
+        var keys = Object.keys(props.defaultData)
+        for (var i = 0; i < keys.length; i++) { copy[keys[i]] = props.defaultData[keys[i]] }
+      }
+      localData.value = copy
+      nextTick(function() { _updatingFromProp = false })
+    }
+  })
 
-function isWideField(f: TemplateInfo['fields'][number]): boolean {
-  return ['textarea', 'qrcode', 'image'].includes(f.type)
-}
+  function isWideField(f: TemplateInfo['fields'][number]): boolean {
+    return ['textarea', 'qrcode', 'image'].includes(f.type)
+  }
+  
+  // 当模板信息变化时，强制重新检查数据同步
+  onUpdated(() => {
+    console.log('WorkspaceForm: 组件已更新')
+    console.log('当前模板:', props.templateInfo.tname)
+    console.log('本地数据:', localData.value)
+    console.log('父级数据:', props.defaultData)
+  })
 </script>
 
 <style scoped>

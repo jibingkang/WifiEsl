@@ -81,28 +81,52 @@ async def get_device_list(
     status: str = Query(default=None),
 ):
     """获取设备列表"""
+    logger.info(f"[API /devices] ========== 获取设备列表请求开始 ==========")
+    logger.info(f"[API /devices] 请求参数: page={page}, page_size={page_size}, search={search}, status={status}")
+    logger.debug(f"[API /devices] 请求头: {dict(request.headers)}")
+    
+    # 从请求头提取Authorization
+    auth_header = request.headers.get("authorization", "")
+    logger.info(f"[API /devices] Authorization头: {auth_header[:50]}...")
+    
     api_key = _get_api_key(request)
     if not api_key:
+        logger.warning(f"[API /devices] ❌ 未找到有效的API Key，返回401未授权")
+        logger.warning(f"[API /devices] Auth头格式: {'Bearer ' if auth_header.startswith('Bearer ') else '不正确'}")
         return {"code": 40100, "message": "未授权，请先登录", "data": None}
 
+    logger.info(f"[API /devices] ✅ 提取到的API Key: {api_key[:8]}... (长度: {len(api_key)})")
+    logger.info(f"[API /devices] API Key格式检查:")
+    logger.info(f"[API /devices]   - 是JWT格式 (eyJ开头): {api_key.startswith('eyJ')}")
+    logger.info(f"[API /devices]   - 长度: {len(api_key)} 字符")
+    logger.info(f"[API /devices]   - 是WIFI_APIKEY格式 (24字符): {len(api_key) == 24}")
+    
     try:
         query_parts = []
         if status:
             query_parts.append(status)
         if search:
             query_parts.append(search)
+        
+        query_str = ",".join(query_parts)
+        logger.info(f"[API /devices] 构造的查询参数: {query_str}")
 
+        logger.info(f"[API /devices] 开始调用wifi_proxy.get_devices...")
         raw_data = await wifi_proxy.get_devices(
             api_key=api_key,
             page=page,
             page_size=page_size,
-            query=",".join(query_parts),
+            query=query_str,
         )
 
         # DEBUG: 打印原始数据用于调试
         import json as _json
-        logger.info(f"RAW device data type={type(raw_data).__name__} keys={list(raw_data.keys()) if isinstance(raw_data, dict) else 'N/A'}")
-        logger.info(f"RAW device data (first 500 chars): {_json.dumps(raw_data, ensure_ascii=False)[:500]}")
+        logger.info(f"[API /devices] RAW device data type={type(raw_data).__name__}")
+        if isinstance(raw_data, dict):
+            logger.info(f"[API /devices] RAW device data keys={list(raw_data.keys())}")
+            logger.info(f"[API /devices] RAW device data (first 800 chars): {_json.dumps(raw_data, ensure_ascii=False, indent=2)[:800]}")
+        else:
+            logger.info(f"[API /devices] RAW device data (type): {type(raw_data)}")
 
         # 真实系统返回格式: { code:20000, data:{ items:[...], total:N } }
         inner_data = raw_data.get("data", raw_data) if isinstance(raw_data, dict) else raw_data

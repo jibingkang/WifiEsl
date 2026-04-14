@@ -3,6 +3,7 @@ WIFI标签管理系统 - FastAPI 应用入口
 """
 import sys
 import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,23 @@ from fastapi.responses import JSONResponse
 
 # 确保项目根目录在路径中（用于加载 .env）
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 配置全局日志级别（DEBUG级别显示所有日志）
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('wifi_esl_debug.log', encoding='utf-8')
+    ]
+)
+
+# 设置httpx的日志级别为DEBUG
+logging.getLogger("httpx").setLevel(logging.DEBUG)
+logging.getLogger("httpcore").setLevel(logging.DEBUG)
+
+logger = logging.getLogger(__name__)
+logger.info("WIFI标签管理系统启动，日志级别: DEBUG")
 
 from config import settings
 

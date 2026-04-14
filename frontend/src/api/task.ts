@@ -44,6 +44,7 @@ export interface CreateTaskData {
 
 export interface UpdateTaskData {
   name?: string
+  tid?: string
   default_data?: Record<string, any>
   status?: string
 }
