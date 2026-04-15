@@ -35,9 +35,9 @@ def get_wifi_client(base_url: str | None = None) -> httpx.AsyncClient:
     # 创建新的客户端
     client = httpx.AsyncClient(
         base_url=base_url,
-        timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=30.0),  # read超时增加到120秒
+        timeout=httpx.Timeout(connect=10.0, read=30.0, write=30.0, pool=30.0),  # 统一30秒超时
         headers={"Content-Type": "application/json"},
-        limits=httpx.Limits(max_connections=20, max_keepalive_connections=5),
+        limits=httpx.Limits(max_connections=50, max_keepalive_connections=10),  # 增加连接池限制以支持批量推送
         follow_redirects=True,  # 启用重定向跟随
     )
     _clients[base_url] = client

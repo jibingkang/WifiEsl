@@ -220,7 +220,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { X, AlertCircle } from 'lucide-vue-next'
 import type { TemplateInfo } from '@/types'
 
@@ -241,6 +241,14 @@ const emit = defineEmits<{
   pushDevice: [dev: any]
   removeBinding: [dev: any]
 }>()
+
+// ── 调试：监听 customOverrides 变化 ──
+watch(() => props.customOverrides, (newVal, oldVal) => {
+  console.log('[DeviceDataTable] customOverrides 变化:', {
+    new: JSON.parse(JSON.stringify(newVal)),
+    old: JSON.parse(JSON.stringify(oldVal))
+  })
+}, { deep: true })
 
 // ── Checkbox 逻辑 ──
 const isAllChecked = computed(() =>

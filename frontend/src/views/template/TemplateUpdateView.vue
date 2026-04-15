@@ -129,6 +129,13 @@
             <span class="badge-sent">正在更新 {{ taskProgress.sent }}</span>
             <span class="badge-success">更新成功 {{ taskProgress.success }}</span>
             <span class="badge-failed">更新失败 {{ taskProgress.failed }}</span>
+            <el-divider direction="vertical" />
+            <el-button v-if="selectedMacs.length > 0" type="primary" text size="small" @click="exportToExcel">
+              <Download :size="14" /> 导出Excel
+            </el-button>
+            <el-button type="primary" text size="small" @click="showImportDialog = true" :disabled="!selectedTemplate">
+              <Upload :size="14" /> 导入Excel
+            </el-button>
           </div>
         </div>
 
@@ -166,6 +173,7 @@
         </div>
 
         <DeviceDataTable
+          :key="tableRefreshKey"
           v-model:checked-macs="checkedMacs"
           :template-info="selectedTemplate!"
           :devices="filteredDeviceTableData"
@@ -236,6 +244,59 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- Excel导入弹窗 -->
+    <el-dialog
+      v-model="showImportDialog"
+      title="导入设备列表"
+      width="520px"
+      destroy-on-close
+      append-to-body
+    >
+      <div class="import-dialog-content">
+        <el-alert
+          type="info"
+          :closable="false"
+          style="margin-bottom: 16px;"
+        >
+          <template #title>
+            <div style="line-height: 1.6;">
+              <p>1. 支持导入包含MAC地址和模板字段数据的Excel文件</p>
+              <p>2. 第一行为表头，必须包含"MAC地址"列</p>
+              <p>3. 已存在的设备将更新自定义数据，新设备将添加到任务</p>
+            </div>
+          </template>
+        </el-alert>
+        
+        <div class="template-download-row" style="margin-bottom: 16px;">
+          <el-button type="primary" text @click="downloadImportTemplate">
+            <Download :size="14" style="margin-right: 4px;" /> 下载导入模板
+          </el-button>
+        </div>
+        
+        <el-upload
+          v-model:file-list="importFileList"
+          drag
+          accept=".xlsx,.xls"
+          :auto-upload="false"
+          :on-change="handleImport"
+          :limit="1"
+        >
+          <el-icon class="el-icon--upload"><Upload /></el-icon>
+          <div class="el-upload__text">
+            拖拽文件到此处或 <em>点击上传</em>
+          </div>
+          <template #tip>
+            <div class="el-upload__tip">
+              请上传 .xlsx 或 .xls 格式的Excel文件
+            </div>
+          </template>
+        </el-upload>
+      </div>
+      <template #footer>
+        <el-button @click="showImportDialog = false; importFileList = []">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -246,7 +307,7 @@ import { ElNotification, ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import {
   Clock, Files, LayoutTemplate, Plus, Pencil, Smartphone,
-  Send, Info, ListTodo,
+  Send, Info, ListTodo, Download, Upload,
 } from 'lucide-vue-next'
 import { Search } from '@element-plus/icons-vue'
 import { useTemplate } from '@/composables/useTemplate'
@@ -272,6 +333,12 @@ const showCreateTaskDialog = ref(false)
 const newTaskName = ref('')
 const newTaskTid = ref('')
 const creatingTask = ref(false)
+
+// ════════════ Excel导入导出 ════════════
+const showImportDialog = ref(false)
+const importFileList = ref<any[]>([])
+const importing = ref(false)
+const tableRefreshKey = ref(0)  // 用于强制刷新表格
 
 // ── 模板 ──
 const selectedTid = ref<string>('')
@@ -1082,6 +1149,273 @@ async function handleRemoveTableDevice(dev: any) {
       ElMessage.error(`移除失败: ${e.message || '未知错误'}`)
     }
   }
+}
+
+// ════════════ Excel导入导出功能 ════════════
+
+/** 导出设备列表到Excel */
+function exportToExcel() {
+  if (!selectedTemplate.value || selectedMacs.value.length === 0) {
+    ElMessage.warning('没有可导出的设备')
+    return
+  }
+
+  // 确定要导出的设备：有勾选则导出勾选的，否则导出全部
+  const macsToExport = checkedMacs.value.length > 0 ? checkedMacs.value : selectedMacs.value
+  
+  if (macsToExport.length === 0) {
+    ElMessage.warning('没有可导出的设备')
+    return
+  }
+
+  // 获取模板字段
+  const fields = selectedTemplate.value.fields || []
+  
+  // 构建表头（使用 label 作为显示名，key 作为数据键）
+  const headers = ['MAC地址', '设备名称', '状态', ...fields.map((f: any) => f.label || f.key)]
+  
+  // 构建数据行
+  const rows = macsToExport.map(mac => {
+    const device = deviceStore.devices?.find((d: any) => d.mac === mac)
+    const customData = customOverrides.value[mac] || {}
+    const taskDev = taskDetail.value?.devices?.find((d: any) => d.mac === mac)
+    
+    const row: any = {
+      'MAC地址': mac,
+      '设备名称': device?.name || '',
+      '状态': taskDev?.update_status || 'pending',
+    }
+    
+    // 添加模板字段值（优先使用自定义数据，其次使用默认值）
+    fields.forEach((field: any) => {
+      const key = field.key
+      const label = field.label || key
+      const value = customData[key] !== undefined ? customData[key] : defaultData.value[key]
+      row[label] = value !== undefined ? value : ''
+    })
+    
+    return row
+  })
+
+  // 使用SheetJS导出
+  import('xlsx').then(XLSX => {
+    const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers })
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '设备列表')
+    
+    // 构建文件名：任务名_模板名_导出类型_年月日时分秒
+    const taskName = taskDetail.value?.name || '任务'
+    const templateName = selectedTemplate.value?.tname || selectedTemplate.value?.tid || '未知模板'
+    const exportType = checkedMacs.value.length > 0 ? '已选' : '全部'
+    const now = new Date()
+    const timeStr = now.toLocaleString('zh-CN', { 
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).replace(/[/:]/g, '').replace(/\s/g, '_')
+    
+    const fileName = `${taskName}_${templateName}_${exportType}_${timeStr}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+    ElMessage.success(`已导出 ${rows.length} 台设备`)
+  }).catch((e) => {
+    console.error('导出失败:', e)
+    ElMessage.error('导出失败，请检查是否安装了xlsx库')
+  })
+}
+
+/** 处理Excel导入 */
+async function handleImport(file: any) {
+  if (!file) return
+  
+  importing.value = true
+  try {
+    const XLSX = await import('xlsx')
+    const data = await file.raw.arrayBuffer()
+    const workbook = XLSX.read(data, { type: 'array' })
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+    
+    if (jsonData.length < 2) {
+      ElMessage.warning('Excel文件数据为空')
+      return
+    }
+    
+    // 解析表头
+    const headers = jsonData[0] as string[]
+    const macIndex = headers.findIndex(h => h.includes('MAC') || h.includes('mac'))
+    
+    if (macIndex === -1) {
+      ElMessage.error('未找到MAC地址列，请检查Excel格式')
+      return
+    }
+    
+    // 获取模板字段映射
+    const fields = selectedTemplate.value?.fields || []
+    console.log('[Import] 模板字段:', fields.map((f: any) => ({ key: f.key, label: f.label })))
+    console.log('[Import] Excel表头:', headers)
+    const fieldKeyToIndex: Record<string, number> = {}
+    fields.forEach((field: any) => {
+      const label = field.label || field.key
+      const index = headers.findIndex(h => h === label || h === field.key)
+      console.log(`[Import] 查找字段 "${label}" (key: ${field.key}) -> 索引: ${index}`)
+      if (index !== -1) {
+        fieldKeyToIndex[field.key] = index
+      }
+    })
+    console.log('[Import] 字段映射:', fieldKeyToIndex)
+    
+    // 解析数据行
+    const importedMacs: string[] = []
+    const importedCustomData: Record<string, Record<string, any>> = {}
+    
+    // 有效的MAC地址正则：6组十六进制，用冒号或连字符分隔
+    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/
+    
+    for (let i = 1; i < jsonData.length; i++) {
+      const row = jsonData[i]
+      const mac = row[macIndex] as string
+      if (!mac || typeof mac !== 'string') continue
+      
+      const trimmedMac = mac.trim().toUpperCase()
+      // 验证MAC地址格式
+      if (!macRegex.test(trimmedMac)) {
+        console.log(`[Import] 跳过无效的MAC地址: "${mac}"`)
+        continue
+      }
+      
+      const normalizedMac = trimmedMac
+      importedMacs.push(normalizedMac)
+      
+      // 提取自定义数据
+      const customData: Record<string, any> = {}
+      Object.entries(fieldKeyToIndex).forEach(([key, idx]) => {
+        if (row[idx] !== undefined && row[idx] !== null && row[idx] !== '') {
+          customData[key] = row[idx]
+        }
+      })
+      
+      if (Object.keys(customData).length > 0) {
+        importedCustomData[normalizedMac] = customData
+        console.log(`[Import] MAC ${normalizedMac} 提取的数据:`, customData)
+      }
+    }
+    
+    if (importedMacs.length === 0) {
+      ElMessage.warning('未找到有效的设备MAC地址')
+      return
+    }
+    
+    // 合并到当前任务
+    if (currentTaskId.value) {
+      // 添加到现有任务（新设备）
+      const newMacs = importedMacs.filter(m => !selectedMacs.value.includes(m))
+      if (newMacs.length > 0) {
+        // 只传递新设备的自定义数据
+        const newMacsCustomData: Record<string, Record<string, any>> = {}
+        newMacs.forEach(mac => {
+          if (importedCustomData[mac]) {
+            newMacsCustomData[mac] = importedCustomData[mac]
+          }
+        })
+        await taskApi.addTaskDevices(currentTaskId.value, newMacs, newMacsCustomData)
+      }
+      
+      // 更新已有设备的自定义数据（通过API保存到后端）
+      const existingMacs = importedMacs.filter(m => selectedMacs.value.includes(m))
+      const updatePromises: Promise<any>[] = []
+      for (const mac of existingMacs) {
+        if (importedCustomData[mac] && Object.keys(importedCustomData[mac]).length > 0) {
+          console.log(`[Import] 更新已有设备 ${mac} 的自定义数据:`, importedCustomData[mac])
+          updatePromises.push(
+            taskApi.updateTaskDeviceData(currentTaskId.value, mac, importedCustomData[mac])
+          )
+        }
+      }
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises)
+        console.log(`[Import] 已更新 ${updatePromises.length} 台已有设备的自定义数据`)
+      }
+      
+      // 更新所有导入设备的自定义数据（包括新设备和已有设备）
+      const updatedOverrides: Record<string, Record<string, any>> = {}
+      // 先复制现有的
+      for (const [mac, data] of Object.entries(customOverrides.value)) {
+        updatedOverrides[mac] = { ...data }
+      }
+      // 再合并导入的数据
+      for (const [mac, data] of Object.entries(importedCustomData)) {
+        updatedOverrides[mac] = { ...updatedOverrides[mac], ...data }
+      }
+      customOverrides.value = updatedOverrides
+      console.log('[Import] 已更新 customOverrides:', JSON.parse(JSON.stringify(updatedOverrides)))
+      
+      // 从后端重新加载以获取最新状态（现在已有设备的自定义数据已保存）
+      await loadTaskDetail(currentTaskId.value)
+      
+      // 强制刷新模板数据缓存
+      if (selectedTemplate.value?.tid) {
+        templateDataCache.value[selectedTemplate.value.tid] = {
+          defaultData: { ...defaultData.value },
+          customOverrides: { ...updatedOverrides }
+        }
+      }
+    } else {
+      // 没有任务时，只更新本地数据
+      const updatedOverrides: Record<string, Record<string, any>> = {}
+      for (const [mac, data] of Object.entries(customOverrides.value)) {
+        updatedOverrides[mac] = { ...data }
+      }
+      importedMacs.forEach(mac => {
+        if (importedCustomData[mac]) {
+          updatedOverrides[mac] = { ...updatedOverrides[mac], ...importedCustomData[mac] }
+        }
+      })
+      customOverrides.value = updatedOverrides
+      console.log('[Import] 无任务模式，已更新 customOverrides:', JSON.parse(JSON.stringify(updatedOverrides)))
+      ElMessage.info(`已导入 ${importedMacs.length} 台设备数据，请创建任务后添加设备`)
+    }
+    
+    ElMessage.success(`成功导入 ${importedMacs.length} 台设备`)
+    showImportDialog.value = false
+    importFileList.value = []
+    
+    // 强制刷新表格显示
+    tableRefreshKey.value++
+    await nextTick()
+  } catch (e: any) {
+    console.error('导入失败:', e)
+    ElMessage.error(`导入失败: ${e.message || '未知错误'}`)
+  } finally {
+    importing.value = false
+  }
+}
+
+/** 下载导入模板 */
+function downloadImportTemplate() {
+  if (!selectedTemplate.value) {
+    ElMessage.warning('请先选择模板')
+    return
+  }
+  
+  const fields = selectedTemplate.value.fields || []
+  const headers = ['MAC地址', '设备名称', '状态', ...fields.map((f: any) => f.label || f.key)]
+  
+  // 示例数据
+  const exampleData = [{
+    'MAC地址': 'D4:3D:39:XX:XX:XX',
+    '设备名称': '示例设备',
+    '状态': 'pending',
+    ...fields.reduce((acc: any, f: any) => {
+      acc[f.label || f.key] = ''
+      return acc
+    }, {})
+  }]
+  
+  import('xlsx').then(XLSX => {
+    const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers })
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '导入模板')
+    XLSX.writeFile(workbook, `设备导入模板_${selectedTemplate.value?.tname || '模板'}.xlsx`)
+  })
 }
 
 /** 全选/反切所有设备勾选 */

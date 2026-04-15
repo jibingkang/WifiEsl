@@ -1236,17 +1236,17 @@ async def remove_template_binding(tid: str, mac: str) -> bool:
 # UpdateTasks 表操作（更新任务主表）
 # ============================================================
 
-async def create_update_task(name: str, tid: str, tname: str = "") -> int:
+async def create_update_task(name: str, tid: str, tname: str = "", user_id: int = 0) -> int:
     """创建新更新任务，返回 task_id"""
     db = await get_db()
     cursor = await db.execute(
-        """INSERT INTO update_tasks (name, tid, tname, status, created_at, updated_at)
-           VALUES (?, ?, ?, 'draft', datetime('now','localtime'), datetime('now','localtime'))""",
-        (name, tid, tname),
+        """INSERT INTO update_tasks (name, tid, tname, user_id, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'draft', datetime('now','localtime'), datetime('now','localtime'))""",
+        (name, tid, tname, user_id),
     )
     await db.commit()
     task_id = cursor.lastrowid
-    logger.info(f"创建更新任务: id={task_id}, name={name}, tid={tid}")
+    logger.info(f"创建更新任务: id={task_id}, name={name}, tid={tid}, user_id={user_id}")
     return task_id
 
 
@@ -1254,6 +1254,7 @@ async def get_task_list(
     page: int = 1,
     page_size: int = 20,
     status_filter: str = "",
+    user_id: int = 0,
 ) -> tuple[list[dict], int]:
     """
     分页查询更新任务列表（含摘要统计）
@@ -1261,13 +1262,13 @@ async def get_task_list(
     """
     db = await get_db()
 
-    where_parts = []
-    params: list = []
+    where_parts = ["user_id = ?"]
+    params: list = [user_id]
     if status_filter:
         where_parts.append("status = ?")
         params.append(status_filter)
 
-    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+    where_sql = f"WHERE {' AND '.join(where_parts)}"
 
     cnt_sql = f"SELECT COUNT(*) as total FROM update_tasks {where_sql}"
     cursor = await db.execute(cnt_sql, params)
@@ -1283,12 +1284,15 @@ async def get_task_list(
     return items, total
 
 
-async def get_task_detail(task_id: int) -> dict | None:
+async def get_task_detail(task_id: int, user_id: int = 0) -> dict | None:
     """获取单个任务详情（含设备列表和状态统计）"""
     db = await get_db()
 
-    # 主表信息
-    cursor = await db.execute("SELECT * FROM update_tasks WHERE id=?", (task_id,))
+    # 主表信息（带用户权限检查）
+    cursor = await db.execute(
+        "SELECT * FROM update_tasks WHERE id=? AND user_id=?", 
+        (task_id, user_id)
+    )
     row = await cursor.fetchone()
     if not row:
         return None
