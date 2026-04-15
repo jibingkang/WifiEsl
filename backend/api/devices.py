@@ -7,16 +7,37 @@ from datetime import datetime
 
 from fastapi import APIRouter, Query, Request
 
-from services.wifi_client import wifi_proxy
-from services.auth_service import get_api_key_from_request
+from services.wifi_connection_manager import wifi_connection_manager
+from services.auth_service import get_api_key_from_request as get_auth_api_key, get_current_user_id_from_token
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/devices", tags=["设备管理"])
 
 
-def _get_api_key(request: Request) -> str | None:
-    return get_api_key_from_request(dict(request.headers))
+async def _get_user_wifi_token(request: Request) -> str | None:
+    """获取用户的WIFI系统token"""
+    try:
+        # 从请求中获取当前用户ID
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header:
+            return None
+        
+        # 提取token（去掉Bearer前缀）
+        token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+        if not token:
+            return None
+        
+        # 从token获取用户ID
+        user_id = get_current_user_id_from_token(token)
+        if not user_id:
+            return None
+        
+        # 获取用户的WIFI系统token
+        return await wifi_connection_manager.get_token_for_user(user_id)
+    except Exception as e:
+        logger.error(f"获取用户WIFI token失败: {e}")
+        return None
 
 
 def _extract_timestamp(item: dict) -> tuple[str, str]:
@@ -89,17 +110,34 @@ async def get_device_list(
     auth_header = request.headers.get("authorization", "")
     logger.info(f"[API /devices] Authorization头: {auth_header[:50]}...")
     
-    api_key = _get_api_key(request)
-    if not api_key:
-        logger.warning(f"[API /devices] ❌ 未找到有效的API Key，返回401未授权")
-        logger.warning(f"[API /devices] Auth头格式: {'Bearer ' if auth_header.startswith('Bearer ') else '不正确'}")
+    # 获取用户的WIFI系统token
+    from services.auth_service import get_current_user_id_from_token
+    
+    # 提取token（去掉Bearer前缀）
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    if not token:
+        logger.warning(f"[API /devices] ❌ 未找到有效的token，返回401未授权")
         return {"code": 40100, "message": "未授权，请先登录", "data": None}
-
-    logger.info(f"[API /devices] ✅ 提取到的API Key: {api_key[:8]}... (长度: {len(api_key)})")
-    logger.info(f"[API /devices] API Key格式检查:")
-    logger.info(f"[API /devices]   - 是JWT格式 (eyJ开头): {api_key.startswith('eyJ')}")
-    logger.info(f"[API /devices]   - 长度: {len(api_key)} 字符")
-    logger.info(f"[API /devices]   - 是WIFI_APIKEY格式 (24字符): {len(api_key) == 24}")
+    
+    # 从token获取用户ID
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        logger.warning(f"[API /devices] ❌ 无法从token获取用户ID")
+        return {"code": 40100, "message": "无效的token", "data": None}
+    
+    logger.info(f"[API /devices] ✅ 用户ID: {user_id}")
+    
+    # 获取用户的WIFI连接
+    conn = await wifi_connection_manager.get_connection(user_id)
+    if not conn or not conn.token:
+        logger.error(f"[API /devices] ❌ 用户 {user_id} 的WIFI连接或token无效")
+        return {"code": 50000, "message": "WIFI系统连接失败，请检查WIFI配置", "data": None}
+    
+    api_key = conn.token
+    base_url = conn.wifi_base_url
+    
+    logger.info(f"[API /devices] ✅ 使用用户 {user_id} 的WIFI配置: base_url={base_url}")
+    logger.info(f"[API /devices] ✅ WIFI系统token: {api_key[:8]}... (长度: {len(api_key)})")
     
     try:
         query_parts = []
@@ -111,12 +149,15 @@ async def get_device_list(
         query_str = ",".join(query_parts)
         logger.info(f"[API /devices] 构造的查询参数: {query_str}")
 
-        logger.info(f"[API /devices] 开始调用wifi_proxy.get_devices...")
+        logger.info(f"[API /devices] 开始调用WIFI系统获取设备列表...")
+        # 需要重新导入wifi_proxy，因为现在的连接管理是独立的
+        from services.wifi_client import wifi_proxy
         raw_data = await wifi_proxy.get_devices(
-            api_key=api_key,
-            page=page,
-            page_size=page_size,
-            query=query_str,
+                api_key=api_key,
+                base_url=base_url,
+                page=page,
+                page_size=page_size,
+                query=query_str,
         )
 
         # DEBUG: 打印原始数据用于调试
@@ -187,12 +228,28 @@ async def get_device_list(
 @router.get("/mac/{mac}")
 async def get_device_by_mac(mac: str, request: Request):
     """根据MAC地址查询设备"""
-    api_key = _get_api_key(request)
-    if not api_key:
+    # 获取用户的WIFI系统token
+    token = await _get_user_wifi_token(request)
+    if not token:
         return {"code": 40100, "message": "未授权", "data": None}
 
     try:
-        raw_data = await wifi_proxy.get_device_by_mac(mac, api_key)
+        # 获取用户ID和连接信息
+        from services.auth_service import get_current_user_id_from_token
+        auth_header = request.headers.get("authorization", "")
+        user_token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+        user_id = get_current_user_id_from_token(user_token)
+        
+        if not user_id:
+            return {"code": 40100, "message": "无效的token", "data": None}
+        
+        # 获取用户的WIFI连接
+        conn = await wifi_connection_manager.get_connection(user_id)
+        if not conn:
+            return {"code": 50000, "message": "WIFI系统连接失败", "data": None}
+        
+        from services.wifi_client import wifi_proxy
+        raw_data = await wifi_proxy.get_device_by_mac(mac, token)
         # 归一化字段（与列表接口保持一致）
         data = _normalize_single_device(raw_data)
         return {"code": 20000, "message": "", "data": data}
@@ -355,12 +412,28 @@ async def remove_template_device_binding(tid: str, mac: str):
 @router.get("/{device_id}")
 async def get_device(device_id: str, request: Request):
     """获取单个设备详情"""
-    api_key = _get_api_key(request)
-    if not api_key:
+    # 获取用户的WIFI系统token
+    token = await _get_user_wifi_token(request)
+    if not token:
         return {"code": 40100, "message": "未授权", "data": None}
 
     try:
-        raw_data = await wifi_proxy.get_device_by_id(device_id, api_key)
+        # 获取用户ID和连接信息
+        from services.auth_service import get_current_user_id_from_token
+        auth_header = request.headers.get("authorization", "")
+        user_token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+        user_id = get_current_user_id_from_token(user_token)
+        
+        if not user_id:
+            return {"code": 40100, "message": "无效的token", "data": None}
+        
+        # 获取用户的WIFI连接
+        conn = await wifi_connection_manager.get_connection(user_id)
+        if not conn:
+            return {"code": 50000, "message": "WIFI系统连接失败", "data": None}
+        
+        from services.wifi_client import wifi_proxy
+        raw_data = await wifi_proxy.get_device_by_id(device_id, token)
         # 归一化字段
         data = _normalize_single_device(raw_data)
         return {"code": 20000, "message": "", "data": data}

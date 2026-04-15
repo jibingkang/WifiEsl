@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '仪表盘', icon: 'Odometer', affix: true },
       },
       {
+        path: 'users',
+        name: 'UserList',
+        component: () => import('@/views/user/UserListView.vue'),
+        meta: { title: '用户管理', icon: 'User' },
+      },
+      {
         path: 'devices',
         name: 'DeviceList',
         component: () => import('@/views/device/DeviceListView.vue'),
@@ -35,7 +41,7 @@ const routes: RouteRecordRaw[] = [
         path: 'template',
         name: 'DataUpdate',
         redirect: '/template/update',
-        meta: { title: '数据更新', icon: 'Document' },
+        meta: { title: '数据管理', icon: 'Document' },
         children: [
           {
             path: '',
@@ -97,7 +103,7 @@ export default routes
  * 路由守卫配置
  */
 export function setupRouterGuards(routerInstance: any) {
-  const userStore = () => import('@/stores/user').then(m => m.useUserStore())
+  const authStore = () => import('@/stores/auth').then(m => m.useAuthStore())
   
   routerInstance.beforeEach(async (to, _from, next) => {
     NProgress.start()
@@ -111,9 +117,12 @@ export function setupRouterGuards(routerInstance: any) {
     const requiresAuth = to.meta?.requiresAuth !== false
     
     if (requiresAuth) {
-      const store = await userStore()
+      const store = await authStore()
       
-      if (!store.token) {
+      // 检查登录状态
+      const isAuthenticated = store.isAuthenticated || store.checkAuth()
+      
+      if (!isAuthenticated) {
         // 未登录，跳转到登录页
         next({
           name: 'Login',

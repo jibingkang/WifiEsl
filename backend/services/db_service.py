@@ -60,10 +60,60 @@ async def init_db():
             role        TEXT    NOT NULL DEFAULT 'operator',
             avatar      TEXT    DEFAULT '',
             status      TEXT    NOT NULL DEFAULT 'active',
+            
+            -- WIFI系统独立配置（每个子账号有自己的WIFI配置）
+            wifi_username    TEXT,      -- WIFI系统的用户名
+            wifi_password    TEXT,      -- WIFI系统的密码（AES加密存储）
+            wifi_apikey      TEXT,      -- 用于MQTT订阅的API Key
+            wifi_token       TEXT,      -- WIFI系统登录后返回的token（新增，用于调用WIFI系统API）
+            wifi_base_url    TEXT,      -- WIFI系统API地址
+            wifi_mqtt_broker TEXT,      -- MQTT broker地址（新增）
+            
+            -- 用户关系（用于管理员管理子账号）
+            parent_user_id   INTEGER DEFAULT 0,  -- 上级用户ID（0为根用户）
+            created_by       INTEGER DEFAULT 0,   -- 创建者用户ID
+            
             created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
             updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
         );
+        
+        -- 为增强的用户表创建索引
+        CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_user_id);
+        CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+        CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
     """)
+
+    # 检查并添加缺失的列（数据库迁移）
+    await db.executescript("""
+        -- 检查并添加wifi_mqtt_broker列（如果不存在）
+        PRAGMA table_info(users);
+    """)
+    
+    # 获取当前列信息
+    columns_info = await db.execute("PRAGMA table_info(users)")
+    columns = await columns_info.fetchall()
+    column_names = [col[1] for col in columns]
+    
+    # 添加缺失的列
+    if 'wifi_mqtt_broker' not in column_names:
+        print("[数据库迁移] 正在添加wifi_mqtt_broker列到users表...")
+        await db.execute("ALTER TABLE users ADD COLUMN wifi_mqtt_broker TEXT")
+        print("[数据库迁移] ✅ wifi_mqtt_broker列添加成功")
+    
+    if 'wifi_token' not in column_names:
+        print("[数据库迁移] 正在添加wifi_token列到users表...")
+        await db.execute("ALTER TABLE users ADD COLUMN wifi_token TEXT")
+        print("[数据库迁移] ✅ wifi_token列添加成功")
+    
+    if 'mqtt_username' not in column_names:
+        print("[数据库迁移] 正在添加mqtt_username列到users表...")
+        await db.execute("ALTER TABLE users ADD COLUMN mqtt_username TEXT DEFAULT 'test'")
+        print("[数据库迁移] ✅ mqtt_username列添加成功")
+    
+    if 'mqtt_password' not in column_names:
+        print("[数据库迁移] 正在添加mqtt_password列到users表...")
+        await db.execute("ALTER TABLE users ADD COLUMN mqtt_password TEXT DEFAULT '123456'")
+        print("[数据库迁移] ✅ mqtt_password列添加成功")
 
     # ── 系统配置表 (key-value) ──
     await db.executescript("""
@@ -130,6 +180,8 @@ async def init_db():
     """)
 
     # ── 设备状态表 (存储每个设备的最新实时状态) ──
+    # 注意：多租户模式下，每个用户有自己的设备记录
+    # 先创建表（不包含 user_id，兼容旧表）
     await db.executescript("""
         CREATE TABLE IF NOT EXISTS devices (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,8 +199,22 @@ async def init_db():
             created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
             updated_at      TEXT    DEFAULT (datetime('now', 'localtime'))
         );
-
-        -- 查询索引
+    """)
+    
+    # 迁移：添加 user_id 列（如果不存在）
+    try:
+        existing = await (await db.execute("PRAGMA table_info(devices)")).fetchall()
+        col_names = {row[1] for row in existing}
+        if 'user_id' not in col_names:
+            await db.execute("ALTER TABLE devices ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 devices.user_id")
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 添加 devices.user_id 列失败: {e}")
+    
+    # 创建索引（在确认 user_id 列存在后）
+    await db.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
         CREATE INDEX IF NOT EXISTS idx_devices_online ON devices(is_online);
         CREATE INDEX IF NOT EXISTS idx_devices_mac ON devices(mac);
         CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen_at);
@@ -187,6 +253,7 @@ async def init_db():
     """)
 
     # ── 更新任务主表 ──
+    # 先创建基础表（不包含 user_id，兼容旧表）
     await db.executescript("""
         CREATE TABLE IF NOT EXISTS update_tasks (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,6 +270,22 @@ async def init_db():
             sent_at         TEXT,
             completed_at    TEXT
         );
+    """)
+    
+    # 迁移：添加 user_id 列（如果不存在）
+    try:
+        existing = await (await db.execute("PRAGMA table_info(update_tasks)")).fetchall()
+        col_names = {row[1] for row in existing}
+        if 'user_id' not in col_names:
+            await db.execute("ALTER TABLE update_tasks ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 update_tasks.user_id")
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 添加 update_tasks.user_id 列失败: {e}")
+    
+    # 创建索引（在确认 user_id 列存在后）
+    await db.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_utasks_user ON update_tasks(user_id);
         CREATE INDEX IF NOT EXISTS idx_utasks_tid ON update_tasks(tid);
         CREATE INDEX IF NOT EXISTS idx_utasks_status ON update_tasks(status);
     """)
@@ -233,7 +316,7 @@ async def init_db():
     # ═══ 兼容旧数据库：确保 task_devices 有新列 ═══
     try:
         # SQLite 不支持 IF NOT EXISTS 加列，先查 PRAGMA
-        existing = (await db.execute("PRAGMA table_info(task_devices)")).fetchall()
+        existing = await (await db.execute("PRAGMA table_info(task_devices)")).fetchall()
         col_names = {row[1] for row in existing}
         if 'sent_at' not in col_names:
             await db.execute("ALTER TABLE task_devices ADD COLUMN sent_at TEXT")
@@ -244,6 +327,44 @@ async def init_db():
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
+    
+    # 检查并添加users表的新字段
+    try:
+        existing = (await db.execute("PRAGMA table_info(users)")).fetchall()
+        col_names = {row[1] for row in existing}
+        
+        # 检查并添加WIFI配置字段
+        wifi_fields = [
+            ('wifi_username', 'TEXT'),
+            ('wifi_password', 'TEXT'),
+            ('wifi_apikey', 'TEXT'),
+            ('wifi_base_url', 'TEXT'),
+            ('parent_user_id', 'INTEGER DEFAULT 0'),
+            ('created_by', 'INTEGER DEFAULT 0')
+        ]
+        
+        for field_name, field_type in wifi_fields:
+            if field_name not in col_names:
+                await db.execute(f"ALTER TABLE users ADD COLUMN {field_name} {field_type}")
+                logger.info(f"[DB] 已添加列 users.{field_name}")
+        
+        # 检查并创建索引
+        existing_idx = await db.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='users'")
+        idx_names = {row[0] for row in await existing_idx.fetchall()}
+        
+        if 'idx_users_parent' not in idx_names:
+            await db.execute("CREATE INDEX idx_users_parent ON users(parent_user_id)")
+            logger.info("[DB] 已创建索引 idx_users_parent")
+        if 'idx_users_role' not in idx_names:
+            await db.execute("CREATE INDEX idx_users_role ON users(role)")
+            logger.info("[DB] 已创建索引 idx_users_role")
+        if 'idx_users_status' not in idx_names:
+            await db.execute("CREATE INDEX idx_users_status ON users(status)")
+            logger.info("[DB] 已创建索引 idx_users_status")
+        
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加users表兼容列失败（可忽略）: {e}")
 
     # ── 插入默认数据 (仅当表为空时) ──
     await _seed_default_data(db)
@@ -271,11 +392,66 @@ async def _seed_default_data(db: aiosqlite.Connection):
     cursor = await db.execute("SELECT COUNT(*) as cnt FROM users")
     row = await cursor.fetchone()
     if row and row["cnt"] == 0:
+        # 创建默认管理员账号，使用当前系统配置作为WIFI配置
+        try:
+            # 尝试加密WIFI密码
+            encrypted_wifi_password = encrypt_wifi_password(settings.wifi_password)
+        except Exception as e:
+            logger.warning(f"WIFI密码加密失败，使用明文存储: {e}")
+            encrypted_wifi_password = settings.wifi_password
+        
         await db.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            ("admin", default_pwd_hash, "admin"),
+            """INSERT INTO users (
+                username, password, role, 
+                wifi_username, wifi_password, wifi_apikey, wifi_base_url,
+                parent_user_id, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "admin", default_pwd_hash, "admin",
+                settings.wifi_username, 
+                encrypted_wifi_password,    # 加密存储的WIFI密码
+                settings.wifi_apikey,
+                settings.wifi_base_url,
+                0, 0  # 根用户，自己创建
+            ),
         )
         logger.info("已创建默认管理员账号: admin / admin123")
+        logger.info(f"管理员WIFI配置: 用户名={settings.wifi_username}, API地址={settings.wifi_base_url}")
+    else:
+        # 已有用户，检查并更新现有管理员的WIFI配置（如果为空）
+        cursor = await db.execute("SELECT id FROM users WHERE username = 'admin'")
+        admin_user = await cursor.fetchone()
+        if admin_user:
+            # 检查WIFI配置是否为空
+            cursor = await db.execute(
+                "SELECT wifi_username FROM users WHERE id = ?", (admin_user['id'],)
+            )
+            wifi_username_exists = await cursor.fetchone()
+            if wifi_username_exists and wifi_username_exists['wifi_username'] is None:
+                # 更新现有管理员的WIFI配置
+                try:
+                    # 尝试加密WIFI密码
+                    encrypted_wifi_password = encrypt_wifi_password(settings.wifi_password)
+                except Exception as e:
+                    logger.warning(f"WIFI密码加密失败，使用明文存储: {e}")
+                    encrypted_wifi_password = settings.wifi_password
+                
+                await db.execute(
+                    """UPDATE users SET 
+                        wifi_username = ?, 
+                        wifi_password = ?, 
+                        wifi_apikey = ?, 
+                        wifi_base_url = ?,
+                        updated_at = datetime('now', 'localtime')
+                    WHERE username = 'admin'""",
+                    (
+                        settings.wifi_username,
+                        encrypted_wifi_password,  # 加密存储
+                        settings.wifi_apikey,
+                        settings.wifi_base_url
+                    )
+                )
+                logger.info("已更新现有管理员用户的WIFI系统配置")
 
     # 默认系统配置 (从 .env 导入初始值)
     cursor = await db.execute("SELECT COUNT(*) as cnt FROM system_config")
@@ -373,6 +549,86 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 # ============================================================
+# WIFI密码加密函数 (AES加密)
+# ============================================================
+
+import base64
+import hashlib
+
+# 导入pycryptodome的Crypto模块
+try:
+    # 标准pycryptodome导入
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad, unpad
+    from Crypto.Random import get_random_bytes
+    print("[OK] 使用Crypto模块 (pycryptodome)")
+except ImportError:
+    try:
+        # 某些环境可能使用Cryptodome
+        from Cryptodome.Cipher import AES
+        from Cryptodome.Util.Padding import pad, unpad
+        from Cryptodome.Random import get_random_bytes
+        print("[OK] 使用Cryptodome模块")
+    except ImportError:
+        raise ImportError("请安装 pycryptodome 模块: pip install pycryptodome")
+
+def _get_encryption_key() -> bytes:
+    """获取加密密钥（基于JWT secret）"""
+    from config import settings
+    # 使用JWT secret作为基础，生成32字节AES密钥
+    key_material = settings.jwt_secret.encode('utf-8')
+    # 使用SHA256生成固定长度的密钥
+    return hashlib.sha256(key_material).digest()
+
+def encrypt_wifi_password(plaintext: str) -> str:
+    """AES加密WIFI密码"""
+    if not plaintext:
+        return ""
+    
+    try:
+        key = _get_encryption_key()
+        iv = get_random_bytes(16)  # 随机初始化向量
+        
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        ciphertext = cipher.encrypt(pad(plaintext.encode('utf-8'), AES.block_size))
+        
+        # 组合IV和密文: IV + ciphertext
+        encrypted_data = iv + ciphertext
+        return base64.b64encode(encrypted_data).decode('utf-8')
+    except Exception as e:
+        logger.error(f"加密WIFI密码失败: {e}")
+        # 如果加密失败，返回原始密码（不安全，但至少可用）
+        return plaintext
+
+def decrypt_wifi_password(encrypted: str) -> str:
+    """AES解密WIFI密码"""
+    if not encrypted:
+        return ""
+    
+    try:
+        # 检查是否是加密格式（base64）
+        if not encrypted.startswith('eyJ'):  # 不是JWT格式，可能是加密的
+            encrypted_data = base64.b64decode(encrypted)
+            
+            # 分离IV和密文
+            iv = encrypted_data[:16]
+            ciphertext = encrypted_data[16:]
+            
+            key = _get_encryption_key()
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+            
+            return plaintext.decode('utf-8')
+        else:
+            # 如果是JWT格式，直接返回（兼容旧数据）
+            return encrypted
+    except Exception as e:
+        logger.error(f"解密WIFI密码失败: {e}")
+        # 如果解密失败，尝试返回原始值（可能是明文）
+        return encrypted
+
+
+# ============================================================
 # Users 表操作
 # ============================================================
 
@@ -428,6 +684,35 @@ async def delete_user(user_id: int):
         (user_id,),
     )
     await db.commit()
+
+
+async def hard_delete_user(user_id: int) -> bool:
+    """硬删除用户 - 从数据库中完全删除用户记录"""
+    db = await get_db()
+    try:
+        # 首先检查用户是否存在
+        cursor = await db.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        row = await cursor.fetchone()
+        if not row:
+            logger.warning(f"尝试删除不存在的用户: id={user_id}")
+            return False
+        
+        # 硬删除用户记录
+        cursor = await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        await db.commit()
+        
+        deleted = cursor.rowcount > 0
+        if deleted:
+            logger.info(f"已硬删除用户: id={user_id}")
+        else:
+            logger.warning(f"硬删除用户失败: id={user_id}")
+            
+        return deleted
+        
+    except Exception as e:
+        logger.error(f"硬删除用户时发生错误: {e}")
+        await db.rollback()
+        return False
 
 
 # ============================================================
@@ -719,29 +1004,32 @@ async def delete_template(tid: str):
 # Devices 表操作
 # ============================================================
 
-async def upsert_device(mac: str, **fields) -> dict:
+async def upsert_device(mac: str, user_id: int = 0, **fields) -> dict:
     """
     新增或更新设备状态 (UPSERT)
     fields: is_online/voltage/rssi/device_type/screen_type/firmware_ver/name/ip/last_seen_at
+    user_id: 所属用户ID（多租户隔离）
     返回更新后的完整记录
     """
     db = await get_db()
-    # 检查是否已存在
-    cur = await db.execute("SELECT id FROM devices WHERE mac=?", (mac,))
+    # 检查是否已存在（按user_id和mac）
+    cur = await db.execute("SELECT id FROM devices WHERE mac=? AND user_id=?", (mac, user_id))
     row = await cur.fetchone()
 
     if row:
         # UPDATE: 只传入的字段 + updated_at
-        sets = ", ".join(f"{k} = ?" for k in fields)
-        vals = list(fields.values()) + [mac]
-        if fields:
+        # 过滤掉 user_id 字段（不能更新）
+        update_fields = {k: v for k, v in fields.items() if k != 'user_id'}
+        sets = ", ".join(f"{k} = ?" for k in update_fields)
+        vals = list(update_fields.values()) + [mac, user_id]
+        if update_fields:
             sets += ", updated_at = datetime('now','localtime')"
-            await db.execute(f"UPDATE devices SET {sets} WHERE mac=?", vals)
+            await db.execute(f"UPDATE devices SET {sets} WHERE mac=? AND user_id=?", vals)
     else:
         # INSERT: 新设备
-        cols = ["mac"] + list(fields.keys())
+        cols = ["mac", "user_id"] + list(fields.keys())
         placeholders = ",".join(["?" for _ in cols])
-        vals = [mac] + list(fields.values())
+        vals = [mac, user_id] + list(fields.values())
         await db.execute(
             f"INSERT INTO devices ({','.join(cols)}) VALUES ({placeholders})",
             vals,
@@ -750,18 +1038,31 @@ async def upsert_device(mac: str, **fields) -> dict:
     await db.commit()
 
     # 返回最新记录
-    cur = await db.execute("SELECT * FROM devices WHERE mac=?", (mac,))
+    cur = await db.execute("SELECT * FROM devices WHERE mac=? AND user_id=?", (mac, user_id))
     result = await cur.fetchone()
     return dict(result)
 
 
-async def get_all_devices(online_only: bool = False) -> list[dict]:
-    """获取所有设备列表"""
+async def get_all_devices(user_id: int = None, online_only: bool = False) -> list[dict]:
+    """
+    获取设备列表
+    user_id: 指定用户ID则只返回该用户的设备，None则返回所有
+    online_only: 是否只返回在线设备
+    """
     db = await get_db()
+    conditions = []
+    params = []
+    
+    if user_id is not None:
+        conditions.append("user_id = ?")
+        params.append(user_id)
     if online_only:
-        cursor = await db.execute("SELECT * FROM devices WHERE is_online=1 ORDER BY last_seen_at DESC")
-    else:
-        cursor = await db.execute("SELECT * FROM devices ORDER BY last_seen_at DESC")
+        conditions.append("is_online = 1")
+    
+    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+    sql = f"SELECT * FROM devices{where_clause} ORDER BY last_seen_at DESC"
+    
+    cursor = await db.execute(sql, params)
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
 

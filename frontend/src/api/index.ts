@@ -32,6 +32,15 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data
+    const url = response.config.url || ''
+
+    console.log('API响应:', { url, data: res })
+
+    // 特殊处理：登录接口不进行拦截器处理，直接返回原始响应
+    if (url.includes('/auth/login')) {
+      console.log('登录接口，返回原始响应')
+      return res
+    }
 
     // 统一错误处理
     if (res.code && res.code !== 20000) {

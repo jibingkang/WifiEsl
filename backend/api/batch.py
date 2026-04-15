@@ -7,15 +7,64 @@ import json
 import logging
 from fastapi import APIRouter, Request
 from services.wifi_client import wifi_proxy
-from services.auth_service import get_api_key_from_request
+from services.auth_service import get_current_user_id_from_token
+from services.wifi_connection_manager import wifi_connection_manager
 from services.db_service import add_log
 
 router = APIRouter(prefix="/batch", tags=["批量操作"])
 logger = logging.getLogger(__name__)
 
 
-def _get_api_key(request: Request) -> str | None:
-    return get_api_key_from_request(dict(request.headers))
+async def _get_wifi_token(request: Request) -> str | None:
+    """从请求中获取用户的WIFI系统token"""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header:
+        return None
+    
+    # 提取token（去掉Bearer前缀）
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    if not token:
+        return None
+    
+    # 从token获取用户ID
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        return None
+    
+    # 获取用户的WIFI系统token
+    conn = await wifi_connection_manager.get_connection(user_id)
+    if conn and conn.token:
+        return conn.token
+    
+    return None
+
+
+async def _get_wifi_config(request: Request) -> tuple[str | None, str | None]:
+    """从请求中获取用户的WIFI系统token和base_url
+    
+    Returns:
+        tuple: (wifi_token, wifi_base_url) 如果获取失败则返回 (None, None)
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header:
+        return None, None
+    
+    # 提取token（去掉Bearer前缀）
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    if not token:
+        return None, None
+    
+    # 从token获取用户ID
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        return None, None
+    
+    # 获取用户的WIFI连接配置
+    conn = await wifi_connection_manager.get_connection(user_id)
+    if conn and conn.token:
+        return conn.token, conn.wifi_base_url
+    
+    return None, None
 
 
 @router.post("/template")
@@ -30,13 +79,15 @@ async def batch_apply_template(request: Request, body: dict):
     logger.info(f"========== 收到批量推送请求 ==========")
     logger.info(f"  请求体原始内容: {json.dumps(body, ensure_ascii=False)}")
     
-    api_key = _get_api_key(request)
-    print(f"  API Key: {'有' if api_key else '无'}")
-    logger.info(f"  API Key: {'有' if api_key else '无'} ({str(api_key)[:20]}...)")
+    wifi_token, wifi_base_url = await _get_wifi_config(request)
+    print(f"  WIFI Token: {'有' if wifi_token else '无'}")
+    print(f"  WIFI Base URL: {wifi_base_url}")
+    logger.info(f"  WIFI Token: {'有' if wifi_token else '无'} ({str(wifi_token)[:20]}...)")
+    logger.info(f"  WIFI Base URL: {wifi_base_url}")
     
-    if not api_key:
+    if not wifi_token:
         print("  >>> 拒绝: 未授权")
-        logger.warning("  >>> 拒绝: 未授权 (无API Key)")
+        logger.warning("  >>> 拒绝: 未授权 (无WIFI Token)")
         return {"code": 40100, "message": "未授权", "data": None}
 
     macs = body.get("macs", [])
@@ -55,8 +106,8 @@ async def batch_apply_template(request: Request, body: dict):
         logger.warning("  >>> 拒请: MAC列表为空")
         return {"code": 40000, "message": "请选择至少一个设备", "data": None}
     
-    if not api_key:
-        logger.warning("  >>> 拒绝: 未授权 (无API Key)")
+    if not wifi_token:
+        logger.warning("  >>> 拒绝: 未授权 (无WIFI Token)")
         return {"code": 40100, "message": "未授权", "data": None}
 
     if not template_id:
@@ -73,7 +124,7 @@ async def batch_apply_template(request: Request, body: dict):
         nonlocal success_count, failed_count
         async with semaphore:
             try:
-                result = await wifi_proxy.apply_template(mac, template_id, data, api_key, template_name=template_name)
+                result = await wifi_proxy.apply_template(mac, template_id, data, wifi_token, template_name=template_name, base_url=wifi_base_url)
                 success_count += 1
                 return {"mac": mac, "success": True, "result": result}
             except Exception as e:
@@ -122,8 +173,8 @@ async def batch_apply_template(request: Request, body: dict):
 @router.post("/control/led")
 async def batch_control_led(request: Request, body: dict):
     """批量设置LED颜色"""
-    api_key = _get_api_key(request)
-    if not api_key:
+    wifi_token, wifi_base_url = await _get_wifi_config(request)
+    if not wifi_token:
         return {"code": 40100, "message": "未授权", "data": None}
 
     macs = body.get("macs", [])
@@ -134,7 +185,7 @@ async def batch_control_led(request: Request, body: dict):
     results = []
     for mac in macs:
         try:
-            r = await wifi_proxy.control_led(mac, red, green, blue, api_key)
+            r = await wifi_proxy.control_led(mac, red, green, blue, wifi_token, base_url=wifi_base_url)
             results.append({"mac": mac, "success": True, "result": r})
         except Exception as e:
             results.append({"mac": mac, "success": False, "error": str(e)})
@@ -149,15 +200,15 @@ async def batch_control_led(request: Request, body: dict):
 @router.post("/control/reboot")
 async def batch_reboot(request: Request, body: dict):
     """批量重启设备"""
-    api_key = _get_api_key(request)
-    if not api_key:
+    wifi_token, wifi_base_url = await _get_wifi_config(request)
+    if not wifi_token:
         return {"code": 40100, "message": "未授权", "data": None}
 
     macs = body.get("macs", [])
     results = []
     for mac in macs:
         try:
-            r = await wifi_proxy.reboot_device(mac, api_key)
+            r = await wifi_proxy.reboot_device(mac, wifi_token, base_url=wifi_base_url)
             results.append({"mac": mac, "success": True, "result": r})
         except Exception as e:
             results.append({"mac": mac, "success": False, "error": str(e)})

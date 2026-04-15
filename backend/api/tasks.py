@@ -26,7 +26,8 @@ from services.db_service import (
     _refresh_task_summary as _refresh_task_summary_db_raw,
 )
 from services.wifi_client import wifi_proxy
-from services.auth_service import get_api_key_from_request
+from services.auth_service import get_current_user_id_from_token
+from services.wifi_connection_manager import wifi_connection_manager
 
 router = APIRouter(prefix="/tasks", tags=["更新任务"])
 logger = logging.getLogger(__name__)
@@ -61,8 +62,56 @@ class DeviceCustomData(BaseModel):
 
 # ── 辅助函数 ─
 
-def _get_api_key(request: Request) -> str | None:
-    return get_api_key_from_request(dict(request.headers))
+async def _get_wifi_token(request: Request) -> str | None:
+    """从请求中获取用户的WIFI系统token"""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header:
+        return None
+    
+    # 提取token（去掉Bearer前缀）
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    if not token:
+        return None
+    
+    # 从token获取用户ID
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        return None
+    
+    # 获取用户的WIFI系统token
+    conn = await wifi_connection_manager.get_connection(user_id)
+    if conn and conn.token:
+        return conn.token
+    
+    return None
+
+
+async def _get_wifi_config(request: Request) -> tuple[str | None, str | None]:
+    """从请求中获取用户的WIFI系统token和base_url
+    
+    Returns:
+        tuple: (wifi_token, wifi_base_url) 如果获取失败则返回 (None, None)
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header:
+        return None, None
+    
+    # 提取token（去掉Bearer前缀）
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    if not token:
+        return None, None
+    
+    # 从token获取用户ID
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        return None, None
+    
+    # 获取用户的WIFI连接配置
+    conn = await wifi_connection_manager.get_connection(user_id)
+    if conn and conn.token:
+        return conn.token, conn.wifi_base_url
+    
+    return None, None
 
 
 # ══════════  任务 CRUD  ══════════
@@ -206,7 +255,9 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    api_key = _get_api_key(request)
+    wifi_token, wifi_base_url = await _get_wifi_config(request)
+    if not wifi_token:
+        raise HTTPException(status_code=401, detail="未授权")
 
     # 解析 default_data
     try:
@@ -263,7 +314,7 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
                 elif isinstance(custom, dict):
                     data.update(custom)
 
-                result = await wifi_proxy.apply_template(mac, tid, data, api_key, template_name=tname)
+                result = await wifi_proxy.apply_template(mac, tid, data, wifi_token, template_name=tname, base_url=wifi_base_url)
                 return {"mac": mac, "success": True, "result": result}
             except Exception as e:
                 logger.warning(f"[Task-{task_id}] 设备 {mac} 推送失败: {e}")

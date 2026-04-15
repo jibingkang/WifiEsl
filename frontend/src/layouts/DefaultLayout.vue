@@ -113,7 +113,7 @@
           <el-dropdown trigger="click" @command="handleUserCommand">
             <div class="user-avatar">
               <el-avatar :size="32" icon="UserFilled" />
-              <span v-if="!isMobile" class="user-name">{{ userStore.username || '管理员' }}</span>
+              <span v-if="!isMobile" class="user-name">{{ authStore.userInfo?.username || '管理员' }}</span>
               <ArrowDown class="arrow-icon" />
             </div>
             <template #dropdown>
@@ -151,14 +151,14 @@ import {
   Odometer, Monitor, Document, FolderOpened, TrendCharts, Clock
 } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import { useBackendWs } from '@/composables/useBackendWs'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 const { mqttConnected } = useBackendWs()
 
 // 状态
@@ -172,6 +172,7 @@ const currentRoute = computed(() => route)
 // 菜单项
 const menuItems = [
   { path: '/dashboard', title: '仪表盘', icon: Odometer },
+  { path: '/users', title: '用户管理', icon: User },
   { path: '/devices', title: '设备管理', icon: Monitor },
   { path: '/template/update', title: '数据更新', icon: Document },
   { path: '/template/history', title: '更新历史', icon: Clock },
@@ -187,7 +188,8 @@ function handleUserCommand(command: string) {
       // TODO: 打开个人信息弹窗
       break
     case 'logout':
-      userStore.logout()
+      authStore.logout()
+      router.push('/login')
       break
   }
 }

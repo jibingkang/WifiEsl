@@ -83,12 +83,12 @@ import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock, Connection } from '@element-plus/icons-vue'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 // 表单引用
 const formRef = ref<FormInstance>()
@@ -124,18 +124,21 @@ async function handleLogin() {
 
     loading.value = true
     try {
-      const res = await userStore.login({
-        username: loginForm.username,
-        password: loginForm.password,
-      })
+      console.log('开始登录，用户名:', loginForm.username)
+      const res = await authStore.login(loginForm.username, loginForm.password)
+      console.log('登录结果:', res)
 
-      ElMessage.success(`欢迎回来，${res.user.username}！`)
+      ElMessage.success(`欢迎回来，${authStore.userInfo?.username || loginForm.username}！`)
 
       // 跳转到目标页面或首页
       const redirect = (route.query.redirect as string) || '/dashboard'
+      console.log('跳转到:', redirect)
       router.push(redirect)
     } catch (error: any) {
-      ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+      console.error('登录捕获的错误:', error)
+      const errorMsg = error.message || '登录失败，请检查用户名和密码'
+      console.error('显示错误消息:', errorMsg)
+      ElMessage.error(errorMsg)
     } finally {
       loading.value = false
     }

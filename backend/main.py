@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 配置全局日志级别（DEBUG级别显示所有日志）
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -23,11 +23,11 @@ logging.basicConfig(
 )
 
 # 设置httpx的日志级别为DEBUG
-logging.getLogger("httpx").setLevel(logging.DEBUG)
-logging.getLogger("httpcore").setLevel(logging.DEBUG)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
-logger.info("WIFI标签管理系统启动，日志级别: DEBUG")
+logger.info("WIFI标签管理系统启动，日志级别: INFO")
 
 from config import settings
 
@@ -45,26 +45,26 @@ from api.websocket import ws_endpoint
 async def lifespan(app: FastAPI):
     """应用生命周期管理: 初始化数据库 → 启动MQTT → 关闭时清理"""
     from services.db_service import init_db, close_db
-    from services.mqtt_service import mqtt_manager, set_main_loop
+    from services.multi_user_mqtt_manager import multi_user_mqtt_manager
+    from services.mqtt_service import set_main_loop
     from services.ws_manager import ws_manager
     import asyncio
 
     # 0. 绑定当前事件循环供MQTT线程使用 (修复跨线程WS广播)
     set_main_loop(asyncio.get_running_loop())
+    
+    # 设置多用户MQTT管理器的主事件循环
+    multi_user_mqtt_manager.set_main_loop(asyncio.get_running_loop())
 
     # 1. 初始化数据库 (建表+种子数据)
     print("[Startup] 正在初始化数据库...")
     await init_db()
 
-    # 2. 启动 MQTT 连接
-    print("[Startup] 正在连接 MQTT Broker...")
-    await mqtt_manager.start()
-
     yield
 
     # 关闭所有连接
     print("[Shutdown] 正在关闭服务...")
-    await mqtt_manager.stop()
+    await multi_user_mqtt_manager.stop_all()
     await ws_manager.close()
     await close_db()
 
@@ -77,14 +77,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ========== CORS 跨域配置 (开发环境暂时禁用) ==========
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=False,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+# ========== CORS 跨域配置 ==========
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# 注意：CORS中间件对WebSocket不生效，WebSocket需要单独处理跨域
+
+# ========== WebSocket 连接日志 ==========
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """记录所有请求"""
+    # WebSocket 请求不经过此中间件处理，直接放行
+    if "/ws/" in str(request.url):
+        logger.info(f"[WS] 收到WebSocket请求: {request.method} {request.url}")
+        response = await call_next(request)
+        logger.info(f"[WS] WebSocket响应: {response.status_code}")
+        return response
+    response = await call_next(request)
+    return response
 
 # ========== 全局异常处理 ==========
 @app.exception_handler(Exception)
@@ -95,44 +111,28 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ========== 原生ASGI WebSocket端点 (绕过中间件) ==========
-from starlette.websockets import WebSocketDisconnect
+# ========== WebSocket端点 ==========
+from fastapi import WebSocket
+from services.ws_manager import ws_endpoint
 
-async def ws_device_status_handler(ws):
-    """Starlette WebSocketRoute 直接接收 WebSocket 对象"""
-    from services.ws_manager import ws_manager
-    from services.mqtt_service import mqtt_manager
-    import time, json
-
-    cid = None
+@app.websocket("/ws/device-status")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket端点 - 实时设备状态推送
     
+    注意：FastAPI默认会检查Origin头，如果前端运行在3001端口，
+    WebSocket连接8001端口，会被认为是跨域请求。
+    我们在CORS中间件中允许了所有来源，但WebSocket需要单独处理。
+    """
+    # 手动接受WebSocket连接，不检查Origin
     try:
-        await ws.accept()
-        cid = await ws_manager.connect(ws)
-        print(f"[WS] ✅ 连接成功: {cid}")
-
-        await ws.send_json({
-            "type": "connected",
-            "data": {"connection_id": cid, "mqtt_connected": mqtt_manager.connected},
-            "timestamp": time.time(),
-        })
-
-        while True:
-            data = await ws.receive_text()
-            msg = json.loads(data)
-            if msg.get("type") == "ping":
-                await ws.send_json({"type": "pong", "timestamp": time.time()})
-
+        # 先接受连接
+        await websocket.accept()
+        logger.info(f"[WS] WebSocket连接已接受 from {websocket.client}")
+        # 然后处理业务逻辑
+        await ws_endpoint(websocket)
     except Exception as e:
-        print(f"[WS] 异常: {e}")
-    finally:
-        if cid:
-            await ws_manager.disconnect(cid)
-
-
-# 将WS端点注册到路由表最前面（不经过中间件）
-from starlette.routing import WebSocketRoute
-app.router.routes.insert(0, WebSocketRoute("/ws/device-status", ws_device_status_handler))
+        logger.error(f"[WS] WebSocket处理异常: {e}")
+        raise
 
 
 # ========== 注册路由 ==========
@@ -144,6 +144,14 @@ app.include_router(batch_router, prefix="/api/v1", tags=["批量操作"])
 app.include_router(tasks_router, prefix="/api/v1", tags=["更新任务"])
 app.include_router(update_history_router, prefix="/api/v1", tags=["更新历史"])
 app.include_router(settings_router, prefix="/api/v1", tags=["系统设置"])
+
+# 导入并注册用户管理API
+try:
+    from api.users import router as users_router
+    app.include_router(users_router, prefix="/api/v1", tags=["用户管理"])
+    logger.info("用户管理API已注册")
+except Exception as e:
+    logger.error(f"用户管理API注册失败: {e}")
 
 # WebSocket 端点 (已通过 add_websocket_route 注册在上方)
 

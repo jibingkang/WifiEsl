@@ -26,6 +26,11 @@
           <template #title>仪表盘</template>
         </el-menu-item>
 
+        <el-menu-item index="/users">
+          <el-icon><User /></el-icon>
+          <template #title>用户管理</template>
+        </el-menu-item>
+
         <el-menu-item index="/devices">
           <el-icon><Monitor /></el-icon>
           <template #title>设备管理</template>
@@ -63,7 +68,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Odometer, Monitor, Document, Files, Grid, DataLine, Connection } from '@element-plus/icons-vue'
+import { Odometer, Monitor, Document, Files, Grid, DataLine, Connection, User } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
 
 const route = useRoute()

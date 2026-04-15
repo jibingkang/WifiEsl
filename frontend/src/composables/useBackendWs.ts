@@ -48,8 +48,9 @@ export function useBackendWs() {
   function connect() {
     if (wsRef.value?.readyState === WebSocket.OPEN) return
 
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${location.host}/ws/device-status`
+    // 直接连接后端 WebSocket，绕过 Vite 代理
+    const url = `ws://localhost:8001/ws/device-status`
+    console.log('[WS] 正在连接:', url)
 
     try {
       const ws = new WebSocket(url)
@@ -58,16 +59,29 @@ export function useBackendWs() {
       ws.onopen = () => {
         console.log('[WS] ✅ 后端WebSocket已连接')
         connected.value = true
+        // 发送认证消息
+        const token = localStorage.getItem('wifi_esl_token')
+        console.log('[WS] 准备发送认证消息, token存在:', !!token)
+        if (token) {
+          ws.send(JSON.stringify({
+            type: 'auth',
+            data: { token }
+          }))
+          console.log('[WS] 认证消息已发送')
+        } else {
+          console.warn('[WS] 未找到token，无法认证')
+        }
         // 添加连接成功的活动记录
         addActivity('success', 'WebSocket连接已建立', '实时设备状态推送已启用')
       }
 
       ws.onmessage = (event) => {
+        console.log('[WS] 收到消息:', event.data)
         try {
           const msg = JSON.parse(event.data)
           handleMessage(msg)
-        } catch {
-          // 忽略非JSON消息
+        } catch(e) {
+          console.log('[WS] 非JSON消息:', e)
         }
       }
 
@@ -101,6 +115,20 @@ export function useBackendWs() {
         const wasConnected = mqttConnected.value
         mqttConnected.value = !!msg.data?.mqtt_connected
         console.log(`[WS] 后端MQTT状态: ${mqttConnected.value ? '已连接' : '未连接'}`)
+        
+        // 添加MQTT连接状态变化的活动记录
+        if (mqttConnected.value && !wasConnected) {
+          addActivity('success', 'MQTT Broker连接成功', '已连接到设备状态服务器')
+        } else if (!mqttConnected.value && wasConnected) {
+          addActivity('warning', 'MQTT Broker连接断开', '设备状态更新暂停')
+        }
+        break
+      }
+
+      case 'mqtt_status': {
+        const wasConnected = mqttConnected.value
+        mqttConnected.value = !!msg.data?.connected
+        console.log(`[WS] MQTT状态更新: ${mqttConnected.value ? '已连接' : '未连接'}`)
         
         // 添加MQTT连接状态变化的活动记录
         if (mqttConnected.value && !wasConnected) {

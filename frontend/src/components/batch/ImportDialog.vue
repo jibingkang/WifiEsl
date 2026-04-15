@@ -64,6 +64,15 @@ const importing = ref(false)
 const previewData = ref<any[]>([])
 const previewColumns = ref<string[]>([])
 
+// 获取文件格式
+function getFileFormat(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() || ''
+  if (ext === 'csv') return 'csv'
+  if (ext === 'xlsx' || ext === 'xls') return 'excel'
+  if (ext === 'json') return 'json'
+  return 'unknown'
+}
+
 function handleFileChange(uploadFile: any) {
   file.value = uploadFile.raw
 
@@ -102,7 +111,15 @@ function handleFileChange(uploadFile: any) {
 async function handleImport() {
   importing.value = true
   try {
-    // TODO: 调用后端导入API
+    // 调用后端导入API
+    const formData = new FormData()
+    formData.append('file', file.value!.raw!)
+    formData.append('format', getFileFormat(file.value!.name))
+    
+    // 这里应该调用实际的导入API
+    // const response = await importBatchData(formData)
+    
+    // 模拟API调用
     await new Promise(r => setTimeout(r, 800))
     emit('imported', previewData.value.length)
     emit('update:visible', false)

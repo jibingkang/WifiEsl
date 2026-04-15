@@ -14,6 +14,7 @@ from typing import Optional
 from config import settings
 from services.wifi_client import wifi_proxy
 from services.db_service import get_user_by_name, add_log, verify_password
+from services.wifi_connection_manager import wifi_connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +37,39 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         await add_log(username, "LOGIN_FAILED", detail="用户名或密码错误", result="failed", ip_address=ip)
         raise ValueError("用户名或密码错误")
 
-    # Step 2: 调用真实WIFI系统登录获取 JWT token
+    # Step 2: 获取用户的WIFI配置并调用真实WIFI系统登录
     logger.info(f"[AUTH] ========== 开始登录WIFI系统获取JWT token ==========")
-    logger.info(f"[AUTH] WIFI系统地址: {settings.wifi_base_url}")
-    logger.info(f"[AUTH] WIFI用户名: {settings.wifi_username}")
-    logger.info(f"[AUTH] WIFI密码: {'*' * len(settings.wifi_password)}")
-    logger.info(f"[AUTH] 当前配置中的WIFI_APIKEY: {settings.wifi_apikey[:8]}... (长度: {len(settings.wifi_apikey)})")
-    logger.info(f"[AUTH] API Key用途: 用于MQTT订阅区分客户")
+    logger.info(f"[AUTH] 本地用户名: {username}")
+    
+    # 获取用户的WIFI配置
+    wifi_username = user.get("wifi_username") or settings.wifi_username
+    wifi_password = user.get("wifi_password") or settings.wifi_password
+    wifi_apikey = user.get("wifi_apikey") or settings.wifi_apikey
+    wifi_base_url = user.get("wifi_base_url") or settings.wifi_base_url
+    
+    # 检查是否使用独立配置
+    using_custom_config = bool(user.get("wifi_username"))
+    
+    if using_custom_config:
+        logger.info(f"[AUTH] ✅ 使用用户独立的WIFI配置:")
+    else:
+        logger.info(f"[AUTH] ⚠️  用户无独立WIFI配置，使用系统默认配置:")
+    
+    logger.info(f"[AUTH]   WIFI用户名: {wifi_username}")
+    logger.info(f"[AUTH]   WIFI密码长度: {len(wifi_password)} 字符")
+    logger.info(f"[AUTH]   API Key: {wifi_apikey[:8]}... (长度: {len(wifi_apikey)})")
+    logger.info(f"[AUTH]   WIFI地址: {wifi_base_url}")
+    
+    # 解密WIFI密码（如果是加密存储的）
+    decrypted_password = wifi_password
+    try:
+        # 尝试从db_service导入解密函数
+        from services.db_service import decrypt_wifi_password as decrypt_func
+        decrypted_password = decrypt_func(wifi_password)
+        logger.debug(f"[AUTH]   WIFI密码解密长度: {len(decrypted_password)} 字符")
+    except Exception as e:
+        logger.debug(f"[AUTH]   WIFI密码解密失败，可能已经是明文: {e}")
+        decrypted_password = wifi_password
     
     # 检查是否真的会调用WIFI系统登录
     logger.info(f"[AUTH] 即将调用 wifi_proxy.login()...")
@@ -50,8 +77,9 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
     api_key = None
     try:
         wifi_result = await wifi_proxy.login(
-            username=settings.wifi_username,
-            password=settings.wifi_password,
+            username=wifi_username,
+            password=decrypted_password,
+            base_url=wifi_base_url,
         )
         
         logger.info(f"[AUTH] ✅ WIFI系统登录调用成功!")
@@ -78,9 +106,11 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
             logger.info(f"[AUTH]    JWT格式: {'✅ 标准JWT (eyJ开头)' if api_key.startswith('eyJ') else '⚠️  非标准格式'}")
             logger.debug(f"[AUTH]    完整token: {api_key}")
         else:
-            logger.warning(f"[AUTH] ❌ 登录响应中没有找到token，使用配置中的WIFI_APIKEY作为后备")
-            logger.warning(f"[AUTH]    配置文件中的WIFI_APIKEY: {settings.wifi_apikey[:8]}... (长度: {len(settings.wifi_apikey)})")
-            api_key = settings.wifi_apikey
+            logger.warning(f"[AUTH] ❌ 登录响应中没有找到token，无法调用WIFI系统API")
+            raise Exception(f"WIFI系统登录失败：未获取到token")
+            
+        # 注意：这里返回的api_key实际上是WIFI系统登录后返回的token
+        # 而用户的wifi_apikey字段只用于MQTT订阅，不用于API调用
             
     except Exception as e:
         import traceback
@@ -93,19 +123,46 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         logger.critical(f"[AUTH] 🚨 严重: 无法获取任何API Key")
         raise ValueError("无法获取WIFI系统API Key")
 
-    # Step 3: 生成JWT token
-    token = _create_jwt_token(username, api_key)
+    # Step 3: 生成JWT token（包含用户配置信息）
+    token = _create_jwt_token(username, api_key, user)
 
-    # Step 4: 存储内存 session
+    # Step 4: 存储内存 session（包含WIFI配置）
     _sessions[token] = {
         "username": username,
         "api_key": api_key,
         "role": user.get("role", "operator"),
+        "user_id": user.get("id"),
+        "wifi_config": {
+            "username": wifi_username,
+            "apikey": wifi_apikey,
+            "base_url": wifi_base_url
+        },
         "created_at": time.time(),
         "expires_at": time.time() + settings.jwt_expire_hours * 3600,
     }
 
-    # Step 5: 记录日志
+    # Step 5: 初始化用户的WIFI连接管理器并启动MQTT
+    try:
+        user_id = user.get("id")
+        if user_id:
+            # 获取用户的WIFI连接，这将自动登录WIFI系统并存储token
+            conn = await wifi_connection_manager.get_connection(user_id)
+            if conn and conn.token:
+                logger.info(f"[AUTH] ✅ 用户 {username} 的WIFI连接已初始化，token: {conn.token[:8]}...")
+                
+                # 启动用户的MQTT连接
+                from services.multi_user_mqtt_manager import multi_user_mqtt_manager
+                mqtt_started = await multi_user_mqtt_manager.start_user_connection(user_id)
+                if mqtt_started:
+                    logger.info(f"[AUTH] ✅ 用户 {username} 的MQTT连接已启动")
+                else:
+                    logger.warning(f"[AUTH] ⚠️  用户 {username} 的MQTT连接启动失败，将在WebSocket连接时重试")
+            else:
+                logger.warning(f"[AUTH] ⚠️  用户 {username} 的WIFI连接初始化失败")
+    except Exception as e:
+        logger.error(f"[AUTH] ❌ 初始化WIFI连接管理器失败: {e}")
+
+    # Step 6: 记录日志
     await add_log(
         username=username,
         action="LOGIN",
@@ -139,14 +196,26 @@ def verify_token(token: str) -> tuple[bool, Optional[str]]:
             # Session不存在(如重启)，但JWT未过期 → 自动重建session
             api_key_from_jwt = payload.get("api_key")
             if api_key_from_jwt and payload.get("exp", 0) > time.time():
+                # 从payload中提取WIFI配置信息
+
+                wifi_config = {
+                    "username": payload.get("wifi_username"),
+                    "apikey": payload.get("wifi_apikey"),
+                    "base_url": payload.get("wifi_base_url", settings.wifi_base_url),
+                    "user_id": payload.get("user_id"),
+                    "parent_user_id": payload.get("parent_user_id", 0)
+                }
+                
                 _sessions[token] = {
                     "username": payload.get("sub", "unknown"),
                     "api_key": api_key_from_jwt,
                     "role": payload.get("role", "operator"),
                     "created_at": time.time(),
                     "expires_at": payload["exp"],
+                    "wifi_config": wifi_config
                 }
                 logger.info(f"自动重建session: {payload.get('sub')}")
+                logger.info(f"   WIFI配置: {wifi_config}")
                 return True, api_key_from_jwt
             return False, None
 
@@ -180,15 +249,88 @@ def get_username_from_token(token: str) -> Optional[str]:
     return session["username"] if session else None
 
 
-def _create_jwt_token(username: str, api_key: str) -> str:
+def get_wifi_config_from_token(token: str) -> Optional[dict]:
+    """从token获取用户的WIFI配置"""
+    session = _sessions.get(token)
+    if not session:
+        return None
+    return session.get("wifi_config")
+
+
+def get_wifi_config_from_request(request_headers: dict) -> Optional[dict]:
+    """从请求头获取用户的WIFI配置"""
+    auth_header = request_headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header[7:]
+    return get_wifi_config_from_token(token)
+
+
+def get_current_user_id_from_token(token: str) -> Optional[int]:
+    """从token获取当前用户ID"""
+    # 首先尝试从session获取
+    session = _sessions.get(token)
+    if session and session.get("user_id"):
+        return session.get("user_id")
+    
+    # 如果session中没有，尝试从JWT token的payload中获取
+    try:
+        import jwt
+        from config import settings
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id:
+            # 尝试将字符串转换为整数
+            return int(user_id) if isinstance(user_id, str) and user_id.isdigit() else user_id
+        
+        # 如果token中没有user_id，尝试通过用户名查找
+        username = payload.get("sub")
+        if username:
+            from services.db_service import get_user_by_name
+            import asyncio
+            
+            # 注意：这里需要异步调用，但函数是同步的
+            # 创建一个新的事件循环来运行异步函数
+            try:
+                user = asyncio.run(get_user_by_name(username))
+                if user:
+                    return user.get("id")
+            except:
+                # 如果异步调用失败，返回None
+                pass
+        
+        return None
+    except Exception as e:
+        logger.error(f"从token解析用户ID失败: {e}")
+        return None
+
+
+def _create_jwt_token(username: str, api_key: str, user_info: dict = None) -> str:
     """生成JWT token"""
     payload = {
         "sub": username,
         "api_key": api_key,
         "iat": int(time.time()),
         "exp": int(time.time()) + settings.jwt_expire_hours * 3600,
-        "role": "admin",
+        "role": user_info.get("role", "admin") if user_info else "admin",
     }
+    
+    # 如果提供了用户信息，添加更多字段
+    if user_info:
+        # 添加WIFI配置信息
+        if user_info.get("wifi_username"):
+            payload["wifi_username"] = user_info.get("wifi_username")
+            payload["wifi_apikey"] = user_info.get("wifi_apikey", "")
+            payload["wifi_base_url"] = user_info.get("wifi_base_url", settings.wifi_base_url)
+        
+        # 添加用户ID
+        if user_info.get("id"):
+            payload["user_id"] = str(user_info["id"])
+        
+        # 添加父用户ID（用于权限管理）
+        if user_info.get("parent_user_id"):
+            payload["parent_user_id"] = user_info.get("parent_user_id")
+    
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 

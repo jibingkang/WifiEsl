@@ -108,11 +108,22 @@ async function loadData() {
   }
 }
 
+import { debounce } from 'lodash-es'
+
 /** 单元格变化 */
 function handleCellChange({ row, column, value }: { row: Record<string, any>; column: string; value: any }) {
   row._changed = true
-  // TODO: 可做防抖保存或标记为待提交
+  row._modifiedTime = Date.now()
+  
+  // 防抖保存
+  debounceSave(row)
 }
+
+// 防抖保存函数
+const debounceSave = debounce((row: Record<string, any>) => {
+  // TODO: 实现实际的保存逻辑
+  console.log('防抖保存行数据:', row)
+}, 1000)
 
 /** 导出 */
 function handleExport() {
@@ -125,9 +136,53 @@ function handleExport() {
 
 /** 确认导出 */
 function doExport(format: string) {
-  // TODO: 调用导出API
+  const exportData = {
+    format,
+    data: tableData.value,
+    columns: selectedColumns.value
+  }
+  
+  // 调用导出API
   ElMessage.success(`正在导出 ${format} 格式...`)
-  exportVisible.value = false
+  
+  // TODO: 实现实际的导出API调用
+  // 这里模拟导出过程
+  setTimeout(() => {
+    if (format === 'csv') {
+      downloadCSV()
+    } else if (format === 'excel') {
+      downloadExcel()
+    }
+    exportVisible.value = false
+  }, 1000)
+}
+
+/** 下载CSV文件 */
+function downloadCSV() {
+  const headers = selectedColumns.value.map(col => col.label)
+  const rows = tableData.value.map(row => 
+    selectedColumns.value.map(col => row[col.prop] || '')
+  )
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n')
+  
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `batch_export_${new Date().getTime()}.csv`
+  link.click()
+  
+  ElMessage.success('CSV文件导出成功')
+}
+
+/** 下载Excel文件 */
+function downloadExcel() {
+  // 这里可以使用第三方库如 xlsx 来处理
+  // 现在先模拟导出
+  ElMessage.success('Excel文件导出成功（功能待完善）')
 }
 
 /** 导入完成 */
