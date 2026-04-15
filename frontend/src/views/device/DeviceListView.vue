@@ -198,7 +198,14 @@ async function handleControl({ action, device }: { action: string; device: any }
     return
   }
 
-  // 其他操作（控制/编辑等）：打开控制面板
+  // 编辑/详情：打开设备详情抽屉
+  if (action === 'edit') {
+    detailDevice.value = device
+    detailDrawerVisible.value = true
+    return
+  }
+
+  // 其他操作（控制面板）：打开控制面板
   controlTargetDevice.value = device
   controlPanelVisible.value = true
 }

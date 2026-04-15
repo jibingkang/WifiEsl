@@ -9,7 +9,7 @@
       highlight-current-row
       style="width: 100%"
       @selection-change="onSelectionChange"
-      @row-click="(_, row) => $emit('rowClick', row)"
+      @row-click="(row) => $emit('rowClick', row)"
     >
       <!-- 多选列 -->
       <el-table-column type="selection" width="46" align="center" />
@@ -89,7 +89,7 @@
               编辑
             </el-button>
             <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, row)">
-              <el-button text size="small"><el-icon><MoreFilled /></el-icon></el-button>
+              <el-button text type="primary" size="small" @click.stop>操作</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="reboot">重启设备</el-dropdown-item>

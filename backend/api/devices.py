@@ -249,9 +249,11 @@ async def get_device_by_mac(mac: str, request: Request):
             return {"code": 50000, "message": "WIFI系统连接失败", "data": None}
         
         from services.wifi_client import wifi_proxy
-        raw_data = await wifi_proxy.get_device_by_mac(mac, token)
+        raw_data = await wifi_proxy.get_device_by_mac(mac, token, conn.wifi_base_url)
+        logger.info(f"[MAC查询设备] WIFI系统原始响应: {raw_data}")
         # 归一化字段（与列表接口保持一致）
         data = _normalize_single_device(raw_data)
+        logger.info(f"[MAC查询设备] 归一化后数据: {data}")
         return {"code": 20000, "message": "", "data": data}
     except Exception as e:
         logger.error(f"按MAC查询设备失败: {e}")
