@@ -48,7 +48,7 @@
               <code class="mac-code">{{ dev.mac }}</code>
             </td>
 
-            <!-- 设备在线状态（单列） -->
+            <!-- 设备在线状态+电量 -->
             <td class="col-device-status">
               <div class="device-status-cell">
                 <span
@@ -59,6 +59,9 @@
                 <span class="status-text" :class="{ 'text-online': dev.status === 'online', 'text-offline': dev.status !== 'online' }">
                   {{ dev.status === 'online' ? '在线' : '离线' }}
                 </span>
+              </div>
+              <div v-if="dev.voltage" class="device-battery">
+                {{ formatVoltage(dev.voltage) }}
               </div>
             </td>
 
@@ -223,10 +226,11 @@
 import { ref, computed, watch } from 'vue'
 import { X, AlertCircle } from 'lucide-vue-next'
 import type { TemplateInfo } from '@/types'
+import { formatVoltage } from '@/utils/format'
 
 const props = withDefaults(defineProps<{
   templateInfo: TemplateInfo
-  devices: Array<{ mac: string; name: string; status: string; hasCustom: boolean; updateStatus?: string; errorMsg?: string; sentAt?: string; finishedAt?: string }>
+  devices: Array<{ mac: string; name: string; status: string; hasCustom: boolean; updateStatus?: string; errorMsg?: string; sentAt?: string; finishedAt?: string; voltage?: number }>
   defaultData: Record<string, any>
   customOverrides: Record<string, Record<string, any>>
   checkedMacs: string[]
@@ -457,6 +461,12 @@ function clearField(mac: string, key: string) {
   font-size: 10.5px;
   color: #94a3b8;
   margin-top: 1px;
+}
+.device-battery {
+  font-size: 11px;
+  color: #22c55e;
+  margin-top: 4px;
+  text-align: center;
 }
 
 /* 状态圆点 */

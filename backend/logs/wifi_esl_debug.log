@@ -22956,3 +22956,2600 @@ httpx.ReadTimeout
         "images": {
           "binFile": "",
           "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:03,347 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:03,348 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:03,348 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:03,348 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:03,348 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:03,348 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:03,348 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:03,349 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:03,349 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:03,349 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:03,349 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:03,349 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:03,469 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:03,469 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:03,470 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:03,470 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:03,470 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:08,034 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:08,035 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:08,035 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:08,100 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:08,100 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:08,100 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:08,101 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:08,101 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:13,351 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:13,351 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:13,351 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:13,352 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:13,352 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:13,352 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:13,352 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:13,352 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:13,352 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:13,458 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:13,458 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:13,458 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:13,458 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:13,459 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:18,033 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:18,034 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:18,034 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:18,110 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:18,110 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:18,110 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:18,110 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:18,110 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:23,337 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:23,337 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:23,337 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:23,338 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:23,477 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:23,478 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:23,478 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:23,478 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:23,478 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:28,031 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:28,031 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:28,032 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:28,032 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:28,033 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:28,105 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:28,106 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:28,106 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:28,106 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:28,106 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:33,334 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:33,334 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:33,335 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:33,335 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:33,336 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:33,439 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:33,439 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:33,440 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:33,440 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:33,440 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:38,042 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:38,042 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:38,043 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:38,043 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:38,043 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:38,043 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:38,043 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:38,044 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:38,044 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:38,044 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:38,044 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:38,044 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:38,114 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:38,115 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:38,115 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:38,115 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:38,115 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:43,336 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:43,336 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:43,337 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:43,337 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:43,445 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:43,445 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:43,445 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:43,445 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:43,445 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:48,044 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:48,045 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:48,110 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:48,111 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:48,111 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:48,111 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:48,111 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:53,337 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:53,337 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:53,337 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:53,338 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:53,338 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:53,338 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:53,338 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:53,338 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:53,338 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:53,446 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:53,446 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:53,446 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:53,446 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:53,447 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:42:58,037 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:42:58,037 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:42:58,038 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:42:58,039 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:42:58,109 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:42:58,109 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:42:58,109 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:42:58,109 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:42:58,110 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:03,346 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:03,346 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:03,346 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:03,346 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:03,346 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:03,347 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:03,347 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:03,347 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:03,347 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:03,463 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:03,464 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:03,464 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:03,464 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:03,464 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:08,040 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:08,040 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:08,041 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:08,041 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:08,042 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:08,106 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:08,106 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:08,106 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:08,107 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:08,107 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:13,338 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:13,338 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:13,339 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:13,339 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:13,340 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:13,340 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:13,457 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:13,457 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:13,457 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:13,457 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:13,457 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:18,338 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:18,339 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:18,423 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:18,424 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:18,424 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:18,424 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:18,424 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:23,030 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:23,031 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:23,031 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:23,031 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:23,031 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:23,031 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:23,031 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:23,032 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:23,032 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:23,032 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:23,032 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:23,096 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:23,096 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:23,096 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:23,096 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:23,096 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:28,353 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:28,353 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:28,353 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:28,354 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:28,455 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:28,455 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:28,455 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:28,455 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:28,455 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:33,030 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:33,031 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:33,031 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:33,032 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:33,102 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:33,103 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:33,103 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:33,103 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:33,103 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:38,347 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:38,348 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:38,348 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:38,348 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:38,467 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:38,467 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:38,467 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:38,467 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:38,468 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:43,034 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:43,035 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:43,035 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:43,035 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:43,035 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:43,035 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:43,035 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:43,036 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:43,036 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:43,036 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:43,036 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:43,118 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:43,118 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:43,118 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:43,118 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:43,118 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:48,341 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:48,341 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:48,341 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:48,341 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:48,341 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:48,342 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:48,342 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:48,342 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:48,342 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:48,463 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:48,463 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:48,463 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:48,463 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:48,464 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:53,033 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:53,033 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:53,033 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:53,033 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:53,105 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:53,105 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:53,105 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:53,105 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:53,106 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:43:58,349 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:43:58,350 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:43:58,493 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:43:58,493 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:43:58,493 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:43:58,493 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:43:58,493 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:03,031 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:03,032 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:03,032 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:03,033 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:03,033 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:03,033 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:03,114 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:03,114 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:03,115 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:03,115 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:03,115 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:08,338 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:08,339 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:08,474 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:08,474 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:08,474 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:08,475 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:08,475 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:13,032 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:13,033 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:13,033 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:13,034 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:13,034 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:13,034 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:13,107 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:13,108 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:13,108 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:13,108 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:13,108 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:18,340 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:18,341 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:18,342 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:18,342 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:18,461 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:18,462 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:18,462 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:18,462 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:18,462 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:23,034 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:23,034 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:23,034 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:23,034 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:23,034 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:23,035 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:23,035 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:23,035 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:23,035 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:23,102 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:23,102 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:23,102 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:23,103 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:23,103 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:28,349 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:28,349 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:28,349 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:28,350 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:28,350 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:28,350 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:28,350 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:28,350 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:28,350 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:28,351 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:28,351 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:28,351 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:28,471 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:28,471 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:28,471 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:28,471 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:28,471 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:33,041 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:33,042 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:33,042 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:33,114 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:33,115 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:33,115 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:33,115 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:33,115 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:38,342 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:38,343 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:38,343 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:38,343 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:38,343 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:38,343 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:38,343 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:38,344 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:38,344 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:38,344 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:38,344 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:38,464 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:38,464 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:38,464 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:38,464 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:38,464 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:43,034 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:43,034 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:43,034 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:43,035 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:43,107 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:43,108 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:43,108 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:43,108 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:43,108 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:48,339 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:48,340 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:48,522 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:48,522 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:48,522 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:48,522 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:48,523 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:53,032 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:53,033 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:53,033 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:53,033 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:53,033 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:53,033 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:53,033 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:53,034 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:53,214 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:53,215 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:53,215 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:53,215 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:53,215 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:44:58,345 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:44:58,346 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:44:58,346 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:44:58,346 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:44:58,346 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:44:58,347 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:44:58,347 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:44:58,347 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:44:58,347 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:44:58,347 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:44:58,348 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:44:58,348 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:44:58,348 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:44:58,348 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:44:58,348 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:44:58,349 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:44:58,349 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:44:58,511 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:44:58,511 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:44:58,511 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:44:58,512 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:44:58,512 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:45:00,029 - services.ws_manager - INFO - [WS] 断开: ws-20, 总数: 2
+2026-04-17 15:45:00,475 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:45:00,476 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:45:00,476 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:45:00,476 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:45:00,477 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:45:00,477 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:45:00,477 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:45:00,477 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:45:00,477 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:45:00,478 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:45:00,478 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:00,478 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:45:00,478 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:45:00,478 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:45:00,479 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:00,479 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:45:00,479 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:45:00,562 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:45:00,563 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:45:00,563 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:45:00,563 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:45:00,564 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:45:00,674 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=52109)
+2026-04-17 15:45:00,675 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=52109)
+2026-04-17 15:45:00,675 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:00,675 - services.ws_manager - INFO - [WS] 新连接: ws-21, 总数: 3
+2026-04-17 15:45:00,675 - services.ws_manager - INFO - [WS] 前端连接建立: ws-21
+2026-04-17 15:45:00,680 - services.ws_manager - INFO - [WS] 连接 ws-21 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:00,681 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:00,681 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:00,681 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:00,682 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:00,703 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=63574)
+2026-04-17 15:45:00,703 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=63574)
+2026-04-17 15:45:00,703 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:00,703 - services.ws_manager - INFO - [WS] 新连接: ws-22, 总数: 4
+2026-04-17 15:45:00,704 - services.ws_manager - INFO - [WS] 前端连接建立: ws-22
+2026-04-17 15:45:00,710 - services.ws_manager - INFO - [WS] 连接 ws-22 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:00,711 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:00,711 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:00,711 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:00,712 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:02,042 - services.ws_manager - INFO - [WS] 断开: ws-22, 总数: 3
+2026-04-17 15:45:02,371 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:45:02,371 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:45:02,372 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:45:02,372 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:45:02,372 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:45:02,373 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:45:02,373 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:45:02,373 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:45:02,373 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:45:02,373 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:45:02,374 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:02,374 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:45:02,374 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:45:02,374 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:45:02,374 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:02,375 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:45:02,375 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:45:02,460 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:45:02,460 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:45:02,461 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:45:02,461 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:45:02,461 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:45:02,641 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=49751)
+2026-04-17 15:45:02,641 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=49751)
+2026-04-17 15:45:02,641 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:02,641 - services.ws_manager - INFO - [WS] 新连接: ws-23, 总数: 4
+2026-04-17 15:45:02,641 - services.ws_manager - INFO - [WS] 前端连接建立: ws-23
+2026-04-17 15:45:02,644 - services.ws_manager - INFO - [WS] 连接 ws-23 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:02,644 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:02,644 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:02,644 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:02,645 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:09,674 - services.ws_manager - INFO - [WS] 断开: ws-19, 总数: 3
+2026-04-17 15:45:09,674 - services.ws_manager - INFO - [WS] 断开: ws-21, 总数: 2
+2026-04-17 15:45:09,675 - services.ws_manager - INFO - [WS] 断开: ws-23, 总数: 1
+2026-04-17 15:45:10,174 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:45:10,175 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:45:10,175 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:45:10,175 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:45:10,175 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:45:10,175 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:45:10,176 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:45:10,176 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:45:10,176 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:45:10,176 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:45:10,176 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:10,176 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:45:10,176 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:45:10,177 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:45:10,177 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:10,177 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:45:10,177 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:45:10,297 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:45:10,297 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:45:10,298 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:45:10,298 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:45:10,298 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:45:10,438 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=64732)
+2026-04-17 15:45:10,438 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=64732)
+2026-04-17 15:45:10,438 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:10,439 - services.ws_manager - INFO - [WS] 新连接: ws-24, 总数: 2
+2026-04-17 15:45:10,439 - services.ws_manager - INFO - [WS] 前端连接建立: ws-24
+2026-04-17 15:45:10,443 - services.ws_manager - INFO - [WS] 连接 ws-24 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:10,443 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:10,443 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:10,444 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:10,444 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:46,423 - services.ws_manager - INFO - [WS] 断开: ws-24, 总数: 1
+2026-04-17 15:45:46,761 - services.db_service_extended - INFO - 共获取 2 个用户
+2026-04-17 15:45:46,761 - api.users - INFO - 管理员 1 (admin) 查看所有用户: 2 个
+2026-04-17 15:45:47,050 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=63969)
+2026-04-17 15:45:47,050 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=63969)
+2026-04-17 15:45:47,050 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:47,051 - services.ws_manager - INFO - [WS] 新连接: ws-25, 总数: 2
+2026-04-17 15:45:47,051 - services.ws_manager - INFO - [WS] 前端连接建立: ws-25
+2026-04-17 15:45:47,053 - services.ws_manager - INFO - [WS] 连接 ws-25 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:47,053 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:47,053 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:47,053 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:47,053 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:47,236 - services.ws_manager - INFO - [WS] 断开: ws-25, 总数: 1
+2026-04-17 15:45:47,590 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:45:47,591 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=
+2026-04-17 15:45:47,591 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:45:47,591 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:45:47,592 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:45:47,592 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:45:47,592 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:45:47,592 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:45:47,593 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:45:47,593 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:45:47,593 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:47,593 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:45:47,593 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:45:47,594 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:45:47,594 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:47,594 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:45:47,594 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:45:47,728 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:45:47,728 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:45:47,728 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:45:47,729 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:45:47,729 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:45:47,868 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=59572)
+2026-04-17 15:45:47,868 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=59572)
+2026-04-17 15:45:47,868 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:45:47,868 - services.ws_manager - INFO - [WS] 新连接: ws-26, 总数: 2
+2026-04-17 15:45:47,868 - services.ws_manager - INFO - [WS] 前端连接建立: ws-26
+2026-04-17 15:45:47,871 - services.ws_manager - INFO - [WS] 连接 ws-26 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:45:47,871 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:45:47,871 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:45:47,872 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:45:47,872 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:45:49,293 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-04-17 15:45:49,294 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:66:A0:92
+2026-04-17 15:45:49,294 - services.wifi_client - INFO - [MAC查询设备] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:49,294 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:49,294 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:49,384 - services.wifi_client - INFO - [MAC查询设备] 响应状态码: 200
+2026-04-17 15:45:49,384 - services.wifi_client - INFO - [MAC查询设备] 成功通过MAC地址 D4:3D:39:66:A0:92 查询设备
+2026-04-17 15:45:49,384 - api.devices - INFO - [MAC查询设备] WIFI系统原始响应: {'code': 20000, 'data': [{'led': {'color': {'red': 0, 'green': 0, 'blue': 0}}, 'station': {'ssid': 'Wlamart', 'password': 'walmart2023', 'rssi': -51}, 'mqtt': {'broker': '192.144.234.153', 'port': 8883, 'username': 'test', 'password': '123456'}, 'sms': {'display': {'fail': 0, 'success': 0}, 'network': {'conn': 0, 'conn_fail': 0, 'discon': 0}, 'reboot': 0}, 'images': {'binFile': '', 'imageFile': 'http://192.144.234.153:4000/uploads/D43D3966A092.1776408694868.thumb'}, '_id': '68eefd3244eb1ce585aa17c6', 'mac': 'D4:3D:39:66:A0:92', '__v': 0, 'alias': '202门', 'createdAt': '2025-10-15T01:47:30.014Z', 'createdBy': '69cb8e82d33300da21f40834', 'devId': 'FF.FF.FF.FF', 'devtype': {'_id': '619f5b7810a81be0366d07ce', 'type': 10, 'name': 'WiFi ESL'}, 'hw': 1025, 'ip': '192.168.0.104', 'product': {'_id': '69d4bdd8d33300da2111ef26', 'name': 'CW001', 'apiKey': 'cef24a6d1fffaf23d2eb72ff', 'createdBy': {'_id': '69cb8e82d33300da21f40834', 'username': 'W123456'}}, 'screentype': {'angle': 0, '_id': '629da84290a84db021fde4be', 'type': 15, 'name': '10.2inch', 'width': 960, 'height': 640, 'color': 2}, 'sn': 'SN1665646468345', 'status': True, 'sw': 336, 'updatedAt': '2026-04-17T07:40:29.967Z', 'usbState': True, 'voltage': 334, 'algorithm': {'_id': '624d12de5b7d2668a48d5530', 'name': 'binarization', 'algorithm': 'binarization'}}]}
+2026-04-17 15:45:49,385 - api.devices - INFO - [MAC查询设备] 归一化后数据: None
+2026-04-17 15:45:52,383 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-04-17 15:45:52,383 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:66:A0:92
+2026-04-17 15:45:52,383 - services.wifi_client - INFO - [MAC查询设备] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:45:52,383 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:52,383 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:45:52,452 - services.wifi_client - INFO - [MAC查询设备] 响应状态码: 200
+2026-04-17 15:45:52,452 - services.wifi_client - INFO - [MAC查询设备] 成功通过MAC地址 D4:3D:39:66:A0:92 查询设备
+2026-04-17 15:45:52,453 - api.devices - INFO - [MAC查询设备] WIFI系统原始响应: {'code': 20000, 'data': [{'led': {'color': {'red': 0, 'green': 0, 'blue': 0}}, 'station': {'ssid': 'Wlamart', 'password': 'walmart2023', 'rssi': -51}, 'mqtt': {'broker': '192.144.234.153', 'port': 8883, 'username': 'test', 'password': '123456'}, 'sms': {'display': {'fail': 0, 'success': 0}, 'network': {'conn': 0, 'conn_fail': 0, 'discon': 0}, 'reboot': 0}, 'images': {'binFile': '', 'imageFile': 'http://192.144.234.153:4000/uploads/D43D3966A092.1776408694868.thumb'}, '_id': '68eefd3244eb1ce585aa17c6', 'mac': 'D4:3D:39:66:A0:92', '__v': 0, 'alias': '202门', 'createdAt': '2025-10-15T01:47:30.014Z', 'createdBy': '69cb8e82d33300da21f40834', 'devId': 'FF.FF.FF.FF', 'devtype': {'_id': '619f5b7810a81be0366d07ce', 'type': 10, 'name': 'WiFi ESL'}, 'hw': 1025, 'ip': '192.168.0.104', 'product': {'_id': '69d4bdd8d33300da2111ef26', 'name': 'CW001', 'apiKey': 'cef24a6d1fffaf23d2eb72ff', 'createdBy': {'_id': '69cb8e82d33300da21f40834', 'username': 'W123456'}}, 'screentype': {'angle': 0, '_id': '629da84290a84db021fde4be', 'type': 15, 'name': '10.2inch', 'width': 960, 'height': 640, 'color': 2}, 'sn': 'SN1665646468345', 'status': True, 'sw': 336, 'updatedAt': '2026-04-17T07:40:29.967Z', 'usbState': True, 'voltage': 334, 'algorithm': {'_id': '624d12de5b7d2668a48d5530', 'name': 'binarization', 'algorithm': 'binarization'}}]}
+2026-04-17 15:45:52,453 - api.devices - INFO - [MAC查询设备] 归一化后数据: None
+2026-04-17 15:46:38,268 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-04-17 15:46:38,268 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:66:A0:92
+2026-04-17 15:46:38,268 - services.wifi_client - INFO - [MAC查询设备] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:46:38,268 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:46:38,268 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:46:38,365 - services.wifi_client - INFO - [MAC查询设备] 响应状态码: 200
+2026-04-17 15:46:38,365 - services.wifi_client - INFO - [MAC查询设备] 成功通过MAC地址 D4:3D:39:66:A0:92 查询设备
+2026-04-17 15:46:38,366 - api.devices - INFO - [MAC查询设备] WIFI系统原始响应: {'code': 20000, 'data': [{'led': {'color': {'red': 0, 'green': 0, 'blue': 0}}, 'station': {'ssid': 'Wlamart', 'password': 'walmart2023', 'rssi': -51}, 'mqtt': {'broker': '192.144.234.153', 'port': 8883, 'username': 'test', 'password': '123456'}, 'sms': {'display': {'fail': 0, 'success': 0}, 'network': {'conn': 0, 'conn_fail': 0, 'discon': 0}, 'reboot': 0}, 'images': {'binFile': '', 'imageFile': 'http://192.144.234.153:4000/uploads/D43D3966A092.1776408694868.thumb'}, '_id': '68eefd3244eb1ce585aa17c6', 'mac': 'D4:3D:39:66:A0:92', '__v': 0, 'alias': '202门', 'createdAt': '2025-10-15T01:47:30.014Z', 'createdBy': '69cb8e82d33300da21f40834', 'devId': 'FF.FF.FF.FF', 'devtype': {'_id': '619f5b7810a81be0366d07ce', 'type': 10, 'name': 'WiFi ESL'}, 'hw': 1025, 'ip': '192.168.0.104', 'product': {'_id': '69d4bdd8d33300da2111ef26', 'name': 'CW001', 'apiKey': 'cef24a6d1fffaf23d2eb72ff', 'createdBy': {'_id': '69cb8e82d33300da21f40834', 'username': 'W123456'}}, 'screentype': {'angle': 0, '_id': '629da84290a84db021fde4be', 'type': 15, 'name': '10.2inch', 'width': 960, 'height': 640, 'color': 2}, 'sn': 'SN1665646468345', 'status': True, 'sw': 336, 'updatedAt': '2026-04-17T07:40:29.967Z', 'usbState': True, 'voltage': 334, 'algorithm': {'_id': '624d12de5b7d2668a48d5530', 'name': 'binarization', 'algorithm': 'binarization'}}]}
+2026-04-17 15:46:38,366 - api.devices - INFO - [MAC查询设备] 归一化后数据: None
+2026-04-17 15:49:24,935 - services.ws_manager - INFO - [WS] 断开: ws-26, 总数: 1
+2026-04-17 15:49:25,460 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:49:25,460 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=
+2026-04-17 15:49:25,460 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:49:25,461 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:49:25,461 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:49:25,461 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:49:25,461 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:49:25,462 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:49:25,462 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:49:25,462 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:49:25,462 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:49:25,462 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:49:25,463 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:49:25,463 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:49:25,463 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:49:25,463 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:49:25,463 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:49:25,633 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:49:25,634 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:49:25,634 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:49:25,634 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:49:25,635 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:49:25,749 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=59973)
+2026-04-17 15:49:25,749 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=59973)
+2026-04-17 15:49:25,749 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:49:25,749 - services.ws_manager - INFO - [WS] 新连接: ws-27, 总数: 2
+2026-04-17 15:49:25,749 - services.ws_manager - INFO - [WS] 前端连接建立: ws-27
+2026-04-17 15:49:25,752 - services.ws_manager - INFO - [WS] 连接 ws-27 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:49:25,752 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:49:25,752 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:49:25,752 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:49:25,752 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:49:26,308 - services.ws_manager - INFO - [WS] 断开: ws-27, 总数: 1
+2026-04-17 15:49:26,634 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-04-17 15:49:26,636 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=20, search=, status=None
+2026-04-17 15:49:26,636 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-04-17 15:49:26,637 - api.devices - INFO - [API /devices] ✅ 用户ID: 1
+2026-04-17 15:49:26,637 - api.devices - INFO - [API /devices] ✅ 使用用户 1 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-04-17 15:49:26,637 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-04-17 15:49:26,638 - api.devices - INFO - [API /devices] 构造的查询参数: 
+2026-04-17 15:49:26,638 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表...
+2026-04-17 15:49:26,638 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-04-17 15:49:26,638 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-04-17 15:49:26,638 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-04-17 15:49:26,639 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-04-17 15:49:26,639 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-04-17 15:49:26,639 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-04-17 15:49:26,639 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3NjQxMDk4OX0.N7Wyu6blexkHdVAZjvwDxt6hMY8xFahVi_YUljCoVVg
+2026-04-17 15:49:26,640 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-04-17 15:49:26,640 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-04-17 15:49:26,718 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-04-17 15:49:26,718 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 2
+2026-04-17 15:49:26,719 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-04-17 15:49:26,719 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-04-17 15:49:26,719 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "Wlamart",
+          "password": "walmart2023",
+          "rssi": -51
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/up
+2026-04-17 15:49:26,907 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=56693)
+2026-04-17 15:49:26,907 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=56693)
+2026-04-17 15:49:26,907 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-04-17 15:49:26,907 - services.ws_manager - INFO - [WS] 新连接: ws-28, 总数: 2
+2026-04-17 15:49:26,907 - services.ws_manager - INFO - [WS] 前端连接建立: ws-28
+2026-04-17 15:49:26,910 - services.ws_manager - INFO - [WS] 连接 ws-28 认证为用户 1, 已添加到组 user_1
+2026-04-17 15:49:26,910 - services.multi_user_mqtt_manager - INFO - 用户 1 MQTT连接已存在且已连接
+2026-04-17 15:49:26,910 - services.ws_manager - INFO - [WS] 用户 1 MQTT连接状态: True
+2026-04-17 15:49:26,910 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-04-17 15:49:26,910 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-17 15:49:42,586 - services.db_service - INFO - 从任务 5 移除设备: mac=D4:3D:39:1C:D7:D6

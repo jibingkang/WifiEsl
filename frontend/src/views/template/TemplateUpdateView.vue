@@ -432,6 +432,8 @@ const filteredDeviceTableData = computed(() => {
   const devices = selectedMacs.value.map(mac => {
     // 从任务设备列表获取 update_status
     const taskDev = taskDetail.value?.devices.find((d: any) => d.mac === mac)
+    // 从设备列表获取电量信息
+    const deviceInfo = deviceStore.devices.find((d: any) => d.mac === mac)
     return {
       mac,
       name: getDeviceName(mac),
@@ -441,6 +443,7 @@ const filteredDeviceTableData = computed(() => {
       errorMsg: taskDev?.error_msg || '',
       sentAt: taskDev?.sent_at || '',
       finishedAt: taskDev?.finished_at || '',
+      voltage: deviceInfo?.voltage,
       // 为筛选准备字段值
       fieldValues: Object.keys(customOverrides.value[mac] || {}).reduce((acc, key) => {
         acc[key] = customOverrides.value[mac][key] || defaultData.value[key] || ''
