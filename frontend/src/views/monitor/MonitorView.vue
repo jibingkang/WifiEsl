@@ -55,7 +55,7 @@
               <span class="chip-dot" />
               <span class="chip-name">{{ dev.name }}</span>
               <code class="chip-mac">{{ dev.mac }}</code>
-              <span class="chip-volt">{{ dev.voltage != null ? formatVolt(dev.voltage) : '--' }}</span>
+              <span class="chip-volt">{{ dev.voltage != null ? formatVoltage(dev.voltage) : '--' }}</span>
             </div>
           </TransitionGroup>
         </div>
@@ -126,7 +126,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { WarningFilled } from '@element-plus/icons-vue'
 import { useDeviceStore } from '@/stores/device'
-import { formatVolt } from '@/utils/format'
+import { formatVolt, formatVoltage } from '@/utils/format'
 
 const deviceStore = useDeviceStore()
 
@@ -208,7 +208,7 @@ async function refresh() {
   const lowBat = deviceStore.lowBatteryDevices.slice(0, 5)
   alerts.value = lowBat.map((d, i) => ({
     id: i,
-    message: `${d.mac} 电量过低 (${formatVolt(d.voltage)})`,
+    message: `${d.mac}${d.name ? ` (${d.name})` : ''} 电量过低 (${formatVoltage(d.voltage)})`,
     time: new Date().toLocaleTimeString('zh-CN'),
   }))
 }

@@ -296,7 +296,56 @@ class UserMQTTConnection:
         elif event_type == "battery_reply":
             voltage = data.get("voltage") or data.get("voltage_mv")
             if voltage is not None:
-                update_fields = {"voltage": int(voltage), "last_seen_at": now_iso}
+                voltage_int = int(voltage)
+                update_fields = {"voltage": voltage_int, "last_seen_at": now_iso}
+                
+                # 低电量告警检查（阈值：350 = 3.5V）
+                LOW_BATTERY_THRESHOLD = 350
+                if voltage_int < LOW_BATTERY_THRESHOLD:
+                    # 查询设备别名
+                    device_name = mac  # 默认使用MAC地址
+                    try:
+                        from services.db_service import get_device_by_mac
+                        device = await get_device_by_mac(mac)
+                        if device and device.get("name"):
+                            device_name = device["name"]
+                    except Exception as e:
+                        logger.warning(f"[MQTT] 获取设备 {mac} 别名失败: {e}")
+                    
+                    # 计算电量百分比（与前端保持一致）
+                    # 前端规则: <335 (3.35V) = 0%, >390 (3.90V) = 100%, 中间线性插值
+                    # voltage_int 单位是 0.01V，如 334 表示 3.34V
+                    if voltage_int >= 390:
+                        battery_percent = 100.0
+                    elif voltage_int <= 335:
+                        battery_percent = 0.0
+                    else:
+                        battery_percent = ((voltage_int - 335) / (390 - 335)) * 100
+                    
+                    voltage_v = voltage_int / 100.0  # 转换为伏特
+                    
+                    # 发送低电量告警WebSocket消息
+                    alert_msg = {
+                        "type": "low_battery_alert",
+                        "data": {
+                            "mac": mac,
+                            "name": device_name,
+                            "voltage": voltage_int,
+                            "voltage_v": round(voltage_v, 2),
+                            "battery_percent": round(battery_percent, 1),
+                            "threshold": LOW_BATTERY_THRESHOLD,
+                            "message": f"设备 {device_name} 电量过低 ({voltage_v:.2f}V, 剩余{battery_percent:.1f}%)，请及时更换电池"
+                        },
+                        "user_id": self.user_id,
+                        "timestamp": time.time(),
+                    }
+                    
+                    if self._main_loop and not self._main_loop.is_closed():
+                        asyncio.run_coroutine_threadsafe(
+                            ws_manager.broadcast_to_user(self.user_id, alert_msg),
+                            self._main_loop
+                        )
+                        logger.warning(f"[MQTT] 低电量告警: {mac} ({device_name}) - {voltage_v:.2f}V ({battery_percent:.1f}%)")
         elif event_type == "usb_state":
             usb_state = data.get("state")
             if usb_state is not None:

@@ -143,26 +143,15 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         "expires_at": time.time() + settings.jwt_expire_hours * 3600,
     }
 
-    # Step 5: 初始化用户的WIFI连接管理器并启动MQTT
-    try:
-        user_id = user.get("id")
-        if user_id:
-            # 获取用户的WIFI连接，这将自动登录WIFI系统并存储token
-            conn = await wifi_connection_manager.get_connection(user_id)
-            if conn and conn.token:
-                logger.info(f"[AUTH] ✅ 用户 {username} 的WIFI连接已初始化，token: {conn.token[:8]}...")
-                
-                # 启动用户的MQTT连接
-                from services.multi_user_mqtt_manager import multi_user_mqtt_manager
-                mqtt_started = await multi_user_mqtt_manager.start_user_connection(user_id)
-                if mqtt_started:
-                    logger.info(f"[AUTH] ✅ 用户 {username} 的MQTT连接已启动")
-                else:
-                    logger.warning(f"[AUTH] ⚠️  用户 {username} 的MQTT连接启动失败，将在WebSocket连接时重试")
-            else:
-                logger.warning(f"[AUTH] ⚠️  用户 {username} 的WIFI连接初始化失败")
-    except Exception as e:
-        logger.error(f"[AUTH] ❌ 初始化WIFI连接管理器失败: {e}")
+    # Step 5: 异步初始化用户的WIFI连接和MQTT（不阻塞登录）
+    user_id = user.get("id")
+    if user_id:
+        # 使用后台任务异步初始化，避免阻塞登录响应
+        import asyncio
+        asyncio.create_task(
+            _init_user_wifi_async(user_id, username, api_key, wifi_username, wifi_password, wifi_apikey, wifi_base_url)
+        )
+        logger.info(f"[AUTH] 🔄 用户 {username} 的WIFI连接初始化已放入后台任务")
 
     # Step 6: 记录日志
     await add_log(
@@ -344,3 +333,57 @@ def cleanup_expired_sessions():
         del _sessions[t]
     if expired_tokens:
         logger.info(f"清理了 {len(expired_tokens)} 个过期session")
+
+
+async def _init_user_wifi_async(
+    user_id: int,
+    username: str,
+    api_key: str,
+    wifi_username: str,
+    wifi_password: str,
+    wifi_apikey: str,
+    wifi_base_url: str
+):
+    """
+    后台异步初始化用户的WIFI连接和MQTT
+    不阻塞登录流程，失败时记录日志但不影响用户登录
+    """
+    try:
+        logger.info(f"[AUTH] 🔄 [后台] 开始初始化用户 {username} 的WIFI连接...")
+        
+        # 设置较短的超时时间，避免长时间阻塞
+        import asyncio
+        
+        # 尝试获取WIFI连接（带超时）
+        try:
+            conn = await asyncio.wait_for(
+                wifi_connection_manager.get_connection(user_id),
+                timeout=10.0  # 10秒超时
+            )
+            if conn and conn.token:
+                logger.info(f"[AUTH] ✅ [后台] 用户 {username} 的WIFI连接已初始化")
+            else:
+                logger.warning(f"[AUTH] ⚠️  [后台] 用户 {username} 的WIFI连接初始化失败，token为空")
+                return
+        except asyncio.TimeoutError:
+            logger.warning(f"[AUTH] ⏱️  [后台] 用户 {username} 的WIFI连接初始化超时，将在后续操作重试")
+            return
+        
+        # 启动MQTT连接（带超时）
+        try:
+            from services.multi_user_mqtt_manager import multi_user_mqtt_manager
+            mqtt_started = await asyncio.wait_for(
+                multi_user_mqtt_manager.start_user_connection(user_id),
+                timeout=10.0
+            )
+            if mqtt_started:
+                logger.info(f"[AUTH] ✅ [后台] 用户 {username} 的MQTT连接已启动")
+            else:
+                logger.warning(f"[AUTH] ⚠️  [后台] 用户 {username} 的MQTT连接启动失败")
+        except asyncio.TimeoutError:
+            logger.warning(f"[AUTH] ⏱️  [后台] 用户 {username} 的MQTT连接启动超时")
+        except Exception as e:
+            logger.error(f"[AUTH] ❌ [后台] 用户 {username} 的MQTT连接启动异常: {e}")
+            
+    except Exception as e:
+        logger.error(f"[AUTH] ❌ [后台] 初始化用户 {username} 的WIFI连接失败: {e}")
