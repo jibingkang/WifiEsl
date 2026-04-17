@@ -423,6 +423,12 @@ const handleSubmit = async () => {
     if (formData.value.wifi_mqtt_broker) {
       submitData.wifi_mqtt_broker = formData.value.wifi_mqtt_broker
     }
+    if (formData.value.mqtt_username) {
+      submitData.mqtt_username = formData.value.mqtt_username
+    }
+    if (formData.value.mqtt_password) {
+      submitData.mqtt_password = formData.value.mqtt_password
+    }
     
     // 调用API
     if (props.dialogType === 'create') {

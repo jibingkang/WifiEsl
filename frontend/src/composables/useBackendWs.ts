@@ -48,8 +48,10 @@ export function useBackendWs() {
   function connect() {
     if (wsRef.value?.readyState === WebSocket.OPEN) return
 
-    // 直接连接后端 WebSocket，绕过 Vite 代理
-    const url = `ws://localhost:8001/ws/device-status`
+    // 使用相对路径，让 Nginx 代理 WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    const url = `${protocol}//${host}/ws/device-status`
     console.log('[WS] 正在连接:', url)
 
     try {

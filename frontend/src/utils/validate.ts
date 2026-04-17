@@ -54,9 +54,11 @@ export function isJsonString(str: string): boolean {
  */
 export const rules = {
   required(message = '此项为必填项'): any {
-    required: true,
-    message,
-    trigger: 'blur',
+    return {
+      required: true,
+      message,
+      trigger: 'blur',
+    }
   },
 
   mac(): any {
