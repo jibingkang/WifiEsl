@@ -394,6 +394,7 @@ async def init_db():
             retry_count     INTEGER NOT NULL DEFAULT 0,
             sent_at         TEXT,
             finished_at     TEXT,
+            selected_row_id INTEGER,
             updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
             created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
             UNIQUE(task_id, mac)
@@ -429,6 +430,9 @@ async def init_db():
         if 'finished_at' not in col_names:
             await db.execute("ALTER TABLE task_devices ADD COLUMN finished_at TEXT")
             print("[DB] 已添加列 task_devices.finished_at")
+        if 'selected_row_id' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN selected_row_id INTEGER")
+            print("[DB] 已添加列 task_devices.selected_row_id")
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")

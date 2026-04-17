@@ -70,7 +70,7 @@
 
         <!-- 底部信息 -->
         <div class="login-footer">
-          <span class="version">v1.0.0</span>
+          <span class="version">v{{ frontendVersion }}</span>
           <ThemeToggle />
         </div>
       </el-card>
@@ -84,6 +84,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock, Connection } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+
+const frontendVersion = __APP_VERSION__
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const router = useRouter()

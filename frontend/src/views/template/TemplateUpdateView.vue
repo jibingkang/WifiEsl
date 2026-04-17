@@ -1590,9 +1590,32 @@ function updateAllChecked() {
 
 // ════════════ 行选择持久化辅助 ═════════════
 
-/** 初始化 selectedRowIds：优先从 localStorage 草稿恢复 → 模板缓存 → 默认第1行 */
+/** 初始化 selectedRowIds：优先从后端 DB 数据恢复 → localStorage 草稿 → 模板缓存 → 默认第1行 */
 function _initSelectedRowIds(devices: any[], taskId?: number) {
-  // 0. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是唯一持久化来源）
+  // 0. 最优先：从后端返回的 selected_row_id 恢复（跨设备同步的权威来源）
+  const fromDb: Record<string, number> = {}
+  let hasDbData = false
+  for (const d of devices) {
+    if (d.rows && d.rows.length > 0) {
+      if (d.selected_row_id) {
+        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
+        if (exists) {
+          fromDb[d.mac] = d.selected_row_id
+          hasDbData = true
+          continue
+        }
+      }
+      // fallback 到第1行
+      fromDb[d.mac] = d.rows[0].id
+    }
+  }
+  if (hasDbData) {
+    selectedRowIds.value = fromDb
+    console.log('从后端DB恢复选中行:', fromDb)
+    return
+  }
+
+  // 1. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
   if (taskId) {
     const draft = readDraftRaw()
     if (draft?.selectedRowIds && draft.taskId === taskId) {
@@ -1610,10 +1633,9 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     }
   }
 
-  // 1. 尝试从模板缓存恢复
+  // 2. 尝试从模板缓存恢复
   const cached = selectedTemplate.value?.tid ? templateDataCache.value[selectedTemplate.value.tid] : null
   if (cached?.selectedRowIds) {
-    // 验证缓存的 row_id 是否仍然有效（设备可能已变化）
     const valid: Record<string, number> = {}
     for (const d of devices) {
       if (d.rows && d.rows.length > 0) {
@@ -1627,7 +1649,7 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     return
   }
 
-  // 2. 无缓存：默认选第1行，同时清空残留的 customOverrides 避免脏数据
+  // 3. 无缓存：默认选第1行
   const defaults: Record<string, number> = {}
   for (const d of devices) {
     if (d.rows && d.rows.length > 0) {
@@ -1825,9 +1847,28 @@ watch([defaultData, customOverrides, selectedRowIds], () => {
   }, 2000)
 }, { deep: true })
 
+// ── selectedRowIds 单独同步到后端（快速防抖 500ms，确保跨设备同步） ──
+let selectedRowSyncTimer: ReturnType<typeof setTimeout> | null = null
+watch(selectedRowIds, (newVal) => {
+  if (!currentTaskId.value) return
+  if (selectedRowSyncTimer) clearTimeout(selectedRowSyncTimer)
+  selectedRowSyncTimer = setTimeout(async () => {
+    try {
+      for (const [mac, rowId] of Object.entries(newVal)) {
+        if (rowId) {
+          await taskApi.updateSelectedRow(currentTaskId.value!, mac, rowId as number)
+        }
+      }
+    } catch (e) {
+      console.warn('[Task] 选中行同步失败:', e)
+    }
+  }, 500)
+}, { deep: true })
+
 onUnmounted(() => {
   if (autoSaveTimer) clearInterval(autoSaveTimer)
   if (dbAutoSaveTimer) clearTimeout(dbAutoSaveTimer)
+  if (selectedRowSyncTimer) clearTimeout(selectedRowSyncTimer)
   stopProgressPolling()
   offWsMessage('display_reply', onDisplayReply)
 })

@@ -32,6 +32,8 @@ from services.db_service import (
     delete_task_device_row,
     delete_all_task_device_rows,
     batch_add_task_device_rows,
+    # DB 连接
+    get_db,
 )
 from services.wifi_client import wifi_proxy
 from services.auth_service import get_current_user_id_from_token
@@ -43,7 +45,6 @@ logger = logging.getLogger(__name__)
 
 async def _refresh_task_summary_db(task_id: int):
     """刷新任务汇总状态（包装 db_service 的函数）"""
-    from services.db_service import get_db
     db = await get_db()
     await _refresh_task_summary_db_raw(db, task_id)
 
@@ -310,6 +311,23 @@ async def update_single_device_status(request: Request, task_id: int, mac: str, 
     # 刷新任务汇总
     await _refresh_task_summary_db(task_id)
     return {"code": 20000, "message": f"设备 {mac} 状态已更新为 {status}"}
+
+
+@router.put("/{task_id}/devices/{mac}/selected-row")
+async def update_selected_row(request: Request, task_id: int, mac: str, body: dict):
+    """更新设备当前选中的子表行ID（跨设备同步用）"""
+    user_id = await _get_current_user_id(request)
+    detail = await get_task_detail(task_id, user_id=user_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
+    row_id = body.get("selected_row_id")
+    db = await get_db()
+    await db.execute(
+        "UPDATE task_devices SET selected_row_id=? WHERE task_id=? AND mac=?",
+        (row_id, task_id, mac),
+    )
+    await db.commit()
+    return {"code": 20000, "message": "已更新选中行"}
 
 
 @router.get("/{task_id}/devices")

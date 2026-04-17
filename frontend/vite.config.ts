@@ -13,6 +13,10 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  define: {
+    __APP_VERSION__: JSON.stringify('1.1.1'),
+    __BUILD_TIME__: JSON.stringify(new Date().toLocaleString('zh-CN', { hour12: false })),
+  },
   server: {
     host: '0.0.0.0',   // 监听所有网卡，支持局域网访问
     port: 3000,

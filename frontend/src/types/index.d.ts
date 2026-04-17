@@ -2,6 +2,10 @@
 // 全局类型定义
 // ============================================
 
+// Vite 编译时注入的常量
+declare const __APP_VERSION__: string
+declare const __BUILD_TIME__: string
+
 // 用户相关
 export interface LoginParams {
   username: string

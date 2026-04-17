@@ -17,6 +17,21 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+# ── 系统信息接口（无需认证） ──
+
+@router.get("/system/info")
+async def system_info():
+    """返回后端版本号和启动时间（无需认证，便于前端确认后端版本）"""
+    from main import APP_VERSION, APP_START_TIME
+    return {
+        "code": 20000,
+        "data": {
+            "version": APP_VERSION,
+            "startTime": APP_START_TIME,
+        },
+    }
+
+
 # ============================================================
 # 请求/响应模型
 # ============================================================

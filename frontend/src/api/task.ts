@@ -132,6 +132,13 @@ export const taskApi = {
   },
 
   /**
+   * 更新设备当前选中的子表行ID（跨设备同步）
+   */
+  updateSelectedRow(taskId: number, mac: string, rowId: number | null): Promise<any> {
+    return service.put(`/tasks/${taskId}/devices/${mac}/selected-row`, { selected_row_id: rowId })
+  },
+
+  /**
    * 获取任务的设备列表
    */
   getTaskDevices(taskId: number): Promise<any> {

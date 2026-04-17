@@ -24,6 +24,16 @@ from services.db_service import (
     batch_update_device_statuses,
     get_task_progress,
     _refresh_task_summary as _refresh_task_summary_db_raw,
+    # 子表 CRUD
+    get_task_device_rows,
+    get_first_task_device_row,
+    add_task_device_row,
+    update_task_device_row,
+    delete_task_device_row,
+    delete_all_task_device_rows,
+    batch_add_task_device_rows,
+    # DB 连接
+    get_db,
 )
 from services.wifi_client import wifi_proxy
 from services.auth_service import get_current_user_id_from_token
@@ -35,7 +45,6 @@ logger = logging.getLogger(__name__)
 
 async def _refresh_task_summary_db(task_id: int):
     """刷新任务汇总状态（包装 db_service 的函数）"""
-    from services.db_service import get_db
     db = await get_db()
     await _refresh_task_summary_db_raw(db, task_id)
 
@@ -58,6 +67,20 @@ class DevicesAdd(BaseModel):
 
 class DeviceCustomData(BaseModel):
     custom_data: dict
+
+
+class TaskDeviceRowCreate(BaseModel):
+    custom_data: dict
+    sort_order: int | None = None
+
+
+class TaskDeviceRowUpdate(BaseModel):
+    custom_data: dict
+
+
+class TaskDeviceRowsBatchCreate(BaseModel):
+    rows: list[dict]  # [custom_data_dict, ...]
+    mode: str = 'overwrite'  # overwrite: 先清空再插入 | append: 追加到现有行之后
 
 
 # ── 辅助函数 ─
@@ -112,6 +135,26 @@ async def _get_wifi_config(request: Request) -> tuple[str | None, str | None]:
         return conn.token, conn.wifi_base_url
     
     return None, None
+
+
+# ══════════  子表行直接操作（必须在 /{task_id} 路由之前定义）  ══════════
+
+@router.put("/device-rows/{row_id}")
+async def update_device_row(request: Request, row_id: int, body: TaskDeviceRowUpdate):
+    """更新单条子表行的自定义数据"""
+    ok = await update_task_device_row(row_id, body.custom_data)
+    if not ok:
+        raise HTTPException(status_code=404, detail="子表行不存在")
+    return {"code": 20000, "message": "已更新"}
+
+
+@router.delete("/device-rows/{row_id}")
+async def delete_device_row(row_id: int):
+    """删除单条子表行"""
+    ok = await delete_task_device_row(row_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="子表行不存在")
+    return {"code": 20000, "message": "已删除"}
 
 
 # ══════════  任务 CRUD  ══════════
@@ -270,6 +313,23 @@ async def update_single_device_status(request: Request, task_id: int, mac: str, 
     return {"code": 20000, "message": f"设备 {mac} 状态已更新为 {status}"}
 
 
+@router.put("/{task_id}/devices/{mac}/selected-row")
+async def update_selected_row(request: Request, task_id: int, mac: str, body: dict):
+    """更新设备当前选中的子表行ID（跨设备同步用）"""
+    user_id = await _get_current_user_id(request)
+    detail = await get_task_detail(task_id, user_id=user_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
+    row_id = body.get("selected_row_id")
+    db = await get_db()
+    await db.execute(
+        "UPDATE task_devices SET selected_row_id=? WHERE task_id=? AND mac=?",
+        (row_id, task_id, mac),
+    )
+    await db.commit()
+    return {"code": 20000, "message": "已更新选中行"}
+
+
 @router.get("/{task_id}/devices")
 async def list_task_devices(request: Request, task_id: int):
     """获取任务的设备列表"""
@@ -295,6 +355,7 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     
     可选参数：
     - macs: 指定要推送的设备MAC列表，如果不传则推送所有符合条件的设备
+    - row_selections: 指定每个设备要推送的行ID，格式 {mac: row_id}，不传则默认推送第一行
     """
     # 获取当前用户ID并进行多租户验证
     user_id = await _get_current_user_id(request)
@@ -316,6 +377,9 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
 
     # 获取需要推送的设备列表
     devices = task.get("devices", [])
+    
+    # 解析行选择参数 {mac: row_id}
+    row_selections = (body or {}).get("row_selections", {}) or {}
     
     # 如果指定了设备列表，只推送指定的设备
     if body and "macs" in body and body["macs"]:
@@ -353,6 +417,8 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
             try:
                 # 合并默认数据和设备自定义数据
                 data = {**default_data}
+
+                # 1. 主表 custom_data 作为基底
                 custom = dev.get("custom_data")
                 if custom and isinstance(custom, str) and custom.strip():
                     try:
@@ -362,6 +428,34 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
                         pass
                 elif isinstance(custom, dict):
                     data.update(custom)
+
+                # 2. 子表数据覆盖主表
+                # 检查是否有指定行选择
+                selected_row_id = row_selections.get(mac)
+                target_row = None
+                
+                if selected_row_id:
+                    # 获取指定行
+                    rows = await get_task_device_rows(dev["id"])
+                    for r in rows:
+                        if r["id"] == selected_row_id:
+                            target_row = r
+                            break
+                
+                # 如果没有指定行或指定行不存在，使用第一行
+                if not target_row:
+                    target_row = await get_first_task_device_row(dev["id"])
+                
+                if target_row:
+                    row_custom = target_row.get("custom_data")
+                    if row_custom:
+                        if isinstance(row_custom, str) and row_custom.strip():
+                            try:
+                                data.update(json.loads(row_custom))
+                            except Exception:
+                                pass
+                        elif isinstance(row_custom, dict):
+                            data.update(row_custom)
 
                 result = await wifi_proxy.apply_template(mac, tid, data, wifi_token, template_name=tname, base_url=wifi_base_url)
                 return {"mac": mac, "success": True, "result": result}
@@ -418,3 +512,88 @@ async def get_progress(request: Request, task_id: int):
             **progress,
         },
     }
+
+
+# ══════════  子表数据管理 (task_device_rows)  ══════════
+
+@router.get("/{task_id}/devices/{mac}/rows")
+async def list_device_rows(request: Request, task_id: int, mac: str):
+    """获取某设备在任务中的所有子表行数据"""
+    user_id = await _get_current_user_id(request)
+    # 先找到 task_device id
+    from services.db_service import get_db
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac)
+    )
+    dev = await cur.fetchone()
+    if not dev:
+        raise HTTPException(status_code=404, detail="设备不在任务中")
+    rows = await get_task_device_rows(dev["id"])
+    return {"code": 20000, "data": rows}
+
+
+@router.post("/{task_id}/devices/{mac}/rows")
+async def add_device_row(request: Request, task_id: int, mac: str, body: TaskDeviceRowCreate):
+    """为某设备添加一条子表行数据"""
+    user_id = await _get_current_user_id(request)
+    from services.db_service import get_db
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac)
+    )
+    dev = await cur.fetchone()
+    if not dev:
+        raise HTTPException(status_code=404, detail="设备不在任务中")
+    row_id = await add_task_device_row(dev["id"], body.custom_data, body.sort_order)
+    return {"code": 20000, "message": "已添加子表行", "data": {"row_id": row_id}}
+
+
+@router.post("/{task_id}/devices/{mac}/rows/batch")
+async def batch_add_device_rows(
+    request: Request, task_id: int, mac: str, body: TaskDeviceRowsBatchCreate
+):
+    """
+    批量添加子表行数据（导入时使用）
+    会先清空该设备的所有旧行，再批量插入新数据
+    mode='overwrite': 先清空再插入
+    mode='append': 追加到现有行之后
+    """
+    user_id = await _get_current_user_id(request)
+    from services.db_service import get_db
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac)
+    )
+    dev = await cur.fetchone()
+    if not dev:
+        raise HTTPException(status_code=404, detail="设备不在任务中")
+
+    mode = body.mode  # overwrite or append（从 Pydantic 模型获取）
+    task_dev_id = dev["id"]
+
+    if mode == "overwrite":
+        await delete_all_task_device_rows(task_dev_id)
+
+    added = await batch_add_task_device_rows(task_dev_id, body.rows)
+    return {
+        "code": 20000,
+        "message": f"已批量添加 {added} 条子表行 (模式={mode})",
+        "data": {"added": added},
+    }
+
+
+@router.delete("/{task_id}/devices/{mac}/rows")
+async def clear_device_rows(request: Request, task_id: int, mac: str):
+    """清空某设备的所有子表行数据"""
+    user_id = await _get_current_user_id(request)
+    from services.db_service import get_db
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac)
+    )
+    dev = await cur.fetchone()
+    if not dev:
+        raise HTTPException(status_code=404, detail="设备不在任务中")
+    deleted = await delete_all_task_device_rows(dev["id"])
+    return {"code": 20000, "message": f"已清空 {deleted} 条子表行"}

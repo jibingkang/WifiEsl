@@ -394,6 +394,7 @@ async def init_db():
             retry_count     INTEGER NOT NULL DEFAULT 0,
             sent_at         TEXT,
             finished_at     TEXT,
+            selected_row_id INTEGER,
             updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
             created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
             UNIQUE(task_id, mac)
@@ -401,6 +402,19 @@ async def init_db():
         CREATE INDEX IF NOT EXISTS idx_tdevices_task ON task_devices(task_id);
         CREATE INDEX IF NOT EXISTS idx_tdevices_mac ON task_devices(mac);
         CREATE INDEX IF NOT EXISTS idx_tdevices_status ON task_devices(update_status);
+    """)
+
+    # ── 设备多行数据子表（同一设备支持多条自定义数据记录）═══
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS task_device_rows (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_device_id  INTEGER NOT NULL REFERENCES task_devices(id) ON DELETE CASCADE,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            custom_data     TEXT    DEFAULT '{}',
+            created_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_rows_tdev_id ON task_device_rows(task_device_id);
+        CREATE INDEX IF NOT EXISTS idx_rows_sort ON task_device_rows(task_device_id, sort_order);
     """)
 
     await db.commit()
@@ -416,6 +430,9 @@ async def init_db():
         if 'finished_at' not in col_names:
             await db.execute("ALTER TABLE task_devices ADD COLUMN finished_at TEXT")
             print("[DB] 已添加列 task_devices.finished_at")
+        if 'selected_row_id' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN selected_row_id INTEGER")
+            print("[DB] 已添加列 task_devices.selected_row_id")
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
@@ -1392,12 +1409,27 @@ async def get_task_detail(task_id: int, user_id: int = 0) -> dict | None:
 
     task = dict(row)
 
-    # 设备明细
+    # 设备明细（含子表行数据）
     dcur = await db.execute(
         "SELECT * FROM task_devices WHERE task_id=? ORDER BY created_at",
         (task_id,),
     )
     devices = [dict(d) for d in await dcur.fetchall()]
+
+    # 批量查询所有设备的子表行数据（避免 N+1）
+    if devices:
+        dev_ids = [str(d["id"]) for d in devices]
+        rcur = await db.execute(
+            f"SELECT * FROM task_device_rows WHERE task_device_id IN ({','.join(['?']*len(dev_ids))}) ORDER BY task_device_id, sort_order",
+            dev_ids,
+        )
+        rows_map: dict[int, list[dict]] = {}
+        for row in await rcur.fetchall():
+            rd = dict(row)
+            rows_map.setdefault(rd["task_device_id"], []).append(rd)
+        for d in devices:
+            d["rows"] = rows_map.get(d["id"], [])
+
     task["devices"] = devices
 
     # 状态统计
@@ -1696,3 +1728,127 @@ async def batch_update_device_statuses(
         "failed_count": failed_cnt,
         "pending_count": pending_cnt,
     }
+
+
+# ============================================================
+# TaskDeviceRows 表操作（设备多行数据子表）
+# ============================================================
+
+async def add_task_device_row(
+    task_device_id: int,
+    custom_data: dict,
+    sort_order: int | None = None,
+) -> int:
+    """
+    为某台任务设备添加一条子表数据行
+    如果 sort_order 为 None，自动取当前最大值+1
+    返回新行的 id
+    """
+    db = await get_db()
+    if sort_order is None:
+        cur = await db.execute(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM task_device_rows WHERE task_device_id=?",
+            (task_device_id,),
+        )
+        sort_order = (await cur.fetchone())[0]
+
+    custom_json = json.dumps(custom_data, ensure_ascii=False)
+    cur = await db.execute(
+        """INSERT INTO task_device_rows (task_device_id, sort_order, custom_data, created_at)
+           VALUES (?, ?, ?, datetime('now','localtime'))""",
+        (task_device_id, sort_order, custom_json),
+    )
+    await db.commit()
+    return cur.lastrowid
+
+
+async def get_task_device_rows(task_device_id: int) -> list[dict]:
+    """获取某台设备的所有子表行（按 sort_order 排序）"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM task_device_rows WHERE task_device_id=? ORDER BY sort_order",
+        (task_device_id,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_first_task_device_row(task_device_id: int) -> dict | None:
+    """获取某台设备排序第一的子表行（sort_order 最小），用于推送时合并数据"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM task_device_rows WHERE task_device_id=? ORDER BY sort_order ASC LIMIT 1",
+        (task_device_id,),
+    )
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def update_task_device_row(row_id: int, custom_data: dict) -> bool:
+    """更新单条子表行的自定义数据"""
+    db = await get_db()
+    custom_json = json.dumps(custom_data, ensure_ascii=False)
+    cur = await db.execute(
+        "UPDATE task_device_rows SET custom_data=? WHERE id=?",
+        (custom_json, row_id),
+    )
+    await db.commit()
+    return cur.rowcount > 0
+
+
+async def delete_task_device_row(row_id: int) -> bool:
+    """删除单条子表行"""
+    db = await get_db()
+    cur = await db.execute("DELETE FROM task_device_rows WHERE id=?", (row_id,))
+    await db.commit()
+    return cur.rowcount > 0
+
+
+async def delete_all_task_device_rows(task_device_id: int) -> int:
+    """清空某台设备的所有子表行，返回删除数量"""
+    db = await get_db()
+    cur = await db.execute(
+        "DELETE FROM task_device_rows WHERE task_device_id=?", (task_device_id,)
+    )
+    await db.commit()
+    deleted = cur.rowcount
+    # 重新编排剩余行的 sort_order（如果有并发插入需注意，但此处简单处理）
+    if deleted > 0:
+        rows = await get_task_device_rows(task_device_id)
+        for idx, r in enumerate(rows):
+            await db.execute(
+                "UPDATE task_device_rows SET sort_order=? WHERE id=?", (idx, r["id"])
+            )
+        await db.commit()
+    return deleted
+
+
+async def batch_add_task_device_rows(
+    task_device_id: int,
+    data_list: list[dict],
+) -> int:
+    """
+    批量添加子表行数据
+    data_list: [custom_data_dict, ...]
+    从当前最大 sort_order 开始递增
+    返回新增数量
+    """
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM task_device_rows WHERE task_device_id=?",
+        (task_device_id,),
+    )
+    base_sort = (await cur.fetchone())[0]
+
+    added = 0
+    for idx, data in enumerate(data_list):
+        custom_json = json.dumps(data, ensure_ascii=False)
+        await db.execute(
+            """INSERT INTO task_device_rows (task_device_id, sort_order, custom_data, created_at)
+               VALUES (?, ?, ?, datetime('now','localtime'))""",
+            (task_device_id, base_sort + idx, custom_json),
+        )
+        added += 1
+
+    await db.commit()
+    return added

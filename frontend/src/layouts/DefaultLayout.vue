@@ -44,7 +44,10 @@
       <!-- 底部信息 -->
       <div class="sidebar-footer">
         <div v-if="!appStore.sidebarCollapsed" class="version-info">
-          <span>v1.0.0</span>
+          <div class="version-line" title="前端版本">FE v{{ frontendVersion }}</div>
+          <div class="version-line" title="后端版本">BE v{{ backendVersion || '...' }}</div>
+          <div class="version-line build-time" title="前端编译时间">{{ buildTime }}</div>
+          <div v-if="backendStartTime" class="version-line build-time" title="后端启动时间">↑ {{ backendStartTime }}</div>
         </div>
       </div>
     </aside>
@@ -154,12 +157,19 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import { useBackendWs } from '@/composables/useBackendWs'
+import service from '@/api/index'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const { mqttConnected } = useBackendWs()
+
+// 版本信息
+const frontendVersion = __APP_VERSION__
+const buildTime = __BUILD_TIME__
+const backendVersion = ref('')
+const backendStartTime = ref('')
 
 // 状态
 const searchText = ref('')
@@ -208,6 +218,13 @@ function handleResize() {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  // 获取后端版本信息
+  service.get('/system/info').then((d: any) => {
+    if (d) {
+      backendVersion.value = d.version || ''
+      backendStartTime.value = d.startTime || ''
+    }
+  }).catch(() => {})
 })
 
 onUnmounted(() => {
@@ -325,13 +342,23 @@ onUnmounted(() => {
   }
 
   .sidebar-footer {
-    padding: 16px;
+    padding: 12px 16px;
     border-top: 1px solid var(--el-border-color-lighter);
 
     .version-info {
       font-size: $font-size-xs;
       color: var(--el-text-color-placeholder);
       text-align: center;
+      line-height: 1.6;
+
+      .version-line {
+        white-space: nowrap;
+      }
+
+      .build-time {
+        font-size: 10px;
+        opacity: 0.7;
+      }
     }
   }
 }
