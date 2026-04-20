@@ -23,6 +23,8 @@ export interface TaskDeviceRow {
   sort_order: number
   custom_data: string | Record<string, any>
   created_at: string
+  sent_at?: string
+  finished_at?: string
 }
 
 export interface TaskDeviceInfo {

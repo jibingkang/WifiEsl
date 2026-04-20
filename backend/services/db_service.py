@@ -437,6 +437,20 @@ async def init_db():
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
     
+    # ═══ 兼容旧数据库：确保 task_device_rows 有 sent_at/finished_at 列 ═══
+    try:
+        existing_rows = await (await db.execute("PRAGMA table_info(task_device_rows)")).fetchall()
+        rows_col_names = {row[1] for row in existing_rows}
+        if 'sent_at' not in rows_col_names:
+            await db.execute("ALTER TABLE task_device_rows ADD COLUMN sent_at TEXT")
+            print("[DB] 已添加列 task_device_rows.sent_at")
+        if 'finished_at' not in rows_col_names:
+            await db.execute("ALTER TABLE task_device_rows ADD COLUMN finished_at TEXT")
+            print("[DB] 已添加列 task_device_rows.finished_at")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加 task_device_rows 兼容列失败（可忽略）: {e}")
+    
     # 检查并添加users表的新字段
     try:
         cursor = await db.execute("PRAGMA table_info(users)")
@@ -1566,11 +1580,21 @@ async def update_task_device_status(
         sql = f"""UPDATE task_devices SET update_status=?, sent_at=datetime('now','localtime')
                   WHERE task_id=? AND mac=?"""
         await db.execute(sql, (status, task_id, mac))
+        # 同步更新子行 sent_at
+        cur = await db.execute("SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac))
+        dev_row = await cur.fetchone()
+        if dev_row:
+            await update_task_device_row_time(dev_row["id"], "sent")
     elif status in ("success", "failed"):
         sql = f"""UPDATE task_devices SET update_status=?, error_msg=?,
                   finished_at=datetime('now','localtime')
                   WHERE task_id=? AND mac=?"""
         await db.execute(sql, (status, error_msg or "", task_id, mac))
+        # 同步更新子行 finished_at
+        cur = await db.execute("SELECT id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac))
+        dev_row = await cur.fetchone()
+        if dev_row:
+            await update_task_device_row_time(dev_row["id"], "finished")
     else:
         await db.execute(
             "UPDATE task_devices SET update_status=? WHERE task_id=? AND mac=?",
@@ -1600,6 +1624,14 @@ async def update_device_status_by_mac(
         (status, error_msg or "", mac),
     )
     await db.commit()
+
+    # 同步更新子行 finished_at
+    cur2 = await db.execute(
+        "SELECT id FROM task_devices WHERE mac=? AND update_status IN ('success', 'failed')",
+        (mac,),
+    )
+    for dev_r in await cur2.fetchall():
+        await update_task_device_row_time(dev_r["id"], "finished")
 
     # 查找受影响的 task_id 并刷新任务汇总
     cur = await db.execute(
@@ -1794,6 +1826,42 @@ async def update_task_device_row(row_id: int, custom_data: dict) -> bool:
     )
     await db.commit()
     return cur.rowcount > 0
+
+
+async def update_task_device_row_time(task_device_id: int, field: str, row_id: int | None = None):
+    """
+    更新子表行的时间戳（sent_at 或 finished_at）
+    如果指定 row_id 则只更新该行，否则更新该设备 selected_row_id 对应的行
+    """
+    db = await get_db()
+
+    if row_id is None:
+        # 从 task_devices 获取 selected_row_id
+        cur = await db.execute(
+            "SELECT selected_row_id FROM task_devices WHERE id=?",
+            (task_device_id,),
+        )
+        dev = await cur.fetchone()
+        if not dev or not dev["selected_row_id"]:
+            # 没有选中的行，更新第一行
+            first_row = await get_first_task_device_row(task_device_id)
+            if not first_row:
+                return
+            row_id = first_row["id"]
+        else:
+            row_id = dev["selected_row_id"]
+
+    if field == "sent":
+        await db.execute(
+            "UPDATE task_device_rows SET sent_at=datetime('now','localtime') WHERE id=?",
+            (row_id,),
+        )
+    elif field == "finished":
+        await db.execute(
+            "UPDATE task_device_rows SET finished_at=datetime('now','localtime') WHERE id=?",
+            (row_id,),
+        )
+    await db.commit()
 
 
 async def delete_task_device_row(row_id: int) -> bool:

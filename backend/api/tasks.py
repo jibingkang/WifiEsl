@@ -403,10 +403,21 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     print(f"\n========== [TASK] 任务 {task_id} 开始推送 ==========")
     print(f"   模板: {tid} ({tname}), 设备数: {len(push_devices)}")
 
-    # 将所有设备状态先置为 sent
+    # 将所有设备状态先置为 sent，同时同步 selected_row_id
+    from services.db_service import get_db as _get_db
+    _push_db = await _get_db()
     for d in push_devices:
+        mac = d["mac"]
+        selected_rid = row_selections.get(mac)
+        if selected_rid:
+            # 同步更新 selected_row_id，确保子行时间戳写入正确的行
+            await _push_db.execute(
+                "UPDATE task_devices SET selected_row_id=? WHERE task_id=? AND mac=?",
+                (selected_rid, task_id, mac),
+            )
         from services.db_service import update_task_device_status as _uds
-        await _uds(task_id, d["mac"], "sent")
+        await _uds(task_id, mac, "sent")
+    await _push_db.commit()
 
     results = []
     semaphore = asyncio.Semaphore(5)

@@ -615,6 +615,16 @@ async function _refreshTaskFromServer() {
           local.error_msg = dev.error_msg || ''
           local.sent_at = dev.sent_at || ''
           local.finished_at = dev.finished_at || ''
+          // 同步子行的 sent_at/finished_at
+          if (dev.rows && local.rows) {
+            for (const newRow of dev.rows) {
+              const localRow = (local.rows as any[]).find((r: any) => r.id === newRow.id)
+              if (localRow) {
+                localRow.sent_at = newRow.sent_at || ''
+                localRow.finished_at = newRow.finished_at || ''
+              }
+            }
+          }
         }
       }
     }
@@ -1592,7 +1602,59 @@ function updateAllChecked() {
 
 /** 初始化 selectedRowIds：优先从后端 DB 数据恢复 → localStorage 草稿 → 模板缓存 → 默认第1行 */
 function _initSelectedRowIds(devices: any[], taskId?: number) {
-  // 0. 最优先：从后端返回的 selected_row_id 恢复（跨设备同步的权威来源）
+  // 0. 最优先：查找最后一次推送成功的子行（finished_at 最晚的行）
+  //   如果没有成功的，找 sent_at 最晚的（推送中）
+  //   这样刷新页面后看到的是最后一次更新成功的数据行
+  const result: Record<string, number> = {}
+  let hasLastSuccessRow = false
+  for (const d of devices) {
+    if (d.rows && d.rows.length > 0) {
+      // 找 finished_at 最晚的行（推送成功）
+      let bestRow: any = null
+      let bestTime = ''
+      for (const r of d.rows) {
+        if (r.finished_at && r.finished_at > bestTime) {
+          bestTime = r.finished_at
+          bestRow = r
+        }
+      }
+      if (bestRow) {
+        result[d.mac] = bestRow.id
+        hasLastSuccessRow = true
+        continue
+      }
+      // 没有成功的，找 sent_at 最晚的（推送中）
+      let bestSentRow: any = null
+      let bestSentTime = ''
+      for (const r of d.rows) {
+        if (r.sent_at && r.sent_at > bestSentTime) {
+          bestSentTime = r.sent_at
+          bestSentRow = r
+        }
+      }
+      if (bestSentRow) {
+        result[d.mac] = bestSentRow.id
+        hasLastSuccessRow = true
+        continue
+      }
+      // 没有推送记录，fallback 到 selected_row_id 或第1行
+      if (d.selected_row_id) {
+        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
+        if (exists) {
+          result[d.mac] = d.selected_row_id
+          continue
+        }
+      }
+      result[d.mac] = d.rows[0].id
+    }
+  }
+  if (hasLastSuccessRow) {
+    selectedRowIds.value = result
+    console.log('从最后一次推送成功的行恢复选中行:', result)
+    return
+  }
+
+  // 1. 尝试从后端 selected_row_id 恢复
   const fromDb: Record<string, number> = {}
   let hasDbData = false
   for (const d of devices) {
@@ -1605,7 +1667,6 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
           continue
         }
       }
-      // fallback 到第1行
       fromDb[d.mac] = d.rows[0].id
     }
   }
@@ -1615,7 +1676,7 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     return
   }
 
-  // 1. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
+  // 2. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
   if (taskId) {
     const draft = readDraftRaw()
     if (draft?.selectedRowIds && draft.taskId === taskId) {
@@ -1633,7 +1694,7 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     }
   }
 
-  // 2. 尝试从模板缓存恢复
+  // 3. 尝试从模板缓存恢复
   const cached = selectedTemplate.value?.tid ? templateDataCache.value[selectedTemplate.value.tid] : null
   if (cached?.selectedRowIds) {
     const valid: Record<string, number> = {}
@@ -1649,7 +1710,7 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     return
   }
 
-  // 3. 无缓存：默认选第1行
+  // 4. 无缓存：默认选第1行
   const defaults: Record<string, number> = {}
   for (const d of devices) {
     if (d.rows && d.rows.length > 0) {

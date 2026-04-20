@@ -12,6 +12,7 @@
                 @change="toggleAll"
               />
             </th>
+            <th class="col-index">#</th>
             <th class="col-name">设备</th>
             <th class="col-device-status">设备状态</th>
             <th class="col-update-status">更新状态</th>
@@ -29,7 +30,7 @@
           </tr>
         </thead>
         <tbody>
-          <template v-for="dev in devices" :key="'dev-' + dev.mac">
+          <template v-for="(dev, devIndex) in devices" :key="'dev-' + dev.mac">
             <!-- 主设备行 -->
             <tr
               :class="{ 'has-custom': hasAnyValue(dev.mac), checked: isChecked(dev.mac), 'row-expanded': expandedMacs.includes(dev.mac) }"
@@ -61,6 +62,9 @@
                   />
                 </div>
               </td>
+
+              <!-- 序号 -->
+              <td class="col-index"><span class="index-num">{{ devIndex + 1 }}</span></td>
 
               <!-- 设备名+MAC -->
               <td class="col-name">
@@ -140,6 +144,9 @@
                   <button class="btn-push" title="推送到该设备" :class="{ disabled: dev.status !== 'online' }" @click="$emit('pushDevice', dev)">
                     推送
                   </button>
+                  <button class="btn-add-row-main" title="为该设备新增一条数据行" @click="handleAddRow(dev.mac, dev.taskId)">
+                    <Plus :size="12" /> 新增行
+                  </button>
                   <button class="btn-remove" title="从更新列表移除该设备" @click="$emit('removeBinding', dev)">
                     移除
                   </button>
@@ -147,10 +154,10 @@
               </td>
             </tr>
 
-            <!-- 子表行（折叠展示，包含第1行在内的所有行） -->
-            <template v-if="expandedMacs.includes(dev.mac) && dev.rows && dev.rows.length > 0">
+            <!-- 子表行（折叠展示） -->
+            <template v-if="expandedMacs.includes(dev.mac)">
               <tr
-                v-for="(row, rowIndex) in dev.rows"
+                v-for="(row, rowIndex) in (dev.rows || [])"
                 :key="'row-' + dev.mac + '-' + row.id"
                 class="sub-row"
                 :class="{ 'row-selected': selectedRowIds[dev.mac] === row.id, 'sub-row-first': rowIndex === 0 }"
@@ -170,10 +177,29 @@
                     <span class="sub-row-index">#{{ rowIndex + 1 }}</span>
                   </div>
                 </td>
-                <td colspan="5" class="sub-info-cell">
+                <td class="col-index sub-index-cell"><span class="sub-dash">-</span></td>
+                <td class="col-name sub-name">
                   <span class="sub-row-label">数据行 {{ rowIndex + 1 }}</span>
                   <span v-if="rowIndex === 0" class="sub-row-first-tag">主行</span>
                   <span class="sub-row-time">{{ formatTimeShort(row.created_at) }}</span>
+                </td>
+                <td class="col-device-status sub-empty-cell"><span class="sub-dash">-</span></td>
+                <td class="col-update-status sub-empty-cell">
+                  <template v-if="row.sent_at && row.finished_at">
+                    <el-tag type="success" size="small" class="update-tag">已推送</el-tag>
+                  </template>
+                  <template v-else-if="row.sent_at">
+                    <el-tag type="warning" size="small" class="update-tag">推送中</el-tag>
+                  </template>
+                  <span v-else class="sub-dash">-</span>
+                </td>
+                <td class="col-sent-at sub-time-cell">
+                  <span v-if="row.sent_at" class="time-cell sub-time" :title="'开始: ' + row.sent_at">{{ formatTimeShort(row.sent_at) }}</span>
+                  <span v-else class="sub-dash">-</span>
+                </td>
+                <td class="col-finished-at sub-time-cell">
+                  <span v-if="row.finished_at" class="time-cell sub-time finished" :title="'完成: ' + row.finished_at">{{ formatTimeShort(row.finished_at) }}</span>
+                  <span v-else class="sub-dash">-</span>
                 </td>
                 <!-- 子行字段编辑 -->
                 <td
@@ -209,6 +235,17 @@
                     >推送此行</button>
                     <button class="btn-remove-sub" title="删除此数据行" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
                   </div>
+                </td>
+              </tr>
+              <!-- 新增子行按钮行 -->
+              <tr class="sub-row sub-row-add">
+                <td class="col-check sub-check" />
+                <td class="col-index sub-index-cell" />
+                <td class="col-name sub-name" :colspan="4 + templateInfo.fields.length + 1">
+                  <button class="btn-add-row" @click="handleAddRow(dev.mac, dev.taskId)">
+                    <Plus :size="14" />
+                    新增数据行
+                  </button>
                 </td>
               </tr>
             </template>
@@ -293,10 +330,10 @@
         </div>
 
         <!-- 卡片子行区域 -->
-        <div v-if="expandedMacs.includes(dev.mac) && dev.rows && dev.rows.length > 0" class="card-sub-rows">
-          <div class="card-sub-header">多行数据 ({{ dev.rows.length }} 条)</div>
+        <div v-if="expandedMacs.includes(dev.mac)" class="card-sub-rows">
+          <div class="card-sub-header">多行数据 ({{ (dev.rows || []).length }} 条)</div>
           <div
-            v-for="(row, rowIndex) in dev.rows"
+            v-for="(row, rowIndex) in (dev.rows || [])"
             :key="'mr-' + dev.mac + '-' + row.id"
             class="card-sub-item"
             :class="{ 'sub-item-active': selectedRowIds[dev.mac] === row.id }"
@@ -340,6 +377,11 @@
               </div>
             </div>
           </div>
+          <!-- 新增子行按钮 -->
+          <button class="card-add-row-btn" @click="handleAddRow(dev.mac, dev.taskId)">
+            <Plus :size="14" />
+            新增数据行
+          </button>
         </div>
 
         <!-- 卡片底部：操作按钮 -->
@@ -349,6 +391,9 @@
             :class="{ disabled: dev.status !== 'online' }"
             @click="$emit('pushDevice', dev)"
           >推送</button>
+          <button class="btn-add-row-mob" @click="handleAddRow(dev.mac, dev.taskId)">
+            <Plus :size="14" /> 新增行
+          </button>
           <button class="btn-remove" @click="$emit('removeBinding', dev)">移除</button>
         </div>
       </div>
@@ -382,7 +427,7 @@ import { taskApi } from '@/api/task'
 
 const props = withDefaults(defineProps<{
   templateInfo: TemplateInfo
-  devices: Array<{ mac: string; name: string; status: string; hasCustom: boolean; updateStatus?: string; errorMsg?: string; sentAt?: string; finishedAt?: string; voltage?: number; id?: number; taskId?: number; rowCount?: number; rows?: Array<{ id: number; task_device_id: number; sort_order: number; custom_data: string | Record<string, any>; created_at: string }> }>
+  devices: Array<{ mac: string; name: string; status: string; hasCustom: boolean; updateStatus?: string; errorMsg?: string; sentAt?: string; finishedAt?: string; voltage?: number; id?: number; taskId?: number; rowCount?: number; rows?: Array<{ id: number; task_device_id: number; sort_order: number; custom_data: string | Record<string, any>; created_at: string; sent_at?: string; finished_at?: string }> }>
   defaultData: Record<string, any>
   customOverrides: Record<string, Record<string, any>>
   checkedMacs: string[]
@@ -914,6 +959,22 @@ async function handleDeleteRow(rowId: number, _mac: string, _taskId: number | un
     console.error('[DeviceDataTable] 删除子行失败:', e)
   }
 }
+
+/** 新增子行 */
+async function handleAddRow(mac: string, taskId: number | undefined) {
+  if (!taskId) return
+  try {
+    await taskApi.addDeviceRow(taskId, mac, {})
+    // 通知父组件刷新数据
+    emit('dataChanged')
+    // 确保该设备处于展开状态
+    if (!expandedMacs.value.includes(mac)) {
+      expandedMacs.value.push(mac)
+    }
+  } catch (e) {
+    console.error('[DeviceDataTable] 新增子行失败:', e)
+  }
+}
 </script>
 
 <style scoped>
@@ -965,6 +1026,7 @@ async function handleDeleteRow(rowId: number, _mac: string, _taskId: number | un
 
 /* 列宽 */
 .col-check { width: 50px; text-align: center; }
+.col-index { width: 36px; text-align: center; }
 .col-name {
   position: sticky;
   left: 0;
@@ -992,6 +1054,21 @@ async function handleDeleteRow(rowId: number, _mac: string, _taskId: number | un
   font-size: 11px;
   color: #22c55e;
   margin-top: 4px;
+  text-align: center;
+}
+
+/* 序号 */
+.index-num {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  min-width: 18px;
+  text-align: center;
+}
+
+.sub-index-cell {
   text-align: center;
 }
 
@@ -1153,6 +1230,24 @@ td.is-custom .cell-input {
   &:hover { background: rgba(107,114,128,0.16); }
 }
 
+/* 主行"新增行"按钮 */
+.btn-add-row-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  background: rgba(16,185,129,0.08);
+  color: #059669;
+
+  &:hover { background: rgba(16,185,129,0.16); }
+}
+
 /* 底部工具条 */
 .table-footer-bar {
   display: flex;
@@ -1242,11 +1337,29 @@ tr.row-expanded > td.col-name { border-left: 3px solid #6366f1; }
   font-family: ui-monospace, SFMono-Regular, monospace;
 }
 
-.sub-info-cell {
+.sub-name {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-left: 4px !important;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sub-empty-cell {
+  text-align: center;
+}
+
+.sub-time-cell {
+  text-align: center;
+}
+
+.sub-time {
+  font-size: 11px;
+  color: #8b5cf6;
+}
+
+.sub-dash {
+  color: #d1d5db;
+  font-size: 11px;
 }
 
 .sub-row-label {
@@ -1329,6 +1442,34 @@ td.is-custom.sub-field .sub-input {
   white-space: nowrap;
 
   &:hover { background: rgba(239,68,68,0.14); }
+}
+
+/* ═══ 新增子行按钮 ═══ */
+.sub-row-add td {
+  border-bottom: none !important;
+  padding: 6px 8px;
+}
+
+.btn-add-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border: 1.5px dashed #c4b5fd;
+  border-radius: 6px;
+  background: rgba(139,92,246,0.04);
+  color: #7c3aed;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(139,92,246,0.1);
+    border-color: #8b5cf6;
+    color: #6d28d9;
+  }
 }
 
 /* ═══ 子行选择样式 ═══ */
@@ -1642,6 +1783,30 @@ td.is-custom.sub-field .sub-input {
 
   .sub-label::after { content: ':'; }
 
+  .card-add-row-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: 1.5px dashed #c4b5fd;
+    border-radius: 8px;
+    background: rgba(139,92,246,0.04);
+    color: #7c3aed;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(139,92,246,0.1);
+      border-color: #8b5cf6;
+      color: #6d28d9;
+    }
+  }
+
   .card-actions {
     display: flex;
     justify-content: flex-end;
@@ -1675,6 +1840,23 @@ td.is-custom.sub-field .sub-input {
     color: #64748b;
     border: 1px solid #e2e8f0;
     &:hover { background: rgba(107,114,128,0.12); }
+  }
+
+  .btn-add-row-mob {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    background: rgba(16,185,129,0.08);
+    color: #059669;
+    transition: all 0.15s;
+
+    &:hover { background: rgba(16,185,129,0.16); }
   }
 
   .table-footer-bar { flex-wrap: wrap; gap: 8px; }

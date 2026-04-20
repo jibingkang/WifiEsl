@@ -2,6 +2,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# 配置国内 npm 源（淘宝镜像）
+RUN npm config set registry https://registry.npmmirror.com
+
 # 复制 package 文件
 COPY package*.json ./
 
@@ -18,6 +21,9 @@ RUN npx vite build --emptyOutDir --minify false
 
 # 生产环境使用 Nginx
 FROM nginx:alpine
+
+# 配置国内 apk 源（阿里云）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
