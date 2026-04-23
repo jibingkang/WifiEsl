@@ -167,6 +167,34 @@
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
+          <div class="sort-group">
+            <span class="sort-label">排序：</span>
+            <el-dropdown trigger="click" @command="(cmd: string) => { sortField = cmd as any; if (cmd === 'default') sortOrder = 'asc' }">
+              <el-button size="default" class="sort-btn">
+                <ArrowUpDown :size="14" />
+                {{ sortField === 'default' ? '默认' : sortField === 'name' ? '设备名' : sortField === 'mac' ? 'MAC' : '状态' }}
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="default" :class="{ 'is-active': sortField === 'default' }">默认排序</el-dropdown-item>
+                  <el-dropdown-item command="name" :class="{ 'is-active': sortField === 'name' }">按设备名</el-dropdown-item>
+                  <el-dropdown-item command="mac" :class="{ 'is-active': sortField === 'mac' }">按MAC地址</el-dropdown-item>
+                  <el-dropdown-item command="status" :class="{ 'is-active': sortField === 'status' }">按设备状态</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button
+              v-if="sortField !== 'default'"
+              size="default"
+              class="sort-order-btn"
+              @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
+              :title="sortOrder === 'asc' ? '当前升序，点击切换降序' : '当前降序，点击切换升序'"
+            >
+              <ArrowUpAZ v-if="sortOrder === 'asc'" :size="14" />
+              <ArrowDownZA v-else :size="14" />
+              {{ sortOrder === 'asc' ? '升序' : '降序' }}
+            </el-button>
+          </div>
           <span class="filter-result-info">
             {{ filterKeyword ? `已筛选出 ${filteredDeviceTableData.length} 台设备` : `共 ${selectedMacs.length} 台设备` }}
           </span>
@@ -310,7 +338,7 @@ import { ElNotification, ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import {
   Clock, Files, LayoutTemplate, Plus, Pencil, Smartphone,
-  Send, Info, ListTodo, Download, Upload,
+  Send, Info, ListTodo, Download, Upload, ArrowUpDown, ArrowUpAZ, ArrowDownZA,
 } from 'lucide-vue-next'
 import { Search } from '@element-plus/icons-vue'
 import { useTemplate } from '@/composables/useTemplate'
@@ -357,6 +385,8 @@ const selectedRowIds = ref<Record<string, number>>({}) // mac -> row_id，记录
 const showDevicePicker = ref(false)
 const isMobile = ref(window.innerWidth <= 768)
 const filterKeyword = ref('')  // 设备筛选关键词（MAC/名称/字段值）
+const sortField = ref<'default' | 'name' | 'mac' | 'status'>('default')  // 排序字段
+const sortOrder = ref<'asc' | 'desc'>('asc')  // 排序方向
 
 // 响应式监听屏幕尺寸
 window.addEventListener('resize', () => {
@@ -461,28 +491,43 @@ const filteredDeviceTableData = computed(() => {
     }
   })
   
-  // 如果没有筛选关键词，返回所有设备
-  if (!filterKeyword.value.trim()) {
-    return devices
+  // 筛选
+  let filtered = devices
+  if (filterKeyword.value.trim()) {
+    const kw = filterKeyword.value.trim().toLowerCase()
+    filtered = devices.filter(dev => {
+      if (dev.mac.toLowerCase().includes(kw)) return true
+      if (dev.name.toLowerCase().includes(kw)) return true
+      const fieldValues = Object.values(dev.fieldValues || {})
+      for (const val of fieldValues) {
+        if (String(val).toLowerCase().includes(kw)) return true
+      }
+      return false
+    })
   }
-  
-  const kw = filterKeyword.value.trim().toLowerCase()
-  // 支持模糊查询：MAC、设备名、字段值
-  return devices.filter(dev => {
-    // 1. 检查 MAC 地址
-    if (dev.mac.toLowerCase().includes(kw)) return true
-    
-    // 2. 检查设备名称
-    if (dev.name.toLowerCase().includes(kw)) return true
-    
-    // 3. 检查自定义字段值
-    const fieldValues = Object.values(dev.fieldValues || {})
-    for (const val of fieldValues) {
-      if (String(val).toLowerCase().includes(kw)) return true
-    }
-    
-    return false
-  })
+
+  // 排序
+  if (sortField.value !== 'default') {
+    const dir = sortOrder.value === 'asc' ? 1 : -1
+    filtered = [...filtered].sort((a, b) => {
+      if (sortField.value === 'name') {
+        return dir * a.name.localeCompare(b.name, 'zh-CN')
+      }
+      if (sortField.value === 'mac') {
+        return dir * a.mac.localeCompare(b.mac)
+      }
+      if (sortField.value === 'status') {
+        // 在线优先
+        const order: Record<string, number> = { online: 0, offline: 1 }
+        const sa = order[a.status] ?? 2
+        const sb = order[b.status] ?? 2
+        return dir * (sa - sb)
+      }
+      return 0
+    })
+  }
+
+  return filtered
 })
 
 /** 任务进度统计 */
@@ -2352,6 +2397,38 @@ onUnmounted(() => {
   padding: 8px 0;
   border-bottom: 1px solid #e5e7eb;
   
+  .sort-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sort-label {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+  .sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .sort-order-btn {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 13px;
+    padding: 5px 10px;
+    color: #409eff;
+    border-color: #b3d8ff;
+    background: #ecf5ff;
+  }
+  .sort-order-btn:hover {
+    color: #66b1ff;
+    border-color: #66b1ff;
+    background: #ecf5ff;
+  }
+
   .filter-result-info {
     font-size: 13px;
     color: #6b7280;
@@ -2368,6 +2445,10 @@ onUnmounted(() => {
     
     .el-input {
       width: 100% !important;
+    }
+    
+    .sort-group {
+      justify-content: center;
     }
     
     .filter-result-info {

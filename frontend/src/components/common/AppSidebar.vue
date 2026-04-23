@@ -60,7 +60,7 @@
 
     <!-- 底部版本 -->
     <div class="sidebar-footer">
-      <span v-show="!appStore.sidebarCollapsed" class="version">v1.0.0</span>
+      <span v-show="!appStore.sidebarCollapsed" class="version">v1.1.2</span>
     </div>
   </aside>
 </template>

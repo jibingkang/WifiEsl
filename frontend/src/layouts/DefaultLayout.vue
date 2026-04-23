@@ -67,11 +67,10 @@
           <!-- 折叠按钮 -->
           <el-button 
             class="collapse-btn" 
-            text 
             @click="appStore.toggleSidebar()"
           >
-            <Fold v-if="!appStore.sidebarCollapsed" />
-            <Expand v-else />
+            <PanelLeftClose v-if="!appStore.sidebarCollapsed" :size="20" />
+            <PanelLeftOpen v-else :size="20" />
           </el-button>
 
           <!-- 面包屑 -->
@@ -149,10 +148,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  Fold, Expand, Search, FullScreen, UserFilled,
+  Search, FullScreen, UserFilled,
   ArrowDown, User, SwitchButton,
   Odometer, Monitor, Document, FolderOpened, TrendCharts, Clock
 } from '@element-plus/icons-vue'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
@@ -404,7 +404,17 @@ onUnmounted(() => {
     gap: 16px;
 
     .collapse-btn {
-      font-size: 18px;
+      padding: 8px;
+      font-size: 20px;
+      color: var(--el-text-color-primary) !important;
+      background: var(--el-fill-color-light) !important;
+      border: 1px solid var(--el-border-color) !important;
+      border-radius: 8px;
+      &:hover {
+        color: var(--el-color-primary) !important;
+        background: var(--el-color-primary-light-9) !important;
+        border-color: var(--el-color-primary-light-7) !important;
+      }
     }
 
     .breadcrumb {

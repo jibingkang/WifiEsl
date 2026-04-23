@@ -156,11 +156,32 @@
 
             <!-- 子表行（折叠展示） -->
             <template v-if="expandedMacs.includes(dev.mac)">
+              <!-- 子行筛选栏（子行数 > 3 时显示） -->
+              <tr v-if="(dev.rows || []).length > 3" class="sub-row sub-row-filter">
+                <td class="col-check sub-check" />
+                <td class="col-index sub-index-cell" />
+                <td class="col-name sub-name" :colspan="4 + templateInfo.fields.length + 1">
+                  <div class="sub-filter-wrap">
+                    <input
+                      type="text"
+                      class="sub-filter-input"
+                      placeholder="搜索子行数据..."
+                      :value="rowFilterMap[dev.mac] || ''"
+                      @input="rowFilterMap[dev.mac] = ($event.target as HTMLInputElement).value"
+                    />
+                    <button
+                      v-if="rowFilterMap[dev.mac]"
+                      class="sub-filter-clear"
+                      @click="rowFilterMap[dev.mac] = ''"
+                    >&#x2715;</button>
+                  </div>
+                </td>
+              </tr>
               <tr
-                v-for="(row, rowIndex) in (dev.rows || [])"
+                v-for="(row, rowIndex) in getFilteredRows(dev.mac, dev.rows || [])"
                 :key="'row-' + dev.mac + '-' + row.id"
                 class="sub-row"
-                :class="{ 'row-selected': selectedRowIds[dev.mac] === row.id, 'sub-row-first': rowIndex === 0 }"
+                :class="{ 'row-selected': selectedRowIds[dev.mac] === row.id, 'sub-row-first': row._origIndex === 0 }"
               >
                 <td class="col-check sub-check">
                   <div class="sub-row-indent">
@@ -174,13 +195,13 @@
                     />
                     <span v-if="rowIndex === 0" class="sub-row-marker sub-row-marker-first" />
                     <span v-else class="sub-row-marker" />
-                    <span class="sub-row-index">#{{ rowIndex + 1 }}</span>
+                    <span class="sub-row-index">#{{ row._origIndex + 1 }}</span>
                   </div>
                 </td>
                 <td class="col-index sub-index-cell"><span class="sub-dash">-</span></td>
                 <td class="col-name sub-name">
-                  <span class="sub-row-label">数据行 {{ rowIndex + 1 }}</span>
-                  <span v-if="rowIndex === 0" class="sub-row-first-tag">主行</span>
+                  <span class="sub-row-label">数据行 {{ row._origIndex + 1 }}</span>
+                  <span v-if="row._origIndex === 0" class="sub-row-first-tag">主行</span>
                   <span class="sub-row-time">{{ formatTimeShort(row.created_at) }}</span>
                 </td>
                 <td class="col-device-status sub-empty-cell"><span class="sub-dash">-</span></td>
@@ -331,9 +352,19 @@
 
         <!-- 卡片子行区域 -->
         <div v-if="expandedMacs.includes(dev.mac)" class="card-sub-rows">
-          <div class="card-sub-header">多行数据 ({{ (dev.rows || []).length }} 条)</div>
+          <div class="card-sub-header">
+            <span>多行数据 ({{ (dev.rows || []).length }} 条)</span>
+            <input
+              v-if="(dev.rows || []).length > 3"
+              type="text"
+              class="sub-filter-input-mob"
+              placeholder="搜索子行..."
+              :value="rowFilterMap[dev.mac] || ''"
+              @input="rowFilterMap[dev.mac] = ($event.target as HTMLInputElement).value"
+            />
+          </div>
           <div
-            v-for="(row, rowIndex) in (dev.rows || [])"
+            v-for="row in getFilteredRows(dev.mac, dev.rows || [])"
             :key="'mr-' + dev.mac + '-' + row.id"
             class="card-sub-item"
             :class="{ 'sub-item-active': selectedRowIds[dev.mac] === row.id }"
@@ -347,8 +378,8 @@
                 class="row-radio row-radio-mob"
                 :title="'切换到此行数据'"
               />
-              <span class="sub-tag">#{{ rowIndex + 1 }}</span>
-              <span v-if="rowIndex === 0" class="sub-row-first-tag-mob">主行</span>
+              <span class="sub-tag">#{{ row._origIndex + 1 }}</span>
+              <span v-if="row._origIndex === 0" class="sub-row-first-tag-mob">主行</span>
               <button class="btn-remove-sub" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
             </div>
             <div
@@ -419,7 +450,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import { X, AlertCircle, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 import type { TemplateInfo } from '@/types'
 import { formatVoltage } from '@/utils/format'
@@ -450,6 +481,27 @@ const emit = defineEmits<{
 
 // ── 折叠状态管理 ──
 const expandedMacs = ref<string[]>([])
+
+// ── 子行筛选状态 ──
+const rowFilterMap = reactive<Record<string, string>>({})
+
+/** 获取筛选后的子行列表（附带原始索引 _origIndex） */
+function getFilteredRows(mac: string, rows: any[]): any[] {
+  const kw = (rowFilterMap[mac] || '').trim().toLowerCase()
+  if (!kw) {
+    return rows.map((r, i) => ({ ...r, _origIndex: i }))
+  }
+  return rows
+    .map((r, i) => ({ ...r, _origIndex: i }))
+    .filter(r => {
+      // 搜索 custom_data 中的值
+      const data = parseRowCustomData(r)
+      for (const val of Object.values(data)) {
+        if (String(val).toLowerCase().includes(kw)) return true
+      }
+      return false
+    })
+}
 
 // ── 行选择状态管理 ──
 // 使用内部 ref 管理，避免与父组件双向同步导致递归更新
@@ -1442,6 +1494,67 @@ td.is-custom.sub-field .sub-input {
   white-space: nowrap;
 
   &:hover { background: rgba(239,68,68,0.14); }
+}
+
+/* ═══ 子行筛选 ═══ */
+.sub-row-filter td {
+  border-bottom: none !important;
+  padding: 4px 8px;
+}
+.sub-filter-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 240px;
+}
+.sub-filter-input {
+  width: 100%;
+  padding: 4px 24px 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #374151;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sub-filter-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.1);
+}
+.sub-filter-input::placeholder {
+  color: #9ca3af;
+}
+.sub-filter-clear {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 2px;
+  line-height: 1;
+}
+.sub-filter-clear:hover {
+  color: #6b7280;
+}
+.sub-filter-input-mob {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  background: #fff;
+  outline: none;
+}
+.sub-filter-input-mob:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.1);
+}
+.sub-filter-input-mob::placeholder {
+  color: #9ca3af;
 }
 
 /* ═══ 新增子行按钮 ═══ */

@@ -1,0 +1,1 @@
+import{U as t}from"./index-CqCnUFSZ.js";function p(){return t.get("/templates")}function s(e){return t.post("/templates",e)}function n(e,a){return t.put(`/templates/${e}`,a)}function u(e){return t.delete(`/templates/${e}`)}function m(e=1,a=20){return t.get("/update-history",{params:{page:e,pageSize:a}})}export{m as a,s as c,u as d,p as g,n as u};
