@@ -15,7 +15,7 @@
         <div class="panel-title">在线率</div>
         <div class="rate-circle-wrap">
           <svg viewBox="0 0 120 120" class="rate-svg">
-            <circle cx="60" cy="60" r="52" fill="none" stroke="#1e293b" stroke-width="10" />
+            <circle cx="60" cy="60" r="52" fill="none" class="rate-bg-circle" stroke-width="10" />
             <circle
               cx="60" cy="60" r="52"
               fill="none"
@@ -166,10 +166,10 @@ function pushEvent(message: string, type: string) {
 const signalData = computed(() => {
   const devs = deviceStore.devices ?? []
   return [
-    { label: '优秀\n>-50dBm', count: devs.filter(d => d.rssi && d.rssi >= -50).length, height: '40%', color: '#22c55e' },
-    { label: '良好\n-60dBm', count: devs.filter(d => d.rssi && d.rssi >= -60).length, height: '65%', color: '#4ade80' },
-    { label: '一般\n-70dBm', count: devs.filter(d => d.rssi && d.rssi >= -70).length, height: '45%', color: '#f59e0b' },
-    { label: '弱\n<-70dBm', count: devs.filter(d => d.rssi && d.rssi < -70).length, height: '22%', color: '#ef4444' },
+    { label: '优秀\n>-50dBm', count: devs.filter(d => d.rssi != null && d.rssi >= -50).length, height: '40%', color: '#22c55e' },
+    { label: '良好\n-60dBm', count: devs.filter(d => d.rssi != null && d.rssi >= -60 && d.rssi < -50).length, height: '65%', color: '#4ade80' },
+    { label: '一般\n-70dBm', count: devs.filter(d => d.rssi != null && d.rssi >= -70 && d.rssi < -60).length, height: '45%', color: '#f59e0b' },
+    { label: '弱\n<-70dBm', count: devs.filter(d => d.rssi != null && d.rssi < -70).length, height: '22%', color: '#ef4444' },
   ]
 })
 
@@ -244,20 +244,41 @@ onUnmounted(() => {
 
 /* ========== 面板基础样式 ========== */
 .panel {
-  background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
-  border: 1px solid rgba(99,102,241,0.12);
+  background: var(--monitor-panel-bg, linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)));
+  border: 1px solid var(--monitor-panel-border, rgba(99,102,241,0.12));
   border-radius: 14px;
   padding: 16px 18px;
   backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease;
 
   .panel-title {
     font-size: 14px;
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--monitor-text-secondary, #94a3b8);
     margin-bottom: 12px;
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+}
+
+/* 浅色模式面板 */
+html:not(.dark) .panel {
+  --monitor-panel-bg: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,250,252,0.98));
+  --monitor-panel-border: rgba(99,102,241,0.1);
+  --monitor-panel-shadow: 0 1px 3px rgba(0,0,0,0.06);
+
+  .panel-title {
+    --monitor-text-secondary: #64748b;
+  }
+}
+
+html.dark .panel {
+  --monitor-panel-bg: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
+  --monitor-panel-border: rgba(99,102,241,0.12);
+
+  .panel-title {
+    --monitor-text-secondary: #94a3b8;
   }
 }
 
@@ -291,6 +312,10 @@ onUnmounted(() => {
   }
 }
 
+html:not(.dark) .live-badge {
+  background: rgba(239,68,68,0.06);
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.15; }
@@ -312,17 +337,35 @@ onUnmounted(() => {
 
 .stat-card-m {
   text-align: center;
-  .sc-label { font-size: 13px; color: #64748b; margin-bottom: 6px; }
+  .sc-label { font-size: 13px; color: var(--monitor-text-muted, #64748b); margin-bottom: 6px; }
   .sc-value {
     font-size: 32px;
     font-weight: 800;
     font-family: 'DIN Alternate', sans-serif;
-    &.text-blue { color: #60a5fa; }
-    &.text-green { color: #4ade80; }
-    &.text-red { color: #f87171; }
-    &.text-yellow { color: #fbbf24; }
-    &.text-orange { color: #fb923c; }
+    &.text-blue { color: var(--monitor-blue, #60a5fa); }
+    &.text-green { color: var(--monitor-green, #4ade80); }
+    &.text-red { color: var(--monitor-red, #f87171); }
+    &.text-yellow { color: var(--monitor-yellow, #fbbf24); }
+    &.text-orange { color: var(--monitor-orange, #fb923c); }
   }
+}
+
+html:not(.dark) .stat-card-m {
+  --monitor-text-muted: #64748b;
+  --monitor-blue: #3b82f6;
+  --monitor-green: #16a34a;
+  --monitor-red: #dc2626;
+  --monitor-yellow: #ca8a04;
+  --monitor-orange: #ea580c;
+}
+
+html.dark .stat-card-m {
+  --monitor-text-muted: #64748b;
+  --monitor-blue: #60a5fa;
+  --monitor-green: #4ade80;
+  --monitor-red: #f87171;
+  --monitor-yellow: #fbbf24;
+  --monitor-orange: #fb923c;
 }
 
 .panel-rate {
@@ -341,13 +384,30 @@ onUnmounted(() => {
     justify-content: center;
   }
   .rate-svg { width: 110px; height: 110px; }
+  .rate-bg-circle { stroke: var(--monitor-rate-bg, #1e293b); }
   .rate-text {
     position: absolute;
     font-size: 26px;
     font-weight: 800;
-    color: #4ade80;
+    color: var(--monitor-green, #4ade80);
     font-family: 'DIN Alternate', sans-serif;
   }
+}
+
+html:not(.dark) .panel-rate .rate-text {
+  --monitor-green: #16a34a;
+}
+
+html.dark .panel-rate .rate-text {
+  --monitor-green: #4ade80;
+}
+
+html:not(.dark) .rate-bg-circle {
+  --monitor-rate-bg: #e2e8f0;
+}
+
+html.dark .rate-bg-circle {
+  --monitor-rate-bg: #1e293b;
 }
 
 /* ========== 设备网格 ========== */
@@ -370,7 +430,7 @@ onUnmounted(() => {
   gap: 6px;
   padding: 8px 12px;
   border-radius: 9px;
-  background: rgba(255,255,255,0.03);
+  background: var(--monitor-chip-bg, rgba(255,255,255,0.03));
   border: 1px solid transparent;
   transition: all 0.2s;
 
@@ -386,9 +446,21 @@ onUnmounted(() => {
   }
   .offline .chip-dot { background: #64748b; }
 
-  .chip-name { font-size: 12px; color: #cbd5e1; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chip-mac { font-size: 11px; font-family: monospace; color: #64748b; }
-  .chip-volt { font-size: 11px; margin-left: auto; color: #94a3b8; }
+  .chip-name { font-size: 12px; color: var(--monitor-chip-name, #cbd5e1); max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip-mac { font-size: 11px; font-family: monospace; color: var(--monitor-chip-mac, #64748b); }
+  .chip-volt { font-size: 11px; margin-left: auto; color: var(--monitor-text-secondary, #94a3b8); }
+}
+
+html:not(.dark) .device-chip {
+  --monitor-chip-bg: rgba(0,0,0,0.02);
+  --monitor-chip-name: #334155;
+  --monitor-chip-mac: #94a3b8;
+}
+
+html.dark .device-chip {
+  --monitor-chip-bg: rgba(255,255,255,0.03);
+  --monitor-chip-name: #cbd5e1;
+  --monitor-chip-mac: #64748b;
 }
 
 /* ========== 事件流 ========== */
@@ -399,12 +471,24 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   padding: 7px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--monitor-divider, rgba(255,255,255,0.04));
   font-size: 12.5px;
   animation: slideIn 0.3s ease both;
 
-  .ev-time { color: #475569; font-family: monospace; white-space: nowrap; min-width: 72px; }
-  .ev-msg { color: #cbd5e1; }
+  .ev-time { color: var(--monitor-time-color, #475569); font-family: monospace; white-space: nowrap; min-width: 72px; }
+  .ev-msg { color: var(--monitor-ev-msg, #cbd5e1); }
+}
+
+html:not(.dark) .event-item {
+  --monitor-divider: rgba(0,0,0,0.06);
+  --monitor-time-color: #94a3b8;
+  --monitor-ev-msg: #475569;
+}
+
+html.dark .event-item {
+  --monitor-divider: rgba(255,255,255,0.04);
+  --monitor-time-color: #475569;
+  --monitor-ev-msg: #cbd5e1;
 }
 
 @keyframes slideIn {
@@ -448,7 +532,7 @@ onUnmounted(() => {
 
   .bar-label {
     font-size: 11px;
-    color: #64748b;
+    color: var(--monitor-text-muted, #64748b);
     text-align: center;
     line-height: 1.3;
     white-space: pre-line;
@@ -469,13 +553,23 @@ onUnmounted(() => {
   gap: 8px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(239,68,68,0.06);
+  background: var(--monitor-alert-bg, rgba(239,68,68,0.06));
   border-left: 3px solid #ef4444;
   margin-bottom: 6px;
   font-size: 12.5px;
 
-  .al-text { color: #fca5a5; flex: 1; }
-  .al-time { color: #64748b; font-size: 11px; font-family: monospace; }
+  .al-text { color: var(--monitor-alert-text, #fca5a5); flex: 1; }
+  .al-time { color: var(--monitor-time-color, #64748b); font-size: 11px; font-family: monospace; }
+}
+
+html:not(.dark) .alert-item {
+  --monitor-alert-bg: rgba(239,68,68,0.04);
+  --monitor-alert-text: #dc2626;
+}
+
+html.dark .alert-item {
+  --monitor-alert-bg: rgba(239,68,68,0.06);
+  --monitor-alert-text: #fca5a5;
 }
 
 .no-alert {
@@ -483,8 +577,16 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: #475569;
+  color: var(--monitor-text-muted, #475569);
   font-size: 13px;
+}
+
+html:not(.dark) .no-alert {
+  --monitor-text-muted: #94a3b8;
+}
+
+html.dark .no-alert {
+  --monitor-text-muted: #475569;
 }
 
 /* ========== 动画过渡 ========== */

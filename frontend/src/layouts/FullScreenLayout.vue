@@ -64,10 +64,19 @@ onUnmounted(() => clearInterval(timer))
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #0a0e1a;
-  color: #e2e8f0;
+  background: var(--monitor-bg, #0a0e1a);
+  color: var(--el-text-color-primary);
   z-index: 100;
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html:not(.dark) .fullscreen-layout {
+  --monitor-bg: #f0f2f5;
+}
+
+html.dark .fullscreen-layout {
+  --monitor-bg: #0a0e1a;
 }
 
 .monitor-header {
@@ -77,9 +86,20 @@ onUnmounted(() => clearInterval(timer))
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: linear-gradient(180deg, rgba(15,23,42,1), rgba(15,23,42,0.85));
-  border-bottom: 1px solid rgba(99,102,241,0.2);
+  background: var(--monitor-header-bg, linear-gradient(180deg, rgba(15,23,42,1), rgba(15,23,42,0.85)));
+  border-bottom: 1px solid var(--monitor-border, rgba(99,102,241,0.2));
   backdrop-filter: blur(10px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+html:not(.dark) .monitor-header {
+  --monitor-header-bg: linear-gradient(180deg, #ffffff, #f8f9fa);
+  --monitor-border: rgba(99,102,241,0.15);
+}
+
+html.dark .monitor-header {
+  --monitor-header-bg: linear-gradient(180deg, rgba(15,23,42,1), rgba(15,23,42,0.85));
+  --monitor-border: rgba(99,102,241,0.2);
 }
 
 .system-title {
@@ -95,11 +115,16 @@ onUnmounted(() => clearInterval(timer))
   -webkit-text-fill-color: transparent;
 }
 
+html:not(.dark) .system-title {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  -webkit-background-clip: text;
+}
+
 .header-center .clock {
   font-size: 20px;
   font-weight: 600;
   font-family: 'SF Mono', monospace;
-  color: #94a3b8;
+  color: var(--el-text-color-secondary);
   letter-spacing: 2px;
 }
 
@@ -123,6 +148,13 @@ onUnmounted(() => clearInterval(timer))
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
 }
 
+html:not(.dark) .mqtt-indicator {
+  background: rgba(239,68,68,0.08);
+  color: #dc2626;
+
+  &.connected { background: rgba(34,197,94,0.08); color: #16a34a; }
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -133,10 +165,10 @@ onUnmounted(() => clearInterval(timer))
   align-items: center;
   gap: 4px;
   padding: 6px 14px;
-  border: 1px solid rgba(148,163,184,0.25);
+  border: 1px solid var(--el-border-color);
   border-radius: 8px;
   background: transparent;
-  color: #94a3b8;
+  color: var(--el-text-color-secondary);
   cursor: pointer;
   font-size: 13px;
   transition: all 0.2s;

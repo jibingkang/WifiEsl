@@ -149,3 +149,50 @@ a {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
+
+/* ==================== 暗色模式全局补充 ==================== */
+html.dark {
+  // 侧边栏菜单选中态
+  .el-menu-item.is-active {
+    background: linear-gradient(135deg, rgba($primary-color, 0.2), rgba($primary-dark, 0.1)) !important;
+  }
+
+  // 统计卡片趋势标签
+  .card-trend.up { background: rgba(34, 197, 94, 0.12); }
+  .card-trend.down { background: rgba(239, 68, 68, 0.12); }
+
+  // 表格优化
+  .el-table {
+    --el-table-bg-color: var(--el-bg-color);
+    --el-table-tr-bg-color: var(--el-bg-color);
+    --el-table-header-bg-color: var(--el-fill-color-lighter);
+    --el-table-row-hover-bg-color: var(--el-fill-color);
+    --el-table-border-color: var(--el-border-color-lighter);
+  }
+
+  // 卡片暗色增强
+  .el-card {
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  // 按钮渐变在暗色模式下增加亮度
+  .el-button--primary {
+    background: linear-gradient(135deg, #818cf8, #a78bfa);
+    &:hover, &:focus {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+  }
+
+  // 滚动条
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+
+  // 输入框聚焦
+  .el-input__wrapper:focus-within {
+    box-shadow: 0 0 0 1px $primary-light inset !important;
+  }
+}

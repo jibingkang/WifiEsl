@@ -1050,13 +1050,13 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
   font-size: 12.5px;
 
   th {
-    background: #f8fafc;
+    background: var(--el-fill-color-lighter);
     padding: 10px 8px;
     font-weight: 600;
-    color: #475569;
+    color: var(--el-text-color-secondary);
     text-align: left;
     white-space: nowrap;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--el-border-color-lighter);
     position: sticky;
     top: 0;
     z-index: 2;
@@ -1065,12 +1065,12 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
 
   td {
     padding: 3px 6px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--el-border-color-extra-light, #f1f5f9);
     vertical-align: middle;
     white-space: nowrap;
   }
 
-  tr:hover td { background: #fafbfc; }
+  tr:hover td { background: var(--el-fill-color-light); }
   tr.has-custom > td { background: rgba(245,158,11,0.03); }
   tr.has-custom:hover td { background: rgba(245,158,11,0.06); }
   tr.checked > td { background: rgba(99,102,241,0.04); }
@@ -1082,7 +1082,7 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
 .col-name {
   position: sticky;
   left: 0;
-  background: white;
+  background: var(--el-bg-color);
   z-index: 1;
   min-width: 140px;
 }
@@ -1094,12 +1094,12 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
 .col-action { min-width: 95px; text-align: center; }
 
 /* 设备名 */
-.dev-name { display: block; font-weight: 500; font-size: 13px; color: #334155; }
+.dev-name { display: block; font-weight: 500; font-size: 13px; color: var(--el-text-color-primary); }
 .mac-code {
   display: block;
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 10.5px;
-  color: #94a3b8;
+  color: var(--el-text-color-placeholder);
   margin-top: 1px;
 }
 .device-battery {
@@ -1170,9 +1170,9 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
   font-family: ui-monospace, SFMono-Regular, monospace;
   white-space: nowrap;
 }
-.time-cell { color: #6b7280; }
-.time-cell.finished { color: #374151; }
-.empty-cell { color: #d1d5db; }
+.time-cell { color: var(--el-text-color-secondary); }
+.time-cell.finished { color: var(--el-text-color-primary); }
+.empty-cell { color: var(--el-text-color-placeholder); }
 .status-text {
   font-size: 11.5px;
   font-weight: 500;
@@ -1194,7 +1194,7 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
   color: #a1a1aa;
   font-family: ui-monospace, SFMono-Regular, monospace;
   margin-left: 2px;
-  &.finished { color: #6b7280; }
+  &.finished { color: var(--el-text-color-secondary); }
 }
 
 /* 可编辑单元格 */
@@ -1204,19 +1204,19 @@ async function handleAddRow(mac: string, taskId: number | undefined) {
   border: 1px solid transparent;
   border-radius: 5px;
   font-size: 12.5px;
-  color: #1e293b;
+  color: var(--el-text-color-primary);
   background: transparent;
   outline: none;
   transition: all 0.15s ease;
   box-sizing: border-box;
 
-  &:hover { border-color: #d1d5db; background: white; }
+  &:hover { border-color: var(--el-border-color); background: var(--el-bg-color); }
   &:focus {
     border-color: #6366f1;
-    background: white;
+    background: var(--el-bg-color);
     box-shadow: 0 0 0 2px rgba(99,102,241,0.1);
   }
-  &::placeholder { color: #c8ccd4; font-size: 11.5px; }
+  &::placeholder { color: var(--el-text-color-placeholder); font-size: 11.5px; }
 }
 
 td.is-custom .cell-input {
@@ -1343,12 +1343,12 @@ td.is-custom .cell-input {
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--el-text-color-placeholder);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
 
-  &:hover { background: #f1f5f9; color: #6366f1; }
+  &:hover { background: var(--el-fill-color-light); color: #6366f1; }
   &.expanded {
     transform: rotate(90deg);
     color: #6366f1;
@@ -1359,7 +1359,7 @@ tr.row-expanded > td.col-name { border-left: 3px solid #6366f1; }
 
 /* ═══ 子行样式 ═══ */
 .sub-row {
-  background: linear-gradient(135deg, #fafbff, #f8f0ff) !important;
+  background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-color-primary-light-8)) !important;
   &:hover td { background: rgba(139,92,246,0.04) !important; }
 }
 
@@ -1523,7 +1523,7 @@ td.is-custom.sub-field .sub-input {
   box-shadow: 0 0 0 2px rgba(124,58,237,0.1);
 }
 .sub-filter-input::placeholder {
-  color: #9ca3af;
+  color: var(--el-text-color-placeholder);
 }
 .sub-filter-clear {
   position: absolute;
@@ -1629,7 +1629,7 @@ td.is-custom.sub-field .sub-input {
   }
 
   &.disabled {
-    color: #9ca3af;
+    color: var(--el-text-color-placeholder);
     background: rgba(156,163,175,0.1);
     cursor: not-allowed;
   }
@@ -1713,7 +1713,7 @@ td.is-custom.sub-field .sub-input {
 
   .card-pending {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--el-text-color-placeholder);
     padding: 2px 7px;
     background: rgba(156,175,195,0.08);
     border-radius: 10px;
@@ -1726,15 +1726,15 @@ td.is-custom.sub-field .sub-input {
     width: 26px;
     height: 26px;
     border-radius: 6px;
-    border: 1.5px solid #e2e8f0;
-    background: #f8fafc;
-    color: #94a3b8;
+    border: 1.5px solid var(--el-border-color-lighter);
+    background: var(--el-fill-color-lighter);
+    color: var(--el-text-color-placeholder);
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
 
-    &:hover { border-color: #a78bfa; color: #8b5cf6; background: #faf5ff; }
-    &.expanded { transform: rotate(90deg); color: #8b5cf6; border-color: #c4b5fd; background: #f5f0ff; }
+    &:hover { border-color: #a78bfa; color: #8b5cf6; background: var(--el-color-primary-light-9); }
+    &.expanded { transform: rotate(90deg); color: #8b5cf6; border-color: #c4b5fd; background: var(--el-color-primary-light-9); }
   }
 
   .card-fields {
@@ -1768,7 +1768,7 @@ td.is-custom.sub-field .sub-input {
     flex-shrink: 0;
     font-size: 13px;
     font-weight: 500;
-    color: #475569;
+    color: var(--el-text-color-secondary);
 
     &::after { content: ':'; }
   }
@@ -1950,8 +1950,8 @@ td.is-custom.sub-field .sub-input {
 
   .btn-remove {
     background: rgba(107,114,128,0.06);
-    color: #64748b;
-    border: 1px solid #e2e8f0;
+    color: var(--el-text-color-secondary);
+    border: 1px solid var(--el-border-color-lighter);
     &:hover { background: rgba(107,114,128,0.12); }
   }
 

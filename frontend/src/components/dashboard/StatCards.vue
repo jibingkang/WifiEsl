@@ -9,7 +9,7 @@
         <p class="card-label">{{ card.label }}</p>
       </div>
       <div class="card-trend" :class="{ up: card.trendUp, down: !card.trendUp && card.trend != null }">
-        <span v-if="card.trend != null">{{ card.trendUp ? '+' : '' }}{{ card.trend }}%</span>
+        <span v-if="card.trend != null">{{ card.trend }}%</span>
       </div>
     </div>
   </div>
@@ -29,6 +29,11 @@ const cards = computed(() => {
   const offlineCount = devList.filter(d => !d.is_online).length
   const lowBattery = devList.filter(d => d.voltage && d.voltage < 3000 && d.is_online)
   const weakSignal = devList.filter(d => d.rssi && d.rssi < -70 && d.is_online)
+  const total = devList.length
+
+  // 实时计算百分比
+  const onlineRate = total > 0 ? parseFloat(((onlineCount / total) * 100).toFixed(1)) : null
+  const offlineRate = total > 0 ? parseFloat(((offlineCount / total) * 100).toFixed(1)) : null
 
   return [
     {
@@ -37,7 +42,7 @@ const cards = computed(() => {
       value: formatNumber(devList.length),
       icon: Monitor,
       gradient: 'linear-gradient(135deg, #6366f1, #818cf8)',
-      trend: 12.5, trendUp: true,
+      trend: onlineRate, trendUp: true,
     },
     {
       key: 'online',
@@ -45,7 +50,7 @@ const cards = computed(() => {
       value: formatNumber(onlineCount),
       icon: Connection,
       gradient: 'linear-gradient(135deg, #22c55e, #4ade80)',
-      trend: 5.2, trendUp: true,
+      trend: onlineRate, trendUp: true,
     },
     {
       key: 'offline',
@@ -53,7 +58,7 @@ const cards = computed(() => {
       value: formatNumber(offlineCount),
       icon: Monitor,
       gradient: 'linear-gradient(135deg, #ef4444, #f87171)',
-      trend: -3.8, trendUp: false,
+      trend: offlineRate, trendUp: false,
     },
     {
       key: 'alert',
@@ -160,8 +165,8 @@ onMounted(() => {
     padding: 2px 8px;
     border-radius: 20px;
 
-    &.up { background: #ecfdf5; color: #059669; }
-    &.down { background: #fef2f2; color: #dc2626; }
+    &.up { background: rgba(34,197,94,0.1); color: #059669; }
+    &.down { background: rgba(239,68,68,0.1); color: #dc2626; }
   }
 }
 

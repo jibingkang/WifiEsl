@@ -39,7 +39,7 @@
         </div>
 
         <!-- 模板切换 -->
-        <div v-if="availableTemplates.length > 0" class="tpl-switcher" style="margin-left: 12px; padding-left: 12px; border-left: 1px solid #e2e8f0;">
+        <div v-if="availableTemplates.length > 0" class="tpl-switcher" style="margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--el-border-color-lighter);">
           <div class="selector-label">
             <LayoutTemplate :size="16" />
             <span class="label-text">选择模板：</span>
@@ -1995,11 +1995,11 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 14px;
   padding: 12px 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-lighter);
 }
 .toolbar-left {
   display: flex;
@@ -2015,7 +2015,7 @@ onUnmounted(() => {
   font-weight: 600;
   
   .label-text {
-    color: #1e293b;
+    color: var(--el-text-color-primary);
     white-space: nowrap;
   }
   
@@ -2043,7 +2043,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #475569;
+  color: var(--el-text-color-regular);
 
   .el-select { width: 180px; }
 }
@@ -2055,11 +2055,11 @@ onUnmounted(() => {
 
 /* ═══ 卡片通用 ═══ */
 .card {
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-lighter);
 }
 .card-header-row {
   display: flex;
@@ -2070,7 +2070,7 @@ onUnmounted(() => {
   h3 {
     font-size: 15px;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--el-text-color-primary);
     margin: 0;
     display: flex;
     align-items: center;
@@ -2079,15 +2079,15 @@ onUnmounted(() => {
 }
 .card-hint {
   font-size: 12.5px;
-  color: #94a3b8;
+  color: var(--el-text-color-placeholder);
 }
 
 /* ═══ 通用数据折叠面板 ═══ */
 .generic-data-collapse {
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-lighter);
   overflow: hidden;
 
   :deep(.el-collapse-item__header) {
@@ -2099,7 +2099,8 @@ onUnmounted(() => {
     color: unset;
     cursor: pointer;
     transition: background-color 0.2s;
-    &:hover { background: #f8fafc; }
+    &:hover { background: var(--el-fill-color-light); }
+    background-color: var(--el-bg-color);
   }
 
   :deep(.el-collapse-item__arrow) {
@@ -2127,7 +2128,7 @@ onUnmounted(() => {
 .collapse-title-text {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--el-text-color-primary);
 }
 .field-summary {
   font-size: 12.5px;
@@ -2152,20 +2153,20 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 100px 40px;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-lighter);
   text-align: center;
 
   h2 {
     font-size: 20px;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--el-text-color-primary);
     margin: 20px 0 8px;
   }
   p {
     font-size: 14px;
-    color: #64748b;
+    color: var(--el-text-color-secondary);
     margin: 0 0 24px;
     max-width: 360px;
   }
@@ -2212,7 +2213,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 32px 0;
-  color: #94a3b8;
+  color: var(--el-text-color-placeholder);
 
   p {
     font-size: 14px;
@@ -2251,11 +2252,11 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 
   .check-info {
     font-size: 13.5px;
-    color: #64748b;
+    color: var(--el-text-color-secondary);
     font-weight: 500;
   }
 }
@@ -2309,7 +2310,7 @@ onUnmounted(() => {
         position: sticky;
         top: 0;
         z-index: 10;
-        background: white;
+        background: var(--el-bg-color);
         border-bottom: 1px solid var(--el-border-color-lighter);
         margin-right: 0 !important;
         padding: 14px 18px;
@@ -2348,7 +2349,7 @@ onUnmounted(() => {
 
     .task-switcher { width: 100%; margin-bottom: 4px; }
     .task-switcher .el-select { width: calc(100% - 80px); flex: 1; }
-    .tpl-switcher { width: 100%; border-left: none !important; padding-left: 0 !important; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 4px; }
+    .tpl-switcher { width: 100%; border-left: none !important; padding-left: 0 !important; border-top: 1px solid var(--el-border-color-lighter); padding-top: 8px; margin-top: 4px; }
     .tpl-switcher .el-select { width: 100%; flex: 1; }
   }
 
@@ -2395,8 +2396,8 @@ onUnmounted(() => {
   gap: 12px;
   margin-bottom: 16px;
   padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
-  
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
   .sort-group {
     display: flex;
     align-items: center;
@@ -2404,7 +2405,7 @@ onUnmounted(() => {
   }
   .sort-label {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-weight: 500;
   }
   .sort-btn {
@@ -2419,19 +2420,11 @@ onUnmounted(() => {
     gap: 3px;
     font-size: 13px;
     padding: 5px 10px;
-    color: #409eff;
-    border-color: #b3d8ff;
-    background: #ecf5ff;
-  }
-  .sort-order-btn:hover {
-    color: #66b1ff;
-    border-color: #66b1ff;
-    background: #ecf5ff;
   }
 
   .filter-result-info {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--el-text-color-secondary);
     font-weight: 500;
   }
 }
