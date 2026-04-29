@@ -58692,3 +58692,7 @@ httpx.ConnectError: [Errno 11001] getaddrinfo failed
 2026-04-29 23:39:18,501 - services.ws_manager - INFO - [WS] 用户 8 MQTT连接状态: True
 2026-04-29 23:39:18,502 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
 2026-04-29 23:39:18,503 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-04-29 23:40:16,212 - services.ws_manager - INFO - [WS] 断开: ws-0, 总数: 3
+2026-04-29 23:40:16,214 - services.ws_manager - INFO - [WS] 断开: ws-2, 总数: 2
+2026-04-29 23:40:16,214 - services.ws_manager - INFO - [WS] 断开: ws-1, 总数: 1
+2026-04-29 23:40:16,214 - services.ws_manager - INFO - [WS] 断开: ws-5, 总数: 0

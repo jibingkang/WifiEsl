@@ -181,9 +181,15 @@ async def get_user_list(
             users = all_users
             logger.info(f"管理员 {current_user_id} ({current_user_role}) 查看所有用户: {len(users)} 个")
         elif current_user_role == "user":
-            # 普通用户：只能查看自己创建的 operator
-            users = await get_users_by_parent(current_user_id)
-            logger.info(f"普通用户 {current_user_id} ({current_user_role}) 查看子用户: {len(users)} 个")
+            # 普通用户：查看自己 + 自己创建的 operator
+            from services.db_service_extended import get_user_with_details
+            myself = await get_user_with_details(current_user_id)
+            child_users = await get_users_by_parent(current_user_id)
+            users = []
+            if myself:
+                users.append(myself)
+            users.extend(child_users)
+            logger.info(f"普通用户 {current_user_id} ({current_user_role}) 查看自己+子用户: {len(users)} 个")
         else:
             # operator 无权查看用户列表
             return {"code": 40300, "message": "无权查看用户列表", "data": None}
