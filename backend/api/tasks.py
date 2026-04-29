@@ -173,6 +173,29 @@ async def _get_current_user_id(request: Request) -> int:
     return user_id
 
 
+async def _get_allowed_user_ids(request: Request) -> tuple[int, list[int] | None]:
+    """
+    获取当前用户ID和该用户可见任务的所有用户ID列表。
+    
+    - admin/user: 只能看到自己的任务 → 返回 (user_id, None)
+    - operator: 能看到自己 + parent_user 的任务 → 返回 (user_id, [operator_id, parent_user_id])
+    
+    Returns: (current_user_id, allowed_user_ids_or_None)
+    """
+    user_id = await _get_current_user_id(request)
+    
+    # 查询当前用户角色和 parent_user_id
+    from services.db_service_extended import get_user_by_id
+    user_info = await get_user_by_id(user_id)
+    
+    if user_info and user_info.get("role") == "operator":
+        parent_id = user_info.get("parent_user_id", 0)
+        if parent_id and parent_id > 0:
+            return user_id, [user_id, parent_id]
+    
+    return user_id, None
+
+
 @router.post("")
 async def create_task(request: Request, body: TaskCreate):
     """创建新的更新任务"""
@@ -196,9 +219,9 @@ async def list_tasks(
     page_size: int = Query(20, ge=1, le=100),
     status: str = Query(""),
 ):
-    """获取任务列表（分页，只返回当前用户的任务）"""
-    user_id = await _get_current_user_id(request)
-    items, total = await get_task_list(page, page_size, status, user_id=user_id)
+    """获取任务列表（分页，返回当前用户可见的任务）"""
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    items, total = await get_task_list(page, page_size, status, user_id=user_id, allowed_user_ids=allowed_ids)
     return {
         "code": 20000,
         "data": {"items": items, "total": total},
@@ -209,8 +232,8 @@ async def list_tasks(
 @router.get("/{task_id}")
 async def get_task(request: Request, task_id: int):
     """获取任务详情（含设备列表和状态统计）"""
-    user_id = await _get_current_user_id(request)
-    detail = await get_task_detail(task_id, user_id=user_id)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     return {"code": 20000, "message": "ok", "data": detail}
@@ -219,7 +242,7 @@ async def get_task(request: Request, task_id: int):
 @router.put("/{task_id}")
 async def update_task_info(request: Request, task_id: int, body: TaskUpdate):
     """更新任务信息"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     kwargs = {}
     if body.name is not None:
         kwargs["name"] = body.name
@@ -233,16 +256,16 @@ async def update_task_info(request: Request, task_id: int, body: TaskUpdate):
     if kwargs:
         await update_task(task_id, **kwargs)
 
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     return {"code": 20000, "message": "更新成功", "data": detail}
 
 
 @router.delete("/{task_id}")
 async def delete_one_task(request: Request, task_id: int):
     """删除任务（级联删除所有设备明细）"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     ok = await delete_task(task_id)
@@ -256,7 +279,7 @@ async def delete_one_task(request: Request, task_id: int):
 @router.post("/{task_id}/devices")
 async def add_devices_to_task(request: Request, task_id: int, body: DevicesAdd):
     """批量添加设备到任务中"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     macs = body.macs
     if not macs:
         raise HTTPException(status_code=400, detail="macs 列表不能为空")
@@ -265,16 +288,16 @@ async def add_devices_to_task(request: Request, task_id: int, body: DevicesAdd):
         task_id, macs,
         custom_data_map=body.custom_data_map,
     )
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     return {"code": 20000, "message": f"已添加 {added} 台设备", "data": detail}
 
 
 @router.delete("/{task_id}/devices/{mac}")
 async def remove_device_from_task(request: Request, task_id: int, mac: str):
     """从任务中移除单台设备"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     ok = await remove_task_device(task_id, mac)
@@ -286,9 +309,9 @@ async def remove_device_from_task(request: Request, task_id: int, mac: str):
 @router.put("/{task_id}/devices/{mac}")
 async def update_single_device_data(request: Request, task_id: int, mac: str, body: DeviceCustomData):
     """更新单台设备的自定义数据"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     await update_task_device_custom_data(task_id, mac, body.custom_data)
@@ -298,9 +321,9 @@ async def update_single_device_data(request: Request, task_id: int, mac: str, bo
 @router.put("/{task_id}/devices/{mac}/status")
 async def update_single_device_status(request: Request, task_id: int, mac: str, body: dict):
     """更新单台设备的推送状态（前端单推时标记 sent/failed）"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     status = body.get("update_status", "")
@@ -316,8 +339,8 @@ async def update_single_device_status(request: Request, task_id: int, mac: str, 
 @router.put("/{task_id}/devices/{mac}/selected-row")
 async def update_selected_row(request: Request, task_id: int, mac: str, body: dict):
     """更新设备当前选中的子表行ID（跨设备同步用）"""
-    user_id = await _get_current_user_id(request)
-    detail = await get_task_detail(task_id, user_id=user_id)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     row_id = body.get("selected_row_id")
@@ -333,9 +356,9 @@ async def update_selected_row(request: Request, task_id: int, mac: str, body: di
 @router.get("/{task_id}/devices")
 async def list_task_devices(request: Request, task_id: int):
     """获取任务的设备列表"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     devices = await get_task_device_list(task_id)
@@ -358,10 +381,10 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     - row_selections: 指定每个设备要推送的行ID，格式 {mac: row_id}，不传则默认推送第一行
     """
     # 获取当前用户ID并进行多租户验证
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     
     # 加载任务详情
-    task = await get_task_detail(task_id, user_id=user_id)
+    task = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
 
@@ -508,9 +531,9 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
 @router.get("/{task_id}/progress")
 async def get_progress(request: Request, task_id: int):
     """获取任务推送进度"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
     progress = await get_task_progress(task_id)
-    detail = await get_task_detail(task_id, user_id=user_id)
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
     if not detail:
         raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     return {
@@ -530,7 +553,11 @@ async def get_progress(request: Request, task_id: int):
 @router.get("/{task_id}/devices/{mac}/rows")
 async def list_device_rows(request: Request, task_id: int, mac: str):
     """获取某设备在任务中的所有子表行数据"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    # 验证任务权限
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     # 先找到 task_device id
     from services.db_service import get_db
     db = await get_db()
@@ -547,7 +574,11 @@ async def list_device_rows(request: Request, task_id: int, mac: str):
 @router.post("/{task_id}/devices/{mac}/rows")
 async def add_device_row(request: Request, task_id: int, mac: str, body: TaskDeviceRowCreate):
     """为某设备添加一条子表行数据"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    # 验证任务权限
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     from services.db_service import get_db
     db = await get_db()
     cur = await db.execute(
@@ -570,7 +601,11 @@ async def batch_add_device_rows(
     mode='overwrite': 先清空再插入
     mode='append': 追加到现有行之后
     """
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    # 验证任务权限
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     from services.db_service import get_db
     db = await get_db()
     cur = await db.execute(
@@ -597,7 +632,11 @@ async def batch_add_device_rows(
 @router.delete("/{task_id}/devices/{mac}/rows")
 async def clear_device_rows(request: Request, task_id: int, mac: str):
     """清空某设备的所有子表行数据"""
-    user_id = await _get_current_user_id(request)
+    user_id, allowed_ids = await _get_allowed_user_ids(request)
+    # 验证任务权限
+    detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
+    if not detail:
+        raise HTTPException(status_code=404, detail="任务不存在或无权限访问")
     from services.db_service import get_db
     db = await get_db()
     cur = await db.execute(

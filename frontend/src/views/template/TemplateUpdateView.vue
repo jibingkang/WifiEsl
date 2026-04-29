@@ -35,11 +35,11 @@
               </span>
             </el-option>
           </el-select>
-          <el-button size="default" @click="showCreateTaskDialog = true">+ 新建</el-button>
+          <el-button v-if="!isOperator" size="default" @click="showCreateTaskDialog = true">+ 新建</el-button>
         </div>
 
         <!-- 模板切换 -->
-        <div v-if="availableTemplates.length > 0" class="tpl-switcher" style="margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--el-border-color-lighter);">
+        <div v-if="!isOperator && availableTemplates.length > 0" class="tpl-switcher" style="margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--el-border-color-lighter);">
           <div class="selector-label">
             <LayoutTemplate :size="16" />
             <span class="label-text">选择模板：</span>
@@ -68,7 +68,7 @@
       </div>
 
       <div class="toolbar-right">
-        <el-button type="primary" @click="showDevicePicker = true" :disabled="!currentTaskId && !selectedTid">
+        <el-button v-if="!isOperator" type="primary" @click="showDevicePicker = true" :disabled="!currentTaskId && !selectedTid">
           <Plus :size="14" /> 添加设备
         </el-button>
         <el-button text type="primary" @click="$router.push('/template/history')">
@@ -84,7 +84,7 @@
       </div>
       <h2>暂无可用模板</h2>
       <p>请先在模板管理中创建一个模板，再回来更新设备数据</p>
-      <el-button type="primary" size="large" @click="$router.push('/template/manage')">
+      <el-button v-if="!isOperator" type="primary" size="large" @click="$router.push('/template/manage')">
         <Files :size="16" /> 去创建模板
       </el-button>
     </div>
@@ -130,10 +130,10 @@
             <span class="badge-success">更新成功 {{ taskProgress.success }}</span>
             <span class="badge-failed">更新失败 {{ taskProgress.failed }}</span>
             <el-divider direction="vertical" />
-            <el-button v-if="selectedMacs.length > 0" type="primary" text size="small" @click="exportToExcel">
+            <el-button v-if="!isOperator && selectedMacs.length > 0" type="primary" text size="small" @click="exportToExcel">
               <Download :size="14" /> 导出Excel
             </el-button>
-            <el-button type="primary" text size="small" @click="showImportDialog = true" :disabled="!selectedTemplate">
+            <el-button v-if="!isOperator" type="primary" text size="small" @click="showImportDialog = true" :disabled="!selectedTemplate">
               <Upload :size="14" /> 导入Excel
             </el-button>
           </div>
@@ -343,6 +343,7 @@ import {
 import { Search } from '@element-plus/icons-vue'
 import { useTemplate } from '@/composables/useTemplate'
 import { useDeviceStore } from '@/stores/device'
+import { useAuthStore } from '@/stores/auth'
 import { deviceApi } from '@/api/device'
 import { taskApi, type TaskSummary, type TaskDetail } from '@/api/task'
 import { onWsMessage, offWsMessage } from '@/composables/useBackendWs'
@@ -355,6 +356,10 @@ import DeviceSelectorDialog from '@/components/template/DeviceSelectorDialog.vue
 const route = useRoute()
 const templateStore = useTemplate()
 const deviceStore = useDeviceStore()
+const authStore = useAuthStore()
+
+// 角色权限判断
+const isOperator = computed(() => authStore.getUserRole() === 'operator')
 
 // ════════════ 任务系统（新增） ════════════
 const currentTaskId = ref<number | null>(null)

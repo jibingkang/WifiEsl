@@ -35,7 +35,7 @@ logger.info("WIFI标签管理系统启动，日志级别: INFO")
 
 # ── 版本与启动时间（供 /system/info 接口使用） ──
 import datetime
-APP_VERSION = "1.1.2"
+APP_VERSION = "1.1.3"
 APP_START_TIME = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 from config import settings

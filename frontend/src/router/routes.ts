@@ -7,6 +7,18 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import FullScreenLayout from '@/layouts/FullScreenLayout.vue'
 
+// 扩展 RouteMeta 类型
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    icon?: string
+    layout?: any
+    requiresAuth?: boolean
+    affix?: boolean
+    roles?: string[]  // 允许访问的角色白名单
+  }
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -29,13 +41,13 @@ const routes: RouteRecordRaw[] = [
         path: 'users',
         name: 'UserList',
         component: () => import('@/views/user/UserListView.vue'),
-        meta: { title: '用户管理', icon: 'User' },
+        meta: { title: '用户管理', icon: 'User', roles: ['admin', 'user'] },
       },
       {
         path: 'devices',
         name: 'DeviceList',
         component: () => import('@/views/device/DeviceListView.vue'),
-        meta: { title: '设备管理', icon: 'Monitor' },
+        meta: { title: '设备管理', icon: 'Monitor', roles: ['admin', 'user'] },
       },
       {
         path: 'template',
@@ -51,12 +63,13 @@ const routes: RouteRecordRaw[] = [
             path: 'update',
             name: 'DataUpdateMain',
             component: () => import('@/views/template/TemplateUpdateView.vue'),
+            meta: { roles: ['admin', 'user', 'operator'] },
           },
           {
             path: 'history',
             name: 'UpdateHistory',
             component: () => import('@/views/template/HistoryPage.vue'),
-            meta: { title: '更新历史' },
+            meta: { title: '更新历史', roles: ['admin', 'user', 'operator'] },
           },
         ],
       },
@@ -64,20 +77,20 @@ const routes: RouteRecordRaw[] = [
         path: 'template/manage',
         name: 'TemplateManage',
         component: () => import('@/views/template/TemplateManageView.vue'),
-        meta: { title: '模板管理', icon: 'Files' },
+        meta: { title: '模板管理', icon: 'Files', roles: ['admin', 'user'] },
       },
       {
         path: 'batch',
         name: 'BatchEdit',
         component: () => import('@/views/batch/BatchEditView.vue'),
-        meta: { title: '批量操作', icon: 'Files' },
+        meta: { title: '批量操作', icon: 'Files', roles: ['admin', 'user'] },
       },
       {
         path: 'monitor',
         name: 'Monitor',
         component: FullScreenLayout,
         redirect: '/monitor/view',
-        meta: { title: '实时监控', icon: 'DataLine' },
+        meta: { title: '实时监控', icon: 'DataLine', roles: ['admin', 'user', 'operator'] },
         children: [
           {
             path: 'view',
@@ -129,6 +142,16 @@ export function setupRouterGuards(routerInstance: any) {
           query: { redirect: to.fullPath },
         })
         return
+      }
+
+      // 角色权限检查
+      if (to.meta?.roles?.length) {
+        const role = store.getUserRole()
+        if (!to.meta.roles.includes(role)) {
+          // 无权访问，重定向到仪表盘
+          next({ name: 'Dashboard' })
+          return
+        }
       }
     }
     

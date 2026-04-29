@@ -114,8 +114,11 @@
           <!-- 用户下拉 -->
           <el-dropdown trigger="click" @command="handleUserCommand">
             <div class="user-avatar">
-              <el-avatar :size="32" icon="UserFilled" />
-              <span v-if="!isMobile" class="user-name">{{ authStore.userInfo?.username || '管理员' }}</span>
+              <el-avatar :size="32" icon="UserFilled" :style="avatarStyle" />
+              <div v-if="!isMobile" class="user-info">
+                <span class="user-name">{{ authStore.userInfo?.username || '用户' }}</span>
+                <el-tag :type="roleTagType" size="small" class="role-tag">{{ roleLabel }}</el-tag>
+              </div>
               <ArrowDown class="arrow-icon" />
             </div>
             <template #dropdown>
@@ -141,6 +144,40 @@
         </router-view>
       </main>
     </div>
+
+    <!-- 个人信息弹窗 -->
+    <el-dialog v-model="profileVisible" title="个人信息" width="480px" @close="handleProfileClose">
+      <div v-loading="profileLoading" class="profile-content">
+        <template v-if="profileData">
+          <div class="profile-header">
+            <el-avatar :size="64" icon="UserFilled" :style="avatarStyle" />
+            <div class="profile-header-info">
+              <h3>{{ profileData.username }}</h3>
+              <el-tag :type="roleTagType" size="default">{{ roleLabel }}</el-tag>
+            </div>
+          </div>
+          <el-descriptions :column="1" border class="profile-desc">
+            <el-descriptions-item label="用户ID">{{ profileData.id }}</el-descriptions-item>
+            <el-descriptions-item label="用户名">{{ profileData.username }}</el-descriptions-item>
+            <el-descriptions-item label="角色">{{ roleLabel }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="profileData.status === 'active' ? 'success' : 'danger'" size="small">
+                {{ profileData.status === 'active' ? '正常' : '禁用' }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="WIFI用户名">{{ profileData.wifi_username || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="WIFI地址">{{ profileData.wifi_base_url || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="MQTT Broker">{{ profileData.wifi_mqtt_broker || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ profileData.created_at || '-' }}</el-descriptions-item>
+            <el-descriptions-item v-if="profileData.parent_user_id" label="所属上级ID">{{ profileData.parent_user_id }}</el-descriptions-item>
+          </el-descriptions>
+        </template>
+        <el-empty v-else-if="!profileLoading" description="获取信息失败" />
+      </div>
+      <template #footer>
+        <el-button @click="profileVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -179,23 +216,65 @@ const isMobile = ref(window.innerWidth < 768)
 const activeMenu = computed(() => route.path)
 const currentRoute = computed(() => route)
 
-// 菜单项
-const menuItems = [
-  { path: '/dashboard', title: '仪表盘', icon: Odometer },
-  { path: '/users', title: '用户管理', icon: User },
-  { path: '/devices', title: '设备管理', icon: Monitor },
-  { path: '/template/update', title: '数据更新', icon: Document },
-  { path: '/template/history', title: '更新历史', icon: Clock },
-  { path: '/template/manage', title: '模板管理', icon: FolderOpened },
-  { path: '/batch', title: '批量操作', icon: TrendCharts },
-  { path: '/monitor', title: '实时监控', icon: Monitor },
-]
+// 角色相关
+const roleLabel = computed(() => {
+  const roleMap: Record<string, string> = { admin: '管理员', user: '用户', operator: '操作员' }
+  return roleMap[authStore.getUserRole()] || '用户'
+})
+const roleTagType = computed(() => {
+  const typeMap: Record<string, string> = { admin: 'danger', user: 'warning', operator: 'info' }
+  return typeMap[authStore.getUserRole()] || 'info'
+})
+const avatarStyle = computed(() => {
+  const colorMap: Record<string, string> = { admin: '#f56c6c', user: '#e6a23c', operator: '#909399' }
+  return { backgroundColor: colorMap[authStore.getUserRole()] || '#409eff' }
+})
+
+// 个人信息弹窗
+const profileVisible = ref(false)
+const profileLoading = ref(false)
+const profileData = ref<any>(null)
+
+async function openProfile() {
+  profileVisible.value = true
+  profileLoading.value = true
+  try {
+    const { authApi } = await import('@/api/auth')
+    const data = await authApi.getProfile()
+    profileData.value = data
+  } catch (e) {
+    console.warn('获取个人信息失败:', e)
+  } finally {
+    profileLoading.value = false
+  }
+}
+
+function handleProfileClose() {
+  profileVisible.value = false
+  profileData.value = null
+}
+
+// 菜单项（按角色过滤）
+const menuItems = computed(() => {
+  const role = authStore.getUserRole()
+  const allMenus = [
+    { path: '/dashboard', title: '仪表盘', icon: Odometer, roles: ['admin', 'user', 'operator'] },
+    { path: '/users', title: '用户管理', icon: User, roles: ['admin', 'user'] },
+    { path: '/devices', title: '设备管理', icon: Monitor, roles: ['admin', 'user'] },
+    { path: '/template/update', title: '数据更新', icon: Document, roles: ['admin', 'user', 'operator'] },
+    { path: '/template/history', title: '更新历史', icon: Clock, roles: ['admin', 'user', 'operator'] },
+    { path: '/template/manage', title: '模板管理', icon: FolderOpened, roles: ['admin', 'user'] },
+    { path: '/batch', title: '批量操作', icon: TrendCharts, roles: ['admin', 'user'] },
+    { path: '/monitor', title: '实时监控', icon: Monitor, roles: ['admin', 'user', 'operator'] },
+  ]
+  return allMenus.filter(m => !m.roles || m.roles.includes(role))
+})
 
 // 方法
 function handleUserCommand(command: string) {
   switch (command) {
     case 'profile':
-      // TODO: 打开个人信息弹窗
+      openProfile()
       break
     case 'logout':
       authStore.logout()
@@ -480,12 +559,26 @@ onUnmounted(() => {
         background: var(--el-fill-color-light);
       }
 
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
       .user-name {
         font-size: $font-size-sm;
         max-width: 80px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .role-tag {
+        font-size: 10px;
+        padding: 0 4px;
+        height: 18px;
+        line-height: 18px;
+        border-radius: 4px;
       }
 
       .arrow-icon {
@@ -505,6 +598,30 @@ onUnmounted(() => {
 
   .page-content {
     min-height: calc(100vh - #{$header-height} - 48px); // 减去padding
+  }
+}
+
+// ==================== 个人信息弹窗 ====================
+.profile-content {
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    .profile-header-info {
+      h3 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .profile-desc {
+    margin-top: 12px;
   }
 }
 

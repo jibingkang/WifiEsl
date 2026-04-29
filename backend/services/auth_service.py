@@ -41,11 +41,32 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
     logger.info(f"[AUTH] ========== 开始登录WIFI系统获取JWT token ==========")
     logger.info(f"[AUTH] 本地用户名: {username}")
     
-    # 获取用户的WIFI配置
-    wifi_username = user.get("wifi_username") or settings.wifi_username
-    wifi_password = user.get("wifi_password") or settings.wifi_password
-    wifi_apikey = user.get("wifi_apikey") or settings.wifi_apikey
-    wifi_base_url = user.get("wifi_base_url") or settings.wifi_base_url
+    # 获取用户的WIFI配置（三级继承：自身 → 父用户 → settings全局默认）
+    wifi_username = user.get("wifi_username")
+    wifi_password = user.get("wifi_password")
+    wifi_apikey = user.get("wifi_apikey")
+    wifi_base_url = user.get("wifi_base_url")
+
+    # 如果用户自身没有配置，尝试从父用户继承
+    if not wifi_username and user.get("parent_user_id"):
+        try:
+            from services.db_service_extended import get_user_by_id
+            parent = await get_user_by_id(user["parent_user_id"])
+            if parent:
+                wifi_username = parent.get("wifi_username")
+                wifi_password = parent.get("wifi_password")
+                wifi_apikey = parent.get("wifi_apikey")
+                wifi_base_url = parent.get("wifi_base_url")
+                if wifi_username:
+                    logger.info(f"[AUTH] 从父用户(ID={user['parent_user_id']})继承WIFI配置")
+        except Exception as e:
+            logger.warning(f"[AUTH] 查询父用户WIFI配置失败: {e}")
+
+    # 最终回退到 settings 全局默认
+    wifi_username = wifi_username or settings.wifi_username
+    wifi_password = wifi_password or settings.wifi_password
+    wifi_apikey = wifi_apikey or settings.wifi_apikey
+    wifi_base_url = wifi_base_url or settings.wifi_base_url
     
     # 检查是否使用独立配置
     using_custom_config = bool(user.get("wifi_username"))
@@ -170,7 +191,7 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         "user": {
             "id": str(user["id"]),
             "username": username,
-            "role": user.get("role", "admin"),
+            "role": user.get("role", "operator"),
             "avatar": user.get("avatar", ""),
             "apiKey": api_key,
         },

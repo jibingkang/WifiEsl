@@ -42,10 +42,9 @@
       </el-form-item>
       
       <el-form-item label="用户角色" prop="role">
-        <el-select v-model="formData.role" placeholder="请选择用户角色">
-          <el-option label="管理员" value="admin" />
+        <el-select v-model="formData.role" placeholder="请选择用户角色" :disabled="dialogType === 'edit'">
+          <el-option v-if="currentRoleOptions.includes('user')" label="普通用户" value="user" />
           <el-option label="操作员" value="operator" />
-          <el-option label="普通用户" value="user" />
         </el-select>
       </el-form-item>
       
@@ -110,6 +109,9 @@
           >
             隐藏
           </el-button>
+        </div>
+        <div v-else-if="dialogType === 'create' && formData.role === 'operator'" class="form-tips">
+          留空将自动从上级用户继承WIFI密码
         </div>
         <div v-else-if="dialogType === 'edit'" class="form-tips">
           当前未设置WIFI密码
@@ -197,20 +199,21 @@
         </div>
       </el-form-item>
       
-      <el-form-item label="上级用户" v-if="dialogType === 'create'">
+      <el-form-item label="上级用户" v-if="dialogType === 'create' && authStore.getUserRole() === 'admin' && formData.role === 'operator'">
         <el-select
           v-model="formData.parent_user_id"
-          placeholder="请选择上级用户（可选）"
+          placeholder="请选择上级用户（可选，默认为自己）"
           clearable
           filterable
         >
           <el-option
             v-for="user in adminUsers"
             :key="user.id"
-            :label="user.username"
+            :label="`${user.username} (${user.role === 'admin' ? '管理员' : '普通用户'})`"
             :value="user.id"
           />
         </el-select>
+        <div class="form-tips">将此操作员分配给某个普通用户管理，不选则默认归属自己</div>
       </el-form-item>
     </el-form>
     
@@ -229,6 +232,8 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
+import { userApi } from '@/api/user'
 import type { User, UserFormData } from '@/types/user'
 
 const props = defineProps<{
@@ -243,6 +248,7 @@ const emit = defineEmits<{
 }>()
 
 const userStore = useUserStore()
+const authStore = useAuthStore()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const showWifiPassword = ref(false)
@@ -258,7 +264,7 @@ const formData = ref<UserFormData>({
   username: '',
   password: '',
   confirmPassword: '',
-  role: 'user',
+  role: 'operator',
   status: 'active',
   avatar: '',
   wifi_username: '',
@@ -311,7 +317,15 @@ const dialogTitle = computed(() => {
 
 // 管理员用户列表（用于选择上级用户）
 const adminUsers = computed(() => {
-  return userStore.userList.filter(user => user.role === 'admin')
+  return userStore.userList.filter(user => user.role === 'admin' || user.role === 'user')
+})
+
+// 根据当前用户角色动态生成可选角色列表
+const currentRoleOptions = computed(() => {
+  const myRole = authStore.getUserRole()
+  if (myRole === 'admin') return ['user', 'operator']  // admin 可创建 user 和 operator
+  if (myRole === 'user') return ['operator']            // user 只能创建 operator
+  return []                                              // operator 不能创建任何用户
 })
 
 // 重置表单
@@ -320,7 +334,7 @@ const resetForm = () => {
     username: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
+    role: 'operator',
     status: 'active',
     avatar: '',
     wifi_username: '',
@@ -361,11 +375,35 @@ watch(() => props.userData, (user) => {
 }, { immediate: true })
 
 // 对话框打开时重置表单验证
-watch(visible, (value) => {
+watch(visible, async (value) => {
   if (value) {
     nextTick(() => {
       formRef.value?.clearValidate()
     })
+    // 创建模式且当前用户是 user/admin 时，预填充当前用户的 WIFI 配置
+    if (props.dialogType === 'create' && !props.userData) {
+      const myRole = authStore.getUserRole()
+      if (myRole === 'user' || myRole === 'admin') {
+        try {
+          const userId = authStore.userInfo?.id
+          if (userId) {
+            const config = await userApi.getWifiConfig(Number(userId)) as any
+            if (config) {
+              formData.value.wifi_username = config.wifi_username || ''
+              formData.value.wifi_apikey = config.wifi_apikey || ''
+              formData.value.wifi_base_url = config.wifi_base_url || ''
+              formData.value.wifi_mqtt_broker = config.wifi_mqtt_broker || ''
+              formData.value.mqtt_username = config.mqtt_username || ''
+              formData.value.mqtt_password = config.mqtt_password || ''
+              // WIFI密码不预填充（安全考虑）
+            }
+          }
+        } catch (e) {
+          // 获取失败不影响创建流程
+          console.warn('预填充WIFI配置失败:', e)
+        }
+      }
+    }
   }
 })
 

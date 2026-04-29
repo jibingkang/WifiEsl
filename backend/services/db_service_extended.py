@@ -307,6 +307,27 @@ async def list_all_users() -> List[Dict[str, Any]]:
     
     return users
 
+async def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    根据用户ID获取用户基本信息（用于配置继承查询）
+    """
+    db = await get_db()
+    
+    cursor = await db.execute(
+        """SELECT id, username, role, wifi_username, wifi_password, wifi_apikey, wifi_base_url,
+           wifi_mqtt_broker, mqtt_username, mqtt_password, parent_user_id, status
+        FROM users WHERE id = ?""",
+        (user_id,)
+    )
+    
+    row = await cursor.fetchone()
+    
+    if not row:
+        return None
+    
+    return dict(row)
+
+
 async def get_user_with_details(user_id: int) -> Optional[Dict[str, Any]]:
     """
     获取用户的完整信息（包含WIFI配置）

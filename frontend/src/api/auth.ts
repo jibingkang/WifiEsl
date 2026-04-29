@@ -39,4 +39,11 @@ export const authApi = {
   getUserInfo(): Promise<any> {
     return service.get('/auth/userinfo')
   },
+
+  /**
+   * 获取当前用户完整信息（含WIFI配置摘要）
+   */
+  getProfile(): Promise<any> {
+    return service.get('/auth/profile')
+  },
 }

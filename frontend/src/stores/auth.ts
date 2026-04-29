@@ -130,7 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 检查是否有权限
   const hasPermission = (requiredRole: string) => {
     const userRole = getUserRole()
-    const roleHierarchy = ['admin', 'operator', 'user']
+    const roleHierarchy = ['admin', 'user', 'operator']
     
     const userIndex = roleHierarchy.indexOf(userRole)
     const requiredIndex = roleHierarchy.indexOf(requiredRole)
