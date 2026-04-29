@@ -1379,15 +1379,24 @@ async def get_task_list(
     page_size: int = 20,
     status_filter: str = "",
     user_id: int = 0,
+    allowed_user_ids: list[int] | None = None,
 ) -> tuple[list[dict], int]:
     """
     分页查询更新任务列表（含摘要统计）
     Returns: (items列表, total总数)
+    
+    allowed_user_ids: 如果提供，查询这些用户ID的任务（operator继承parent_user时使用）
     """
     db = await get_db()
 
-    where_parts = ["user_id = ?"]
-    params: list = [user_id]
+    if allowed_user_ids is not None:
+        placeholders = ",".join(["?"] * len(allowed_user_ids))
+        where_parts = [f"user_id IN ({placeholders})"]
+        params: list = list(allowed_user_ids)
+    else:
+        where_parts = ["user_id = ?"]
+        params: list = [user_id]
+
     if status_filter:
         where_parts.append("status = ?")
         params.append(status_filter)
@@ -1408,15 +1417,25 @@ async def get_task_list(
     return items, total
 
 
-async def get_task_detail(task_id: int, user_id: int = 0) -> dict | None:
-    """获取单个任务详情（含设备列表和状态统计）"""
+async def get_task_detail(task_id: int, user_id: int = 0, allowed_user_ids: list[int] | None = None) -> dict | None:
+    """获取单个任务详情（含设备列表和状态统计）
+    
+    allowed_user_ids: 如果提供，这些用户ID都有权查看该任务
+    """
     db = await get_db()
 
     # 主表信息（带用户权限检查）
-    cursor = await db.execute(
-        "SELECT * FROM update_tasks WHERE id=? AND user_id=?", 
-        (task_id, user_id)
-    )
+    if allowed_user_ids is not None:
+        placeholders = ",".join(["?"] * len(allowed_user_ids))
+        cursor = await db.execute(
+            f"SELECT * FROM update_tasks WHERE id=? AND user_id IN ({placeholders})", 
+            [task_id] + list(allowed_user_ids)
+        )
+    else:
+        cursor = await db.execute(
+            "SELECT * FROM update_tasks WHERE id=? AND user_id=?", 
+            (task_id, user_id)
+        )
     row = await cursor.fetchone()
     if not row:
         return None

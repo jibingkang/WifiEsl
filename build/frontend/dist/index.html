@@ -6,8 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="WIFI标签管理系统 - 电子价签设备管理平台" />
     <title>WIFI标签管理系统</title>
-    <script type="module" crossorigin src="/assets/index-CaJw4ojq.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-_XcqFfDs.css">
+    <script>
+      // 防止暗色模式闪烁：在DOM渲染前根据用户偏好设置dark类
+      (function() {
+        var theme = localStorage.getItem('wifi_esl_theme');
+        var isDark = theme === 'dark' || 
+          (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-zU9tV8k5.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BsfSzQc8.css">
   </head>
   <body>
     <div id="app"></div>

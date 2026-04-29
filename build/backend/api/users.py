@@ -14,7 +14,8 @@ from services.db_service_extended import (
     get_user_wifi_config,
     get_users_by_parent,
     list_all_users,
-    get_user_with_details
+    get_user_with_details,
+    get_user_by_id
 )
 from services.auth_service import get_api_key_from_request, verify_token
 from services.db_service import get_user_by_name, update_user
@@ -39,6 +40,7 @@ class CreateUserRequest(BaseModel):
     wifi_mqtt_broker: Optional[str] = None  # MQTT broker地址
     mqtt_username: Optional[str] = None     # MQTT用户名
     mqtt_password: Optional[str] = None     # MQTT密码
+    parent_user_id: Optional[int] = None    # 指定父用户ID（admin创建operator时可选）
 
 class UpdateUserRequest(BaseModel):
     """更新用户请求体"""
@@ -133,6 +135,22 @@ def check_admin_permission(role: str) -> bool:
     """检查是否是管理员权限"""
     return role in ["admin", "super_admin"]
 
+
+def check_create_permission(creator_role: str, target_role: str) -> bool:
+    """检查创建者是否有权创建目标角色
+    - admin 可创建 user 和 operator
+    - user 只能创建 operator
+    - operator 不能创建任何用户
+    - 任何角色都不能创建 admin
+    """
+    if target_role == "admin":
+        return False  # 不允许通过API创建admin
+    if creator_role == "admin":
+        return target_role in ["user", "operator"]
+    if creator_role == "user":
+        return target_role == "operator"
+    return False  # operator不能创建
+
 # ============================================================
 # 用户管理API
 # ============================================================
@@ -162,23 +180,13 @@ async def get_user_list(
             all_users = await list_all_users()
             users = all_users
             logger.info(f"管理员 {current_user_id} ({current_user_role}) 查看所有用户: {len(users)} 个")
-        else:
-            # 普通用户：只能查看自己创建的子用户
+        elif current_user_role == "user":
+            # 普通用户：只能查看自己创建的 operator
             users = await get_users_by_parent(current_user_id)
             logger.info(f"普通用户 {current_user_id} ({current_user_role}) 查看子用户: {len(users)} 个")
-            # 普通用户也应该能看到自己
-            try:
-                from services.db_service_extended import get_user_with_details
-                current_user_info = await get_user_with_details(current_user_id)
-                if current_user_info:
-                    # 安全：移除敏感信息
-                    if "password" in current_user_info:
-                        current_user_info["password"] = "***"
-                    if "wifi_password" in current_user_info:
-                        current_user_info["wifi_password"] = "***"
-                    users.append(current_user_info)
-            except Exception as e:
-                logger.error(f"获取当前用户信息失败: {e}")
+        else:
+            # operator 无权查看用户列表
+            return {"code": 40300, "message": "无权查看用户列表", "data": None}
         
         # 应用搜索过滤（兼容search和keyword）
         search_term = search or keyword
@@ -249,9 +257,17 @@ async def get_user_detail(
             return {"code": 40400, "message": "用户不存在", "data": None}
         
         # 权限检查
+        is_self = current_user_id == user_id
         if not check_admin_permission(current_user_role):
-            # 普通用户只能查看自己创建的子用户
-            if target_user.get("created_by") != current_user_id:
+            if is_self:
+                # 任何用户都可以查看自己的信息
+                pass
+            elif current_user_role == "user":
+                # 普通用户可以查看自己创建的子用户
+                if target_user.get("created_by") != current_user_id:
+                    return {"code": 40300, "message": "无权查看该用户信息", "data": None}
+            else:
+                # operator 只能查看自己
                 return {"code": 40300, "message": "无权查看该用户信息", "data": None}
         
         # 安全：移除敏感信息
@@ -282,14 +298,61 @@ async def create_user(
     if not current_user_id:
         return {"code": 40100, "message": "未登录", "data": None}
     
-    if not check_admin_permission(current_user_role):
-        return {"code": 40300, "message": "无权创建用户", "data": None}
+    # 三级权限：检查创建者是否有权创建目标角色
+    if not check_create_permission(current_user_role, user_data.role):
+        if current_user_role == "operator":
+            return {"code": 40300, "message": "操作员无权创建用户", "data": None}
+        return {"code": 40300, "message": f"无权创建 {user_data.role} 角色的用户", "data": None}
+    
+    # parent_user_id 逻辑
+    parent_user_id = current_user_id  # 默认
+    if user_data.role == "operator":
+        # 创建 operator 时，admin 可指定其他 user 为父
+        if current_user_role == "admin" and user_data.parent_user_id:
+            # 验证指定的父用户存在且角色为 user 或 admin
+            parent = await get_user_by_id(user_data.parent_user_id)
+            if parent and parent.get("role") in ("admin", "user"):
+                parent_user_id = user_data.parent_user_id
+            # 如果父用户不存在或角色不符，静默回退到 current_user_id
+        # user 创建 operator 时，parent_user_id 强制 = 自身
+    # 创建 user 时，parent_user_id 始终 = current_user_id
     
     try:
         # 检查用户名是否已存在
         existing_user = await get_user_by_name(user_data.username)
         if existing_user:
             return {"code": 40001, "message": "用户名已存在", "data": None}
+        
+        # 创建 operator 时，空的 WIFI 字段从 parent_user 继承
+        if user_data.role == "operator":
+            parent = await get_user_by_id(parent_user_id)
+            if parent:
+                # 解密父用户的WIFI密码用于继承
+                parent_wifi_password = None
+                if parent.get("wifi_password") and not user_data.wifi_password:
+                    try:
+                        from services.db_service import decrypt_wifi_password
+                        parent_wifi_password = decrypt_wifi_password(parent["wifi_password"])
+                    except Exception:
+                        parent_wifi_password = parent["wifi_password"]
+                
+                # 仅继承前端未填写的字段
+                if not user_data.wifi_username and parent.get("wifi_username"):
+                    user_data.wifi_username = parent["wifi_username"]
+                if not user_data.wifi_password and parent_wifi_password:
+                    user_data.wifi_password = parent_wifi_password
+                if not user_data.wifi_apikey and parent.get("wifi_apikey"):
+                    user_data.wifi_apikey = parent["wifi_apikey"]
+                if not user_data.wifi_base_url and parent.get("wifi_base_url"):
+                    user_data.wifi_base_url = parent["wifi_base_url"]
+                if not user_data.wifi_mqtt_broker and parent.get("wifi_mqtt_broker"):
+                    user_data.wifi_mqtt_broker = parent["wifi_mqtt_broker"]
+                if not user_data.mqtt_username and parent.get("mqtt_username"):
+                    user_data.mqtt_username = parent["mqtt_username"]
+                if not user_data.mqtt_password and parent.get("mqtt_password"):
+                    user_data.mqtt_password = parent["mqtt_password"]
+                
+                logger.info(f"操作员 {user_data.username} 从父用户 {parent_user_id} 继承了WIFI配置")
         
         # 创建用户
         new_user_id = await create_user_with_wifi_config(
@@ -303,7 +366,7 @@ async def create_user(
             wifi_mqtt_broker=user_data.wifi_mqtt_broker,
             mqtt_username=user_data.mqtt_username,
             mqtt_password=user_data.mqtt_password,
-            parent_user_id=current_user_id,
+            parent_user_id=parent_user_id,
             created_by=current_user_id
         )
         
@@ -343,10 +406,25 @@ async def update_user_info(
             return {"code": 40400, "message": "用户不存在", "data": None}
         
         # 权限检查
+        is_self = current_user_id == user_id
         if not check_admin_permission(current_user_role):
-            # 普通用户只能修改自己创建的子用户
-            if target_user.get("created_by") != current_user_id:
-                return {"code": 40300, "message": "无权修改该用户信息", "data": None}
+            if is_self:
+                # 用户可以修改自己的基本信息（但不能改角色）
+                if user_data.role is not None and user_data.role != target_user.get("role"):
+                    return {"code": 40300, "message": "不能修改自己的角色", "data": None}
+            elif current_user_role == "user":
+                # user 角色：只能修改自己创建的 operator
+                if target_user.get("created_by") != current_user_id or target_user.get("role") != "operator":
+                    return {"code": 40300, "message": "无权修改该用户信息", "data": None}
+            elif current_user_role == "operator":
+                return {"code": 40300, "message": "操作员无权修改用户信息", "data": None}
+            else:
+                if target_user.get("created_by") != current_user_id:
+                    return {"code": 40300, "message": "无权修改该用户信息", "data": None}
+        
+        # 禁止将角色修改为 admin
+        if user_data.role == "admin":
+            return {"code": 40300, "message": "不允许将用户角色修改为管理员", "data": None}
         
         # 如果需要更新本地用户信息
         update_fields = {}
@@ -420,9 +498,15 @@ async def delete_user(
         
         # 权限检查
         if not check_admin_permission(current_user_role):
-            # 普通用户只能删除自己创建的子用户
-            if target_user.get("created_by") != current_user_id:
-                return {"code": 40300, "message": "无权删除该用户", "data": None}
+            if current_user_role == "user":
+                # user 只能删除自己创建的 operator
+                if target_user.get("created_by") != current_user_id or target_user.get("role") != "operator":
+                    return {"code": 40300, "message": "无权删除该用户", "data": None}
+            elif current_user_role == "operator":
+                return {"code": 40300, "message": "操作员无权删除用户", "data": None}
+            else:
+                if target_user.get("created_by") != current_user_id:
+                    return {"code": 40300, "message": "无权删除该用户", "data": None}
         
         # 不能删除自己
         if user_id == current_user_id:

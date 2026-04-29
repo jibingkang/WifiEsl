@@ -49,10 +49,23 @@ async def get_userinfo(request: Request):
     if not is_valid:
         return {"code": 40101, "message": "Token已过期或无效", "data": None}
 
+    # 从JWT payload中解析真实角色和用户名
+    try:
+        import jwt as pyjwt
+        from config import settings
+        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        role = payload.get("role", "operator")
+        username = payload.get("sub", "")
+        user_id = payload.get("user_id")
+    except Exception:
+        role = "operator"
+        username = ""
+        user_id = None
+
     return {
         "code": 20000,
         "message": "",
-        "data": {"role": "admin"},
+        "data": {"role": role, "username": username, "id": user_id},
     }
 
 
@@ -68,3 +81,47 @@ async def logout(request: Request):
         del _sessions[token]
 
     return {"code": 20000, "message": "已退出登录", "data": None}
+
+
+@router.get("/profile")
+async def get_profile(request: Request):
+    """获取当前用户完整信息（含WIFI配置摘要）"""
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+
+    if not token:
+        return {"code": 40100, "message": "未登录", "data": None}
+
+    is_valid, _ = verify_token(token)
+    if not is_valid:
+        return {"code": 40101, "message": "Token已过期或无效", "data": None}
+
+    # 从JWT payload中获取用户ID
+    try:
+        import jwt as pyjwt
+        from config import settings
+        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except Exception:
+        user_id = None
+
+    if not user_id:
+        return {"code": 40100, "message": "无效的用户信息", "data": None}
+
+    # 从数据库获取完整用户信息
+    from services.db_service_extended import get_user_with_details
+    user = await get_user_with_details(user_id)
+    if not user:
+        return {"code": 40400, "message": "用户不存在", "data": None}
+
+    # 安全：移除敏感信息
+    if "password" in user:
+        user["password"] = "***"
+    if "wifi_password" in user:
+        user["wifi_password"] = "***"
+
+    return {
+        "code": 20000,
+        "message": "",
+        "data": user,
+    }
