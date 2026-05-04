@@ -42,7 +42,7 @@ async def _get_user_wifi_token(request: Request) -> str | None:
 
 def _extract_timestamp(item: dict) -> tuple[str, str]:
     """从原始设备数据中提取创建/更新时间，返回 (created_at, updated_at)"""
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     created = (
         item.get("created_at") or item.get("createdAt")
         or item.get("created") or item.get("registerTime") or now
@@ -334,6 +334,60 @@ async def get_device_stats():
         }
     except Exception as e:
         logger.error(f"获取设备统计失败: {e}")
+        return {"code": 50000, "message": f"查询失败: {e}", "data": None}
+
+
+@router.get("/alerts")
+async def get_device_alerts():
+    """
+    登录后即时告警摘要 - 返回需要关注的异常设备
+    返回: {
+      offline_count, offline_devices(最近10台),
+      low_battery_count, low_battery_devices(最近10台)
+    }
+    """
+    from services.db_service import get_db
+
+    try:
+        db = await get_db()
+
+        # 离线设备：is_online=0，按最后在线时间降序，取最近10台
+        offline_cur = await db.execute(
+            "SELECT COUNT(*) as cnt FROM devices WHERE is_online=0"
+        )
+        offline_count = (await offline_cur.fetchone())["cnt"]
+
+        offline_rows_cur = await db.execute(
+            "SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at "
+            "FROM devices WHERE is_online=0 ORDER BY last_seen_at DESC LIMIT 10"
+        )
+        offline_devices = [dict(r) for r in await offline_rows_cur.fetchall()]
+
+        # 低电量设备：在线且 voltage < 350（即 <3.50V），按电压升序，取最近10台
+        low_battery_cur = await db.execute(
+            "SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL"
+        )
+        low_battery_count = (await low_battery_cur.fetchone())["cnt"]
+
+        low_battery_rows_cur = await db.execute(
+            "SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at FROM devices "
+            "WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL "
+            "ORDER BY voltage ASC LIMIT 10"
+        )
+        low_battery_devices = [dict(r) for r in await low_battery_rows_cur.fetchall()]
+
+        return {
+            "code": 20000,
+            "message": "",
+            "data": {
+                "offline_count": offline_count,
+                "offline_devices": offline_devices,
+                "low_battery_count": low_battery_count,
+                "low_battery_devices": low_battery_devices,
+            },
+        }
+    except Exception as e:
+        logger.error(f"获取设备告警失败: {e}")
         return {"code": 50000, "message": f"查询失败: {e}", "data": None}
 
 

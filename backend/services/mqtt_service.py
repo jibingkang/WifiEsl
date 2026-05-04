@@ -185,12 +185,14 @@ class MQTTManager:
         """
         import datetime as dt
 
-        now_iso = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        now_iso = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         update_fields: dict = {}
 
         if event_type == "online":
             update_fields = {"is_online": 1, "last_seen_at": now_iso}
+            # 设备上线时自动查询电量（异步触发，不阻塞）
+            asyncio.ensure_future(self._query_battery_on_online(mac))
         elif event_type == "offline":
             update_fields = {"is_online": 0}
         elif event_type == "battery_reply":
@@ -224,6 +226,18 @@ class MQTTManager:
             await add_device_event(mac, event_type, data)
         except Exception as e:
             logger.error(f"[DB] add event [{event_type}] for {mac} 失败: {e}")
+
+    async def _query_battery_on_online(self, mac: str):
+        """设备上线时自动查询电量（异步，不阻塞上线事件处理）"""
+        try:
+            from services.wifi_client import WifiSystemProxy
+            from config import settings
+            api_key = settings.wifi_apikey
+            base_url = None
+            result = await WifiSystemProxy.query_battery(mac, api_key, base_url=base_url)
+            logger.info(f"[MQTT] 设备上线自动查电量 {mac}: {result}")
+        except Exception as e:
+            logger.debug(f"[MQTT] 设备上线自动查电量 {mac} 失败（不影响上线）: {e}")
 
     def _on_disconnect(self, client, userdata, reason_code, properties=None, packet_from_broker=None):
         """MQTT断连回调 (paho-mqtt v2: 5个参数 + self)"""

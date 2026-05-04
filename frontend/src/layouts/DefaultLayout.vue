@@ -178,6 +178,106 @@
         <el-button @click="profileVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 设备告警弹窗（登录后自动弹出） -->
+    <el-dialog
+      v-model="alertVisibleRef"
+      title=""
+      width="560px"
+      :close-on-click-modal="true"
+      class="device-alert-dialog"
+    >
+      <div class="alert-dialog-body">
+        <!-- 全部正常 -->
+        <template v-if="allNormalRef">
+          <div class="alert-header">
+            <div class="alert-icon-wrap success">
+              <CheckCircle :size="24" />
+            </div>
+            <div class="alert-title-group">
+              <h3 class="alert-title">设备状态正常</h3>
+              <p class="alert-subtitle">所有设备运行正常，无需关注</p>
+            </div>
+          </div>
+        </template>
+
+        <!-- 有异常 -->
+        <template v-else>
+          <!-- 标题区 -->
+          <div class="alert-header">
+            <div class="alert-icon-wrap warning">
+              <AlertTriangle :size="24" />
+            </div>
+            <div class="alert-title-group">
+              <h3 class="alert-title">设备状态告警</h3>
+              <p class="alert-subtitle">系统检测到以下设备需要关注</p>
+            </div>
+          </div>
+
+          <!-- 离线设备 -->
+          <div v-if="alertDataRef?.offline_count" class="alert-section offline">
+            <div class="section-header">
+              <WifiOff :size="16" />
+              <span class="section-title">离线设备 ({{ alertDataRef.offline_count }}台)</span>
+            </div>
+            <div class="device-list">
+              <div
+                v-for="dev in alertDataRef.offline_devices"
+                :key="dev.mac"
+                class="device-card"
+              >
+                <div class="device-info">
+                  <span class="device-mac">{{ dev.mac }}</span>
+                  <span v-if="dev.name && dev.name !== dev.mac" class="device-name">{{ dev.name }}</span>
+                  <span v-if="dev.voltage != null && dev.voltage !== 0" class="device-volt">{{ formatVolt(dev.voltage) }}</span>
+                  <el-tag size="small" type="danger" class="device-tag">离线</el-tag>
+                </div>
+                <div v-if="dev.last_seen_at" class="device-meta">
+                  最后在线: {{ formatRelativeTime(dev.last_seen_at) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 低电量设备 -->
+          <div v-if="alertDataRef?.low_battery_count" class="alert-section low-battery">
+            <div class="section-header">
+              <BatteryLow :size="16" />
+              <span class="section-title">低电量 ({{ alertDataRef.low_battery_count }}台)</span>
+            </div>
+            <div class="device-list">
+              <div
+                v-for="dev in alertDataRef.low_battery_devices"
+                :key="dev.mac"
+                class="device-card"
+              >
+                <div class="device-info">
+                  <span class="device-mac">{{ dev.mac }}</span>
+                  <span v-if="dev.name && dev.name !== dev.mac" class="device-name">{{ dev.name }}</span>
+                  <span v-if="dev.voltage != null && dev.voltage !== 0" class="device-volt low">{{ formatVolt(dev.voltage) }}</span>
+                  <el-tag size="small" :type="dev.is_online ? 'success' : 'danger'" class="device-tag">
+                    {{ dev.is_online ? '在线' : '离线' }}
+                  </el-tag>
+                </div>
+                <div v-if="dev.last_seen_at" class="device-meta">
+                  {{ formatRelativeTime(dev.last_seen_at) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <template #footer>
+        <div class="alert-footer">
+          <el-button @click="loginAlert.dismissAlert()">知道了</el-button>
+          <el-button v-if="!allNormalRef" type="primary" @click="goToMonitor">
+            <Monitor :size="14" style="margin-right: 4px;" />
+            查看详情
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -189,11 +289,13 @@ import {
   ArrowDown, User, SwitchButton,
   Odometer, Monitor, Document, FolderOpened, TrendCharts, Clock
 } from '@element-plus/icons-vue'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
+import { PanelLeftClose, PanelLeftOpen, AlertTriangle, WifiOff, BatteryLow, CheckCircle } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import { useBackendWs } from '@/composables/useBackendWs'
+import { useLoginAlert } from '@/composables/useLoginAlert'
+import { formatVolt, formatRelativeTime } from '@/utils/format'
 import service from '@/api/index'
 
 const route = useRoute()
@@ -201,6 +303,8 @@ const router = useRouter()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const { mqttConnected } = useBackendWs()
+const loginAlert = useLoginAlert()
+const { alertVisible: alertVisibleRef, alertData: alertDataRef, allNormal: allNormalRef } = loginAlert
 
 // 版本信息
 const frontendVersion = __APP_VERSION__
@@ -277,10 +381,17 @@ function handleUserCommand(command: string) {
       openProfile()
       break
     case 'logout':
+      loginAlert.resetCheck()
       authStore.logout()
       router.push('/login')
       break
   }
+}
+
+/** 跳转到监控页并关闭告警弹窗 */
+function goToMonitor() {
+  alertVisibleRef.value = false
+  router.push('/monitor')
 }
 
 function toggleFullscreen() {
@@ -304,6 +415,8 @@ onMounted(() => {
       backendStartTime.value = d.startTime || ''
     }
   }).catch(() => {})
+  // 登录后自动检查设备告警（每次会话只弹一次）
+  loginAlert.checkAlerts()
 })
 
 onUnmounted(() => {
@@ -656,5 +769,173 @@ onUnmounted(() => {
   .main-content {
     padding: 16px;
   }
+}
+
+// ==================== 设备告警弹窗 ====================
+.device-alert-dialog {
+  :deep(.el-dialog__header) {
+    display: none; // 隐藏默认标题栏
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 24px;
+  }
+}
+
+.alert-dialog-body {
+  min-height: 80px;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  .alert-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.warning {
+      background: linear-gradient(135deg, rgba(#f59e0b, 0.15), rgba(#ef4444, 0.1));
+      color: #f59e0b;
+    }
+
+    &.success {
+      background: linear-gradient(135deg, rgba(#10b981, 0.15), rgba(#34d399, 0.1));
+      color: #10b981;
+    }
+  }
+
+  .alert-title-group {
+    .alert-title {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+
+    .alert-subtitle {
+      margin: 0;
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
+    }
+  }
+}
+
+.alert-section {
+  margin-bottom: 16px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--el-border-color-lighter);
+
+  &.offline {
+    background: linear-gradient(135deg, rgba(#ef4444, 0.04), rgba(#ef4444, 0.02));
+    border-color: rgba(#ef4444, 0.12);
+  }
+
+  &.low-battery {
+    background: linear-gradient(135deg, rgba(#f59e0b, 0.06), rgba(#f59e0b, 0.02));
+    border-color: rgba(#f59e0b, 0.15);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--el-text-color-primary);
+
+    .section-title {
+      font-weight: 600;
+      font-size: 13px;
+    }
+  }
+
+  &.offline .section-header { color: #ef4444; }
+  &.low-battery .section-header { color: #d97706; }
+
+  .device-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+}
+
+.device-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+  }
+
+  .device-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .device-mac {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  .device-name {
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .device-volt {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+    &.low {
+      color: #d97706;
+      font-weight: 500;
+    }
+  }
+
+  .device-tag {
+    transform: scale(0.85);
+  }
+
+  .device-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    padding-left: 2px;
+
+    > span {
+      white-space: nowrap;
+    }
+  }
+}
+
+.alert-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

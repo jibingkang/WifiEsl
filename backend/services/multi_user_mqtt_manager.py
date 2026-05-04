@@ -30,6 +30,7 @@ class UserMQTTConnection:
         self.thread: Optional[threading.Thread] = None
         self.stop_event = threading.Event()
         self.api_key: Optional[str] = None
+        self.base_url: Optional[str] = None
         self.broker_host: Optional[str] = None
         self.broker_port: int = 1883
         self._main_loop: Optional[asyncio.AbstractEventLoop] = None
@@ -49,6 +50,7 @@ class UserMQTTConnection:
             
             # MQTT订阅使用用户的wifi_apikey（专门用于MQTT订阅）
             self.api_key = conn.wifi_apikey if conn.wifi_apikey else conn.token
+            self.base_url = conn.wifi_base_url
             broker_url = conn.wifi_mqtt_broker
             
             # MQTT认证信息：优先使用用户配置的，否则使用默认
@@ -285,12 +287,14 @@ class UserMQTTConnection:
         import datetime as dt
         from services.db_service import update_device_status_by_mac
         
-        now_iso = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        now_iso = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         update_fields: dict = {}
         
         if event_type == "online":
             update_fields = {"is_online": 1, "last_seen_at": now_iso}
+            # 设备上线时自动查询电量（异步触发，不阻塞）
+            asyncio.ensure_future(self._query_battery_on_online(mac))
         elif event_type == "offline":
             update_fields = {"is_online": 0}
         elif event_type == "battery_reply":
@@ -386,6 +390,17 @@ class UserMQTTConnection:
                 logger.error(f"[DB] 更新任务设备状态失败 {mac}: {e}")
         
         logger.debug(f"用户 {self.user_id} 设备 {mac} 事件 {event_type} 已持久化")
+    
+    async def _query_battery_on_online(self, mac: str):
+        """设备上线时自动查询电量（异步，不阻塞上线事件处理）"""
+        if not self.api_key:
+            return
+        try:
+            from services.wifi_client import WifiSystemProxy
+            result = await WifiSystemProxy.query_battery(mac, self.api_key, base_url=self.base_url)
+            logger.info(f"[MQTT] 设备上线自动查电量 {mac}: {result}")
+        except Exception as e:
+            logger.debug(f"[MQTT] 设备上线自动查电量 {mac} 失败（不影响上线）: {e}")
     
     def _on_disconnect(self, client, userdata, flags, reason_code, properties=None):
         """断开连接回调"""

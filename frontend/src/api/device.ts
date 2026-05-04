@@ -131,4 +131,14 @@ export const deviceApi = {
   removeTemplateBinding(tid: string, mac: string): Promise<any> {
     return service.delete(`/devices/template-devices/${tid}/${mac}`)
   },
+
+  // ==================== 设备告警接口 ====================
+
+  /**
+   * 获取设备告警信息(登录后调用) - 返回离线和低电量设备列表
+   * GET /api/v1/devices/alerts
+   */
+  getDeviceAlerts(): Promise<any> {
+    return service.get('/devices/alerts')
+  },
 }

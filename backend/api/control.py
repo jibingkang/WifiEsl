@@ -101,7 +101,7 @@ async def query_battery(mac: str, request: Request):
                 try:
                     from services.db_service import upsert_device
                     import datetime as _dt
-                    now_iso = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    now_iso = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     await upsert_device(mac, voltage=int(raw_voltage), last_seen_at=now_iso)
                     print(f"[Control] 电量查询结果已同步DB: mac={mac}, voltage={raw_voltage}")
                 except Exception as db_err:
