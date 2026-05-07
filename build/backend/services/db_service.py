@@ -166,12 +166,58 @@ async def init_db():
             detail      TEXT,
             result      TEXT    DEFAULT 'success',
             ip_address  TEXT,
+            user_id     INTEGER NOT NULL DEFAULT 0,
+            task_id     INTEGER,
             created_at  TEXT    DEFAULT (datetime('now', 'localtime'))
         );
 
-        -- 索引优化查询
+        -- 基本索引（不依赖 user_id，确保旧表升级时不崩溃）
         CREATE INDEX IF NOT EXISTS idx_logs_action ON operation_logs(action);
         CREATE INDEX IF NOT EXISTS idx_logs_time ON operation_logs(created_at);
+    """)
+
+    # 迁移：为旧 operation_logs 表添加缺失列
+    try:
+        existing = await (await db.execute("PRAGMA table_info(operation_logs)")).fetchall()
+        col_names = {row[1] for row in existing}
+        if 'user_id' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 operation_logs.user_id")
+        if 'task_id' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN task_id INTEGER")
+            logger.info("[DB] 已添加列 operation_logs.task_id")
+        if 'ip_address' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN ip_address TEXT DEFAULT ''")
+            logger.info("[DB] 已添加列 operation_logs.ip_address")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 添加 operation_logs 列失败: {e}")
+
+    # 在确认列存在后创建 user_id 索引
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_user ON operation_logs(user_id)")
+
+    # ── 设备推送审计日志表（每台设备每次推送的详细记录）──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS device_push_logs (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id         INTEGER,
+            mac             TEXT    NOT NULL,
+            user_id         INTEGER NOT NULL DEFAULT 0,
+            username        TEXT,
+            template_id     TEXT,
+            template_name   TEXT,
+            push_data       TEXT    DEFAULT '{}',
+            result          TEXT    DEFAULT 'pending',
+            error_msg       TEXT    DEFAULT '',
+            sent_at         TEXT,
+            replied_at      TEXT,
+            created_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_dpl_mac ON device_push_logs(mac);
+        CREATE INDEX IF NOT EXISTS idx_dpl_task ON device_push_logs(task_id);
+        CREATE INDEX IF NOT EXISTS idx_dpl_user ON device_push_logs(user_id);
+        CREATE INDEX IF NOT EXISTS idx_dpl_time ON device_push_logs(created_at DESC);
     """)
 
     # ── 模板表 ──
@@ -419,6 +465,20 @@ async def init_db():
 
     await db.commit()
 
+    # ═══ 兼容旧数据库：确保 operation_logs 有 user_id / task_id 列 ═══
+    try:
+        existing_ol = await (await db.execute("PRAGMA table_info(operation_logs)")).fetchall()
+        ol_col_names = {row[1] for row in existing_ol}
+        if 'user_id' not in ol_col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 operation_logs.user_id")
+        if 'task_id' not in ol_col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN task_id INTEGER")
+            logger.info("[DB] 已添加列 operation_logs.task_id")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加 operation_logs 兼容列失败（可忽略）: {e}")
+
     # ═══ 兼容旧数据库：确保 task_devices 有新列 ═══
     try:
         # SQLite 不支持 IF NOT EXISTS 加列，先查 PRAGMA
@@ -489,6 +549,18 @@ async def init_db():
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加users表兼容列失败（可忽略）: {e}")
+
+    # ── 回填历史数据：device_push_logs.template_name 为空时从 update_tasks 补全 ──
+    try:
+        await db.execute("""
+            UPDATE device_push_logs SET template_name = (
+                SELECT tname FROM update_tasks WHERE update_tasks.id = device_push_logs.task_id
+            ) WHERE (template_name IS NULL OR template_name = '')
+        """)
+        await db.commit()
+        logger.info("[DB] 已回填 device_push_logs.template_name")
+    except Exception as e:
+        logger.debug(f"[DB] 回填 device_push_logs.template_name 跳过: {e}")
 
     # ── 插入默认数据 (仅当表为空时) ──
     await _seed_default_data(db)
@@ -923,13 +995,15 @@ async def add_log(
     detail: str = "",
     result: str = "success",
     ip_address: str = "",
+    user_id: int = 0,
+    task_id: int | None = None,
 ):
     """记录一条操作日志"""
     db = await get_db()
     await db.execute("""
-        INSERT INTO operation_logs (username, action, target_type, target_id, detail, result, ip_address)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (username, action, target_type, target_id, detail, result, ip_address))
+        INSERT INTO operation_logs (username, action, target_type, target_id, detail, result, ip_address, user_id, task_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (username, action, target_type, target_id, detail, result, ip_address, user_id, task_id))
     await db.commit()
 
 
@@ -937,21 +1011,49 @@ async def get_logs(
     page: int = 1,
     page_size: int = 20,
     action: str = "",
+    user_id: int | None = None,
+    allowed_user_ids: list[int] | None = None,
+    start_time: str = "",
+    end_time: str = "",
+    mac: str = "",
 ) -> tuple[list[dict], int]:
     """
-    分页查询操作日志
+    分页查询操作日志（支持权限过滤）
     Returns: (items列表, total总数)
     """
     db = await get_db()
 
-    where = ""
+    where_parts = []
     params: list = []
+
     if action:
-        where = "WHERE action LIKE ?"
-        params.append(f"%{action}%")
+        where_parts.append("action = ?")
+        params.append(action)
+
+    # 权限过滤：按用户ID范围
+    if allowed_user_ids is not None:
+        placeholders = ",".join("?" * len(allowed_user_ids))
+        where_parts.append(f"user_id IN ({placeholders})")
+        params.extend(allowed_user_ids)
+    elif user_id is not None:
+        where_parts.append("user_id = ?")
+        params.append(user_id)
+
+    if start_time:
+        where_parts.append("created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("created_at <= ?")
+        params.append(end_time)
+
+    if mac:
+        where_parts.append("detail LIKE ?")
+        params.append(f"%{mac}%")
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
     # 总数
-    cnt_sql = f"SELECT COUNT(*) as total FROM operation_logs {where}"
+    cnt_sql = f"SELECT COUNT(*) as total FROM operation_logs {where_sql}"
     cursor = await db.execute(cnt_sql, params)
     total_row = await cursor.fetchone()
     total = total_row["total"]
@@ -959,8 +1061,135 @@ async def get_logs(
     # 分页数据
     offset = (page - 1) * page_size
     sql = f"""
-        SELECT * FROM operation_logs {where}
+        SELECT * FROM operation_logs {where_sql}
         ORDER BY created_at DESC LIMIT ? OFFSET ?
+    """
+    cursor = await db.execute(sql, params + [page_size, offset])
+    rows = await cursor.fetchall()
+    items = [dict(r) for r in rows]
+
+    return items, total
+
+
+# ============================================================
+# DevicePushLogs 表操作
+# ============================================================
+
+async def add_push_log(
+    task_id: int,
+    mac: str,
+    user_id: int = 0,
+    username: str = "",
+    template_id: str = "",
+    template_name: str = "",
+    push_data: str = "{}",
+    result: str = "pending",
+    error_msg: str = "",
+    sent_at: str | None = None,
+):
+    """记录一条设备推送日志"""
+    db = await get_db()
+    await db.execute("""
+        INSERT INTO device_push_logs
+            (task_id, mac, user_id, username, template_id, template_name, push_data, result, error_msg, sent_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (task_id, mac, user_id, username, template_id, template_name, push_data, result, error_msg, sent_at))
+    await db.commit()
+
+
+async def update_push_log_result(mac: str, task_id: int | None, result: str, error_msg: str = ""):
+    """更新推送日志的结果（设备回执时调用）"""
+    db = await get_db()
+    import datetime as dt
+    now_iso = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if task_id:
+        await db.execute(
+            "UPDATE device_push_logs SET result=?, error_msg=?, replied_at=? WHERE mac=? AND task_id=? AND result='sent'",
+            (result, error_msg, now_iso, mac, task_id),
+        )
+    else:
+        # 找到该MAC最近一条sent记录，通过子查询获取其id再更新
+        await db.execute(
+            "UPDATE device_push_logs SET result=?, error_msg=?, replied_at=? "
+            "WHERE id = ("
+            "  SELECT id FROM device_push_logs "
+            "  WHERE mac=? AND result='sent' "
+            "  ORDER BY created_at DESC LIMIT 1"
+            ")",
+            (result, error_msg, now_iso, mac),
+        )
+    await db.commit()
+
+
+async def get_push_logs(
+    page: int = 1,
+    page_size: int = 20,
+    task_id: int | None = None,
+    mac: str = "",
+    user_id: int | None = None,
+    allowed_user_ids: list[int] | None = None,
+    start_time: str = "",
+    end_time: str = "",
+    result: str = "",
+) -> tuple[list[dict], int]:
+    """
+    分页查询设备推送日志（支持权限过滤）
+    - LEFT JOIN devices 获取设备别名
+    - LEFT JOIN task_devices 获取 fallback 完成时间/结果
+    Returns: (items列表, total总数)
+    """
+    db = await get_db()
+
+    # 使用前缀避免歧义：dpl = device_push_logs, td = task_devices
+    where_parts = []
+    params: list = []
+
+    if task_id is not None:
+        where_parts.append("dpl.task_id = ?")
+        params.append(task_id)
+    if mac:
+        where_parts.append("dpl.mac LIKE ?")
+        params.append(f"%{mac}%")
+
+    # 权限过滤
+    if allowed_user_ids is not None:
+        placeholders = ",".join("?" * len(allowed_user_ids))
+        where_parts.append(f"dpl.user_id IN ({placeholders})")
+        params.extend(allowed_user_ids)
+    elif user_id is not None:
+        where_parts.append("dpl.user_id = ?")
+        params.append(user_id)
+
+    if start_time:
+        where_parts.append("dpl.created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("dpl.created_at <= ?")
+        params.append(end_time)
+    if result:
+        where_parts.append("dpl.result = ?")
+        params.append(result)
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+    # 总数（仅主表计数）
+    cnt_sql = f"SELECT COUNT(*) as total FROM device_push_logs dpl {where_sql}"
+    cursor = await db.execute(cnt_sql, params)
+    total_row = await cursor.fetchone()
+    total = total_row["total"]
+
+    # 分页数据：LEFT JOIN 获取设备名称 + 模板名 fallback（不 JOIN task_devices，每条记录独立）
+    offset = (page - 1) * page_size
+    sql = f"""
+        SELECT
+            dpl.*,
+            d.name AS device_name,
+            COALESCE(NULLIF(dpl.template_name, ''), ut.tname) AS template_name_final
+        FROM device_push_logs dpl
+        LEFT JOIN devices d ON dpl.mac = d.mac
+        LEFT JOIN update_tasks ut ON dpl.task_id = ut.id
+        {where_sql}
+        ORDER BY dpl.created_at DESC LIMIT ? OFFSET ?
     """
     cursor = await db.execute(sql, params + [page_size, offset])
     rows = await cursor.fetchall()
@@ -1239,9 +1468,12 @@ async def get_device_events(
     event_type: str | None = None,
     page: int = 1,
     page_size: int = 50,
+    allowed_macs: list[str] | None = None,
+    start_time: str = "",
+    end_time: str = "",
 ) -> tuple[list[dict], int]:
     """
-    分页查询设备事件
+    分页查询设备事件（支持权限过滤）
     Returns: (事件列表, 总数)
     """
     db = await get_db()
@@ -1254,6 +1486,21 @@ async def get_device_events(
     if event_type:
         where_parts.append("event_type = ?")
         params.append(event_type)
+
+    # 权限过滤：只查看有权限的MAC
+    if allowed_macs is not None:
+        if not allowed_macs:
+            return [], 0  # 无权限设备，直接返回空
+        placeholders = ",".join("?" * len(allowed_macs))
+        where_parts.append(f"mac IN ({placeholders})")
+        params.extend(allowed_macs)
+
+    if start_time:
+        where_parts.append("created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("created_at <= ?")
+        params.append(end_time)
 
     where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 

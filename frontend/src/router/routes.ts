@@ -74,6 +74,30 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'logs',
+        name: 'OperationLogs',
+        redirect: '/logs/operations',
+        meta: { title: '操作记录', icon: 'Document' },
+        children: [
+          {
+            path: '',
+            redirect: '/logs/operations',
+          },
+          {
+            path: 'operations',
+            name: 'OperationLogList',
+            component: () => import('@/views/log/OperationLogPage.vue'),
+            meta: { title: '操作记录', roles: ['admin', 'user', 'operator'] },
+          },
+          {
+            path: 'device-events',
+            name: 'DeviceEventList',
+            component: () => import('@/views/log/DeviceEventsPage.vue'),
+            meta: { title: '设备事件', roles: ['admin', 'user', 'operator'] },
+          },
+        ],
+      },
+      {
         path: 'template/manage',
         name: 'TemplateManage',
         component: () => import('@/views/template/TemplateManageView.vue'),

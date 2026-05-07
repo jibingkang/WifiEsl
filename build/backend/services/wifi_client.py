@@ -395,8 +395,7 @@ class WifiSystemProxy:
         logger.info(f"=== 推送模板到设备 ===")
         logger.info(f"  目标地址: {client.base_url}{url}")
         logger.info(f"  MAC: {mac}, 模板ID: {template_id}, 模板名称: {template_name}")
-        logger.debug(f"  请求Token: {api_key[:20]}...")
-        logger.debug(f"  请求数据: {json.dumps(payload, ensure_ascii=False)}")
+        logger.info(f"  请求参数: {json.dumps(payload, ensure_ascii=False)}")
         try:
             resp = await client.post(
                 url,

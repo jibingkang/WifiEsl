@@ -14,7 +14,7 @@ import paho.mqtt.client as mqtt
 
 from .wifi_connection_manager import wifi_connection_manager
 from .ws_manager import ws_manager
-from .db_service import upsert_device, add_device_event, update_device_status_by_mac
+from .db_service import upsert_device, add_device_event, update_device_status_by_mac, add_log, update_push_log_result
 
 logger = logging.getLogger(__name__)
 
@@ -295,6 +295,8 @@ class UserMQTTConnection:
             update_fields = {"is_online": 1, "last_seen_at": now_iso}
             # 设备上线时自动查询电量（异步触发，不阻塞）
             asyncio.ensure_future(self._query_battery_on_online(mac))
+            # 设备上线时同步名称（异步触发，不阻塞）
+            asyncio.ensure_future(self._sync_device_name_on_online(mac))
         elif event_type == "offline":
             update_fields = {"is_online": 0}
         elif event_type == "battery_reply":
@@ -371,6 +373,22 @@ class UserMQTTConnection:
             event_type=event_type,
             payload=data
         )
+
+        # 记录在线/离线操作日志
+        if event_type in ("online", "offline"):
+            try:
+                detail = json.dumps({"mac": mac, "event": event_type, "user_id": self.user_id}, ensure_ascii=False)
+                await add_log(
+                    username="system",
+                    action=f"device_{event_type}",
+                    target_type="device",
+                    target_id=mac,
+                    detail=detail,
+                    result="success",
+                    user_id=self.user_id,
+                )
+            except Exception as e:
+                logger.debug(f"[DB] add log [{event_type}] for {mac} 失败: {e}")
         
         # display_reply: 联动更新任务设备状态（result=200 → success, 否则 failed）
         if event_type == "display_reply" and mac:
@@ -386,6 +404,8 @@ class UserMQTTConnection:
                 logger.info(f"[MQTT] display_reply: {mac} -> {new_status}, 更新行数: {updated_rows}")
                 if updated_rows == 0:
                     logger.warning(f"[MQTT] display_reply: {mac} 没有更新任何行，检查task_devices表中是否存在该设备且状态为sent")
+                # 同步更新推送日志的完成时间和最终结果
+                await update_push_log_result(mac, task_id=None, result=new_status, error_msg=err_msg)
             except Exception as e:
                 logger.error(f"[DB] 更新任务设备状态失败 {mac}: {e}")
         
@@ -401,6 +421,21 @@ class UserMQTTConnection:
             logger.info(f"[MQTT] 设备上线自动查电量 {mac}: {result}")
         except Exception as e:
             logger.debug(f"[MQTT] 设备上线自动查电量 {mac} 失败（不影响上线）: {e}")
+
+    async def _sync_device_name_on_online(self, mac: str):
+        """设备上线时从WIFI系统同步名称到本地DB（异步，不阻塞）"""
+        if not self.api_key:
+            return
+        try:
+            from services.wifi_client import WifiSystemProxy
+            dev_info = await WifiSystemProxy.get_device_by_mac(mac, self.api_key, base_url=self.base_url)
+            dev_data = dev_info.get("data", dev_info) if isinstance(dev_info, dict) else {}
+            alias = dev_data.get("alias", "") if isinstance(dev_data, dict) else ""
+            if alias:
+                await upsert_device(mac=mac, user_id=self.user_id, name=alias)
+                logger.info(f"[MQTT] 设备上线同步名称: {mac} -> {alias}")
+        except Exception as e:
+            logger.debug(f"[MQTT] 设备上线同步名称 {mac} 失败（不影响上线）: {e}")
     
     def _on_disconnect(self, client, userdata, flags, reason_code, properties=None):
         """断开连接回调"""

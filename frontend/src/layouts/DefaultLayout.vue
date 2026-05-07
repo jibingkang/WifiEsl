@@ -289,7 +289,7 @@ import {
   ArrowDown, User, SwitchButton,
   Odometer, Monitor, Document, FolderOpened, TrendCharts, Clock
 } from '@element-plus/icons-vue'
-import { PanelLeftClose, PanelLeftOpen, AlertTriangle, WifiOff, BatteryLow, CheckCircle } from 'lucide-vue-next'
+import { PanelLeftClose, PanelLeftOpen, AlertTriangle, WifiOff, BatteryLow, CheckCircle, ClipboardList, Activity } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
@@ -367,6 +367,8 @@ const menuItems = computed(() => {
     { path: '/devices', title: '设备管理', icon: Monitor, roles: ['admin', 'user'] },
     { path: '/template/update', title: '数据更新', icon: Document, roles: ['admin', 'user', 'operator'] },
     { path: '/template/history', title: '更新历史', icon: Clock, roles: ['admin', 'user', 'operator'] },
+    { path: '/logs/operations', title: '操作记录', icon: ClipboardList, roles: ['admin', 'user', 'operator'] },
+    { path: '/logs/device-events', title: '设备事件', icon: Activity, roles: ['admin', 'user', 'operator'] },
     { path: '/template/manage', title: '模板管理', icon: FolderOpened, roles: ['admin', 'user'] },
     { path: '/batch', title: '批量操作', icon: TrendCharts, roles: ['admin', 'user'] },
     { path: '/monitor', title: '实时监控', icon: Monitor, roles: ['admin', 'user', 'operator'] },

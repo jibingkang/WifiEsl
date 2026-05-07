@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 
 from config import settings
 from services.ws_manager import ws_manager
-from services.db_service import upsert_device, add_device_event, update_device_status_by_mac
+from services.db_service import upsert_device, add_device_event, update_device_status_by_mac, add_log, update_push_log_result
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +219,8 @@ class MQTTManager:
             try:
                 await update_device_status_by_mac(mac, new_status, err_msg)
                 print(f"[MQTT] display_reply: {mac} -> {new_status}")
+                # 同步更新推送日志的完成时间和最终结果
+                await update_push_log_result(mac, task_id=None, result=new_status, error_msg=err_msg)
             except Exception as e:
                 logger.error(f"[DB] 更新任务设备状态失败 {mac}: {e}")
 
@@ -226,6 +228,22 @@ class MQTTManager:
             await add_device_event(mac, event_type, data)
         except Exception as e:
             logger.error(f"[DB] add event [{event_type}] for {mac} 失败: {e}")
+
+        # 记录在线/离线操作日志
+        if event_type in ("online", "offline"):
+            try:
+                import json as _json
+                detail = _json.dumps({"mac": mac, "event": event_type}, ensure_ascii=False)
+                await add_log(
+                    username="system",
+                    action=f"device_{event_type}",
+                    target_type="device",
+                    target_id=mac,
+                    detail=detail,
+                    result="success",
+                )
+            except Exception as e:
+                logger.debug(f"[DB] add log [{event_type}] for {mac} 失败: {e}")
 
     async def _query_battery_on_online(self, mac: str):
         """设备上线时自动查询电量（异步，不阻塞上线事件处理）"""

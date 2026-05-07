@@ -32,6 +32,11 @@ from services.db_service import (
     delete_task_device_row,
     delete_all_task_device_rows,
     batch_add_task_device_rows,
+    # 操作日志
+    add_log,
+    add_push_log,
+    # 模板查询
+    get_template_by_tid,
     # DB 连接
     get_db,
 )
@@ -206,7 +211,16 @@ async def create_task(request: Request, body: TaskCreate):
     if not tid:
         raise HTTPException(status_code=400, detail="tid 不能为空")
 
-    task_id = await create_update_task(name=name, tid=tid, user_id=user_id)
+    # 查询模板名称
+    tname = ""
+    try:
+        tpl = await get_template_by_tid(tid)
+        if tpl:
+            tname = tpl.get("tname", "")
+    except Exception as e:
+        logger.warning(f"创建任务时查询模板名称失败 tid={tid}: {e}")
+
+    task_id = await create_update_task(name=name, tid=tid, tname=tname, user_id=user_id)
     # 获取完整详情返回
     detail = await get_task_detail(task_id, user_id=user_id)
     return {"code": 20000, "message": "创建成功", "data": detail}
@@ -425,6 +439,11 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     logger.info(f"[Task-{task_id}] 开始执行推送，目标 {len(push_devices)} 台设备")
     print(f"\n========== [TASK] 任务 {task_id} 开始推送 ==========")
     print(f"   模板: {tid} ({tname}), 设备数: {len(push_devices)}")
+    print(f"   设备MAC列表: {[d['mac'] for d in push_devices]}")
+    # 打印每台设备的推送参数
+    for d in push_devices[:5]:  # 最多打印5台设备参数
+        cd = d.get("custom_data", "{}")
+        print(f"   设备 {d['mac']}: custom_data={cd}")
 
     # 将所有设备状态先置为 sent，同时同步 selected_row_id
     from services.db_service import get_db as _get_db
@@ -513,6 +532,81 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
 
     # 刷新任务汇总状态
     await _refresh_task_summary_db(task_id)
+
+    # ═══ 记录推送日志 ═══
+    import datetime as dt
+    now_iso = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 查询操作人信息
+    from services.db_service_extended import get_user_by_id
+    operator_info = await get_user_by_id(user_id)
+    operator_name = operator_info.get("username", "unknown") if operator_info else "unknown"
+
+    # 1. 每台设备写一条 device_push_logs（逐条 try，一条失败不影响其他）
+    for r in results:
+        mac = r.get("mac", "")
+        try:
+            # 从推送设备中查找对应的 custom_data
+            push_data_json = "{}"
+            for d in push_devices:
+                if d["mac"] == mac:
+                    cd = d.get("custom_data", "{}")
+                    if isinstance(cd, dict):
+                        push_data_json = json.dumps(cd, ensure_ascii=False)
+                    elif isinstance(cd, str):
+                        push_data_json = cd
+                    break
+
+            p_result = "sent" if r.get("success") else "failed"
+            p_error = r.get("error", "") if not r.get("success") else ""
+            await add_push_log(
+                task_id=task_id,
+                mac=mac,
+                user_id=user_id,
+                username=operator_name,
+                template_id=tid,
+                template_name=tname,
+                push_data=push_data_json,
+                result=p_result,
+                error_msg=p_error,
+                sent_at=now_iso,
+            )
+            # 从WIFI系统同步设备别名到本地DB
+            if r.get("success"):
+                try:
+                    from services.db_service import upsert_device as _upsert
+                    dev_info = await wifi_proxy.get_device_by_mac(mac, wifi_token, base_url=wifi_base_url)
+                    dev_data = dev_info.get("data", dev_info) if isinstance(dev_info, dict) else {}
+                    alias = dev_data.get("alias", "") if isinstance(dev_data, dict) else ""
+                    if alias:
+                        await _upsert(mac=mac, user_id=user_id, name=alias)
+                except Exception:
+                    pass
+        except Exception as push_log_err:
+            logger.warning(f"[Task-{task_id}] 设备 {mac} 推送明细写入失败: {push_log_err}")
+
+    # 2. 汇总写一条 operation_logs（确保必然执行，不受 above 异常影响）
+    try:
+        detail_data = {
+            "taskId": task_id,
+            "templateId": tid,
+            "templateName": tname,
+            "deviceCount": len(push_devices),
+            "sentOk": sent_ok,
+            "sentFail": sent_fail,
+        }
+        await add_log(
+            username=operator_name,
+            action="task_push",
+            target_type="task",
+            target_id=str(task_id),
+            detail=json.dumps(detail_data, ensure_ascii=False),
+            result="success" if sent_fail == 0 else "partial",
+            user_id=user_id,
+            task_id=task_id,
+        )
+    except Exception as log_err:
+        logger.warning(f"[Task-{task_id}] 写入操作汇总日志失败: {log_err}")
 
     return {
         "code": 20000,

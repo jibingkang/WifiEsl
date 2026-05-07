@@ -48,6 +48,7 @@ from api.batch import router as batch_router
 from api.tasks import router as tasks_router
 from api.settings import router as settings_router
 from api.websocket import ws_endpoint
+from api.logs import router as logs_router
 
 
 @asynccontextmanager
@@ -162,6 +163,7 @@ app.include_router(batch_router, prefix="/api/v1", tags=["批量操作"])
 app.include_router(tasks_router, prefix="/api/v1", tags=["更新任务"])
 app.include_router(update_history_router, prefix="/api/v1", tags=["更新历史"])
 app.include_router(settings_router, prefix="/api/v1", tags=["系统设置"])
+app.include_router(logs_router, prefix="/api/v1", tags=["操作记录"])
 
 # 导入并注册用户管理API
 try:
