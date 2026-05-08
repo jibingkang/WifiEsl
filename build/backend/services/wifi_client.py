@@ -164,6 +164,11 @@ class WifiSystemProxy:
                     device_count = len(data)
             
             logger.info(f"[获取设备列表] 成功获取设备列表，设备数量: {device_count}")
+            if isinstance(result, dict):
+                wf_data = result.get("data", {})
+                if isinstance(wf_data, dict):
+                    wf_total = wf_data.get("total", device_count)
+                    logger.info(f"[获取设备列表] WIFI系统 total={wf_total}, items_count={device_count}")
             logger.debug(f"[获取设备列表] 完整响应: {json.dumps(result, ensure_ascii=False)[:300]}")
             
             return result

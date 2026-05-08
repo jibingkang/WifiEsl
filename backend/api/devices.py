@@ -97,13 +97,14 @@ def _normalize_single_device(raw_data: dict) -> dict | None:
 async def get_device_list(
     request: Request,
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     search: str = Query(default=""),
     status: str = Query(default=None),
 ):
     """获取设备列表"""
     logger.info(f"[API /devices] ========== 获取设备列表请求开始 ==========")
     logger.info(f"[API /devices] 请求参数: page={page}, page_size={page_size}, search={search}, status={status}")
+    logger.info(f"[API /devices] 全部query参数: {dict(request.query_params)}")
     logger.debug(f"[API /devices] 请求头: {dict(request.headers)}")
     
     # 从请求头提取Authorization
@@ -140,24 +141,16 @@ async def get_device_list(
     logger.info(f"[API /devices] ✅ WIFI系统token: {api_key[:8]}... (长度: {len(api_key)})")
     
     try:
-        query_parts = []
-        if status:
-            query_parts.append(status)
-        if search:
-            query_parts.append(search)
-        
-        query_str = ",".join(query_parts)
-        logger.info(f"[API /devices] 构造的查询参数: {query_str}")
+        # 不传 query 给 WIFI，拿全量数据后在本地做模糊筛选
+        logger.info(f"[API /devices] 构造的查询参数: search={search}, status={status}")
+        logger.info(f"[API /devices] 开始调用WIFI系统获取设备列表(全量)...")
 
-        logger.info(f"[API /devices] 开始调用WIFI系统获取设备列表...")
-        # 需要重新导入wifi_proxy，因为现在的连接管理是独立的
         from services.wifi_client import wifi_proxy
         raw_data = await wifi_proxy.get_devices(
                 api_key=api_key,
                 base_url=base_url,
-                page=page,
-                page_size=page_size,
-                query=query_str,
+                page=1,
+                page_size=20,  # WIFI标准分页大小
         )
 
         # DEBUG: 打印原始数据用于调试
@@ -175,30 +168,64 @@ async def get_device_list(
         # inner_data 可能是 { items:[], total:N } 或直接是列表
         if isinstance(inner_data, dict):
             items = inner_data.get("items", [])
-            total = inner_data.get("total", len(items))
+            wf_total = inner_data.get("total", len(items))
         elif isinstance(inner_data, list):
             items = inner_data
-            total = len(inner_data)
+            wf_total = len(inner_data)
         else:
             items = []
-            total = 0
+            wf_total = 0
+
+        # 如果WIFI系统返回的total>当前items数量，翻页获取全部数据
+        if isinstance(items, list) and wf_total > len(items) and isinstance(inner_data, dict):
+            import math
+            remaining = wf_total - len(items)
+            logger.info(f"[API /devices] WIFI系统返回 total={wf_total}, items={len(items)}, 还需获取 {remaining} 条")
+            for wp in range(2, math.ceil(wf_total / len(items)) + 1):
+                try:
+                    next_raw = await wifi_proxy.get_devices(
+                        api_key=api_key,
+                        base_url=base_url,
+                        page=wp,
+                        page_size=20,
+                    )
+                    n_inner = next_raw.get("data", next_raw) if isinstance(next_raw, dict) else next_raw
+                    n_items = n_inner.get("items", []) if isinstance(n_inner, dict) else (n_inner if isinstance(n_inner, list) else [])
+                    items.extend(n_items)
+                    logger.info(f"[API /devices]  第{wp}页获取 {len(n_items)} 条，累计 {len(items)} 条")
+                except Exception as e:
+                    logger.warning(f"[API /devices] 获取第{wp}页失败: {e}")
+                    break
+        total = wf_total
 
         # 统一设备数据格式 (真实系统返回小写字段)
         normalized_items = []
+        status_samples = []  # 调试：收集status值
         for item in (items if isinstance(items, list) else []):
             if isinstance(item, dict):
+                raw_status = item.get("status")
+                if len(status_samples) < 5:
+                    status_samples.append(f"{item.get('mac','?')}: status={raw_status}({type(raw_status).__name__})")
                 # 提取嵌套的子对象字段
                 station = item.get("station") or {}
                 screentype = item.get("screentype") or item.get("screen_type") or {}
                 devtype = item.get("devtype") or item.get("device_type") or {}
                 created_at, updated_at = _extract_timestamp(item)
                 
+                # 归一化 is_online：WIFI可能返回 bool/int/str
+                if raw_status is True or raw_status == 1 or (isinstance(raw_status, str) and raw_status.lower() in ("online", "true", "1")):
+                    is_online = True
+                elif raw_status is False or raw_status == 0 or (isinstance(raw_status, str) and raw_status.lower() in ("offline", "false", "0")):
+                    is_online = False
+                else:
+                    is_online = False  # 默认离线
+                
                 normalized_items.append({
                     "id": item.get("_id", item.get("id", "")),
                     "mac": item.get("mac", ""),
                     "ip": item.get("ip", ""),
                     "name": item.get("alias", item.get("name")),
-                    "is_online": item.get("status", False),
+                    "is_online": is_online,
                     "voltage": item.get("voltage"),
                     "rssi": station.get("rssi"),
                     "usb_state": item.get("usbState", item.get("usb_state")),
@@ -211,6 +238,33 @@ async def get_device_list(
                     "updated_at": updated_at,
                 })
 
+        # 调试日志：打印status采样值，检查在线/离线状态来源
+        if status_samples:
+            logger.info(f"[API /devices] status采样: {status_samples}")
+
+        # 本地过滤：模糊搜索（MAC + 名称）
+        if search:
+            kw = search.lower()
+            normalized_items = [
+                d for d in normalized_items
+                if kw in d.get("mac", "").lower() or kw in d.get("name", "").lower()
+            ]
+            logger.info(f"[API /devices] 搜索过滤后: {len(normalized_items)} 台设备 (search={search})")
+
+        # 本地过滤：在线状态筛选
+        if status:
+            if status == "online":
+                normalized_items = [d for d in normalized_items if d.get("is_online")]
+            elif status == "offline":
+                normalized_items = [d for d in normalized_items if not d.get("is_online")]
+            logger.info(f"[API /devices] 状态过滤后: {len(normalized_items)} 台设备 (status={status})")
+
+        total = len(normalized_items)
+
+        # 分页切片
+        start = (page - 1) * page_size
+        paged_items = normalized_items[start:start + page_size]
+
         return {
             "code": 20000,
             "message": "",
@@ -218,7 +272,7 @@ async def get_device_list(
                 "total": total,
                 "page": page,
                 "pageSize": page_size,
-                "items": normalized_items,
+                "items": paged_items,
             },
         }
     except Exception as e:

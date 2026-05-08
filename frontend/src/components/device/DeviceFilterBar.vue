@@ -1,7 +1,7 @@
 <template>
   <div class="filter-bar">
     <el-form :model="localFilters" inline class="filter-form">
-      <!-- 关键词搜索 -->
+      <!-- 关键词搜索（输入时自动防抖查询） -->
       <el-form-item>
         <el-input
           v-model="localFilters.keyword"
@@ -9,14 +9,14 @@
           clearable
           :prefix-icon="Search"
           style="width: 220px;"
-          @keyup.enter="$emit('search')"
-          @clear="$emit('search')"
+          @input="debouncedSearch"
+          @clear="syncAndSearch"
         />
       </el-form-item>
 
       <!-- 状态筛选 -->
       <el-form-item>
-        <el-select v-model="localFilters.status" placeholder="在线状态" clearable style="width: 130px;">
+        <el-select v-model="localFilters.status" placeholder="在线状态" clearable style="width: 130px;" @change="syncAndSearch">
           <el-option label="全部状态" value="" />
           <el-option label="在线" value="online" />
           <el-option label="离线" value="offline" />
@@ -25,7 +25,7 @@
 
       <!-- 设备类型 -->
       <el-form-item>
-        <el-select v-model="localFilters.deviceType" placeholder="设备类型" clearable style="width: 140px;">
+        <el-select v-model="localFilters.deviceType" placeholder="设备类型" clearable style="width: 140px;" @change="syncAndSearch">
           <el-option label="全部类型" value="" />
           <el-option v-for="(label, key) in DEVICE_TYPES" :key="key" :label="label" :value="key" />
         </el-select>
@@ -33,7 +33,7 @@
 
       <!-- 屏幕类型 -->
       <el-form-item>
-        <el-select v-model="localFilters.screenType" placeholder="屏幕类型" clearable style="width: 130px;">
+        <el-select v-model="localFilters.screenType" placeholder="屏幕类型" clearable style="width: 130px;" @change="syncAndSearch">
           <el-option label="全部屏幕" value="" />
           <el-option v-for="(label, key) in SCREEN_TYPES" :key="key" :label="label" :value="key" />
         </el-select>
@@ -41,7 +41,7 @@
 
       <!-- 按钮 -->
       <el-form-item>
-        <el-button type="primary" :icon="Search" @click="$emit('search')">搜索</el-button>
+        <el-button type="primary" :icon="Search" @click="syncAndSearch">搜索</el-button>
         <el-button :icon="RefreshRight" @click="handleReset">重置</el-button>
       </el-form-item>
     </el-form>
@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, watch, nextTick } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { DEVICE_TYPES, SCREEN_TYPES } from '@/utils/constants'
 
@@ -76,10 +76,26 @@ const localFilters = reactive({ ...props.filters })
 
 watch(() => props.filters, () => Object.assign(localFilters, props.filters), { deep: true })
 
+// 同步filters到父组件并触发搜索 (emit update后再nextTick search)
+function syncAndSearch() {
+  emit('update:filters', { ...localFilters })
+  nextTick(() => emit('search'))
+}
+
+// 防抖搜索：输入停止300ms后自动查询
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedSearch() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    syncAndSearch()
+  }, 300)
+}
+
 function handleReset() {
   Object.assign(localFilters, { keyword: '', status: '', deviceType: '', screenType: '' })
-  emit('update:filters', localFilters)
+  emit('update:filters', { ...localFilters })
   emit('reset')
+  nextTick(() => emit('search'))
 }
 </script>
 

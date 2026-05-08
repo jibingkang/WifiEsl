@@ -128,6 +128,7 @@
         style="width: 100%"
         :default-sort="{ prop: 'created_at', order: 'descending' }"
       >
+        <el-table-column type="index" label="#" width="55" align="center" />
         <el-table-column prop="id" label="ID" width="80" sortable />
         
         <el-table-column prop="username" label="用户名" min-width="120">

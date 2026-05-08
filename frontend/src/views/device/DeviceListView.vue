@@ -12,7 +12,7 @@
     </div>
 
     <!-- 筛选栏 -->
-    <DeviceFilterBar v-model:filters="filters" @search="handleSearch" @reset="handleReset" />
+    <DeviceFilterBar :filters="filters" @update:filters="(v: any) => Object.assign(filters, v)" @search="handleSearch" @reset="handleReset" />
 
     <!-- 操作栏 (选中后显示) -->
     <transition name="slide-fade">
@@ -36,6 +36,8 @@
       :devices="deviceStore.devices ?? []"
       :loading="deviceStore.loading"
       :total="deviceStore.total ?? 0"
+      :current-page="deviceStore.currentPage"
+      :page-size="deviceStore.pageSize"
       v-model:selected-macs="selectedMacs"
       @selection-change="onSelectionChange"
       @control="handleControl"
@@ -114,8 +116,8 @@ const router = useRouter()
 const deviceStore = useDeviceStore()
 const { isMobile } = useResponsive()
 
-// 筛选条件
-let filters = reactive({
+// 筛选条件 (用const保持响应式，通过Object.assign更新)
+const filters = reactive({
   keyword: '',
   status: '' as string,
   deviceType: '',
@@ -135,7 +137,11 @@ const editDeviceId = ref<string | null>(null)
 
 /** 加载设备 */
 function refreshDevices() {
-  deviceStore.fetchDevices(filters as any)
+  // 映射筛选参数：前端keyword→后端search
+  const params: Record<string, any> = {}
+  if (filters.keyword) params.search = filters.keyword
+  if (filters.status) params.status = filters.status
+  deviceStore.fetchDevices(params)
 }
 
 /** 搜索 */

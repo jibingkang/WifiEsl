@@ -2,9 +2,23 @@
  * 设备数据状态管理 Store
  */
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Device, PaginatedResponse } from '@/types'
 import { deviceApi } from '@/api/device'
+
+// localStorage 持久化 key
+const PAGE_SIZE_KEY = 'wifi_esl_device_page_size'
+
+function loadPageSize(): number {
+  try {
+    const v = localStorage.getItem(PAGE_SIZE_KEY)
+    return v ? parseInt(v) || 20 : 20
+  } catch { return 20 }
+}
+
+function savePageSize(v: number) {
+  try { localStorage.setItem(PAGE_SIZE_KEY, String(v)) } catch {}
+}
 
 export const useDeviceStore = defineStore('device', () => {
   // 状态
@@ -12,7 +26,10 @@ export const useDeviceStore = defineStore('device', () => {
   const loading = ref(false)
   const total = ref(0)
   const currentPage = ref(1)
-  const pageSize = ref(20)
+  const pageSize = ref(loadPageSize())
+
+  // 持久化 pageSize
+  watch(pageSize, (v) => savePageSize(v))
   /** 已选中的设备MAC列表 */
   const selectedMacs = ref<string[]>([])
 

@@ -12,10 +12,13 @@
       @row-click="(row) => $emit('rowClick', row)"
     >
       <!-- 多选列 -->
-      <el-table-column type="selection" width="46" align="center" />
+      <el-table-column type="selection" width="46" align="center" fixed />
+
+      <!-- 序号 -->
+      <el-table-column type="index" label="#" width="55" align="center" fixed />
 
       <!-- MAC地址 -->
-      <el-table-column prop="mac" label="MAC地址" min-width="170" show-overflow-tooltip fixed>
+      <el-table-column prop="mac" label="MAC地址" min-width="170" show-overflow-tooltip>
         <template #default="{ row }">
           <span class="mac-text">{{ formatMac(row.mac) }}</span>
         </template>
@@ -114,26 +117,26 @@
         :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         background
-        @size-change="(s) => emit('paginationChange', { page: currentPage, pageSize: s })"
-        @current-change="(p) => emit('paginationChange', { page: p, pageSize: pageSize })"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { MoreFilled } from '@element-plus/icons-vue'
 import type { Device } from '@/types'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { formatMac, formatVoltage, formatRelativeTime } from '@/utils/format'
 import { DEVICE_TYPES, SCREEN_TYPES } from '@/utils/constants'
 
-defineProps<{
+const props = defineProps<{
   devices: Device[]
   loading: boolean
   total?: number
   selectedMacs?: string[]
+  currentPage?: number
+  pageSize?: number
 }>()
 
 const emit = defineEmits<{
@@ -144,8 +147,14 @@ const emit = defineEmits<{
 }>()
 
 const tableRef = ref()
-const currentPage = ref(1)
-const pageSize = ref(20)
+const currentPage = computed({
+  get: () => props.currentPage ?? 1,
+  set: (v) => emit('paginationChange', { page: v, pageSize: pageSize.value }),
+})
+const pageSize = computed({
+  get: () => props.pageSize ?? 20,
+  set: (v) => emit('paginationChange', { page: currentPage.value, pageSize: v }),
+})
 
 function onSelectionChange(rows: Device[]) {
   emit('selectionChange', rows.map(r => r.mac))
