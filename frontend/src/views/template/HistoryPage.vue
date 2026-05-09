@@ -260,7 +260,7 @@ async function fetchPage(p: number) {
 onMounted(async () => {
   // 确保设备列表已加载（用于获取设备名称）
   if (deviceStore.devices.length === 0) {
-    await deviceStore.fetchDevices().catch(() => {})
+    await deviceStore.fetchAllDevices().catch(() => {})
   }
   fetchData()
 })

@@ -519,7 +519,7 @@ const filteredDeviceTableData = computed(() => {
     // 从任务设备列表获取 update_status 和 子表数据
     const taskDev = taskDetail.value?.devices.find((d: any) => d.mac === mac)
     // 从设备列表获取电量信息
-    const deviceInfo = deviceStore.devices.find((d: any) => d.mac === mac)
+    const deviceInfo = deviceStore.allDevices.find((d: any) => d.mac === mac) ?? deviceStore.devices.find((d: any) => d.mac === mac)
     return {
       id: taskDev?.id,
       taskId: currentTaskId.value ?? undefined,
@@ -588,12 +588,12 @@ const taskProgress = computed(() => {
 })
 
 function getDeviceName(mac: string): string {
-  const d = deviceStore.devices.find((d: any) => d.mac === mac)
+  const d = deviceStore.allDevices.find((d: any) => d.mac === mac) ?? deviceStore.devices.find((d: any) => d.mac === mac)
   return d?.name || mac
 }
 
 function getDeviceStatus(mac: string): string {
-  const d = deviceStore.devices.find((d: any) => d.mac === mac)
+  const d = deviceStore.allDevices.find((d: any) => d.mac === mac) ?? deviceStore.devices.find((d: any) => d.mac === mac)
   return d?.is_online ? 'online' : 'offline'
 }
 
@@ -1986,7 +1986,7 @@ function onDisplayReply(data: any) {
 
 onMounted(async () => {
   await templateStore.fetchTemplates()
-  await deviceStore.fetchDevices()
+  await deviceStore.fetchAllDevices()
   await fetchTaskList()
 
   // 注册 WS display_reply 监听

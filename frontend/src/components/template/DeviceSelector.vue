@@ -217,9 +217,10 @@ const filteredDevices = computed(() => {
   )
 })
 
-// 在线设备列表
+// 在线设备列表（使用全量缓存确保所有设备可见）
 const onlineDevices = computed(() => {
-  return deviceStore.devices.filter((d: any) => d.is_online)
+  const source = deviceStore.allDevices.length > 0 ? deviceStore.allDevices : deviceStore.devices
+  return source.filter((d: any) => d.is_online)
 })
 
 const hasOnlineDevices = computed(() => onlineDevices.value.length > 0)
@@ -365,7 +366,7 @@ function removeMac(mac: string) {
 }
 
 function getDeviceStatus(mac: string): string {
-  const device = deviceStore.devices.find((d: any) => d.mac === mac)
+  const device = deviceStore.allDevices.find((d: any) => d.mac === mac) ?? deviceStore.devices.find((d: any) => d.mac === mac)
   return device?.is_online ? 'online' : 'offline'
 }
 
@@ -386,7 +387,7 @@ function handleConfirmSelection() {
 onMounted(async () => {
   loading.value = true
   try {
-    await deviceStore.fetchDevices()
+    await deviceStore.fetchAllDevices()
   } finally {
     loading.value = false
   }

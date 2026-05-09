@@ -93,8 +93,8 @@ const templates = ref([
 async function loadData() {
   loading.value = true
   try {
-    await deviceStore.fetchDevices()
-    tableData.value = (deviceStore.devices ?? []).map(d => ({
+    await deviceStore.fetchAllDevices()
+    tableData.value = (deviceStore.allDevices.length > 0 ? deviceStore.allDevices : deviceStore.devices).map(d => ({
       id: d.id,
       mac: d.mac,
       name: d.name || '',

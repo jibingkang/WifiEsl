@@ -23,6 +23,7 @@ function savePageSize(v: number) {
 export const useDeviceStore = defineStore('device', () => {
   // 状态
   const devices = ref<Device[]>([])
+  const allDevices = ref<Device[]>([])   // 全量设备缓存（不分页，用于MAC查找）
   const loading = ref(false)
   const total = ref(0)
   const currentPage = ref(1)
@@ -76,10 +77,53 @@ export const useDeviceStore = defineStore('device', () => {
   }
 
   /**
-   * 根据MAC获取单个设备信息
+   * 全量加载所有设备（循环拉取所有分页，缓存到 allDevices）
+   * 同时把第一页写入 devices 保持向后兼容
+   */
+  async function fetchAllDevices() {
+    loading.value = true
+    try {
+      const MAX_PAGE_SIZE = 100  // 后端限制 le=100
+      let allItems: Device[] = []
+      let page = 1
+      let hasMore = true
+
+      while (hasMore) {
+        const res: PaginatedResponse<Device> = await deviceApi.getDeviceList({
+          page,
+          pageSize: MAX_PAGE_SIZE,
+        })
+        const items = res.items ?? []
+        allItems.push(...items)
+
+        // 第一页时设置 total
+        if (page === 1) {
+          total.value = res.total ?? 0
+        }
+
+        // 判断是否还有更多
+        hasMore = items.length === MAX_PAGE_SIZE && allItems.length < (res.total ?? 0)
+        page++
+      }
+
+      allDevices.value = allItems
+      // 同时填 devices 为第一页（向后兼容依赖 devices 的视图）
+      if (allItems.length > 0) {
+        devices.value = allItems.slice(0, MAX_PAGE_SIZE)
+      }
+      console.log(`[DeviceStore] 全量加载 ${allItems.length} 台设备`)
+    } catch (e) {
+      console.error('[DeviceStore] Failed to fetch all devices:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 根据MAC获取单个设备信息（优先从全量缓存查找）
    */
   function getDeviceByMac(mac: string): Device | undefined {
-    return devices.value.find(d => d.mac === mac)
+    return allDevices.value.find(d => d.mac === mac) ?? devices.value.find(d => d.mac === mac)
   }
 
   /**
@@ -115,6 +159,7 @@ export const useDeviceStore = defineStore('device', () => {
 
   return {
     devices,
+    allDevices,
     loading,
     total,
     currentPage,
@@ -126,6 +171,7 @@ export const useDeviceStore = defineStore('device', () => {
     lowBatteryDevices,
     weakSignalDevices,
     fetchDevices,
+    fetchAllDevices,
     getDeviceByMac,
     updateDeviceStatus,
     deviceOnline,
