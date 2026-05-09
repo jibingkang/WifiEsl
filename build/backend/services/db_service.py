@@ -865,10 +865,9 @@ async def update_user(user_id: int, **kwargs):
     db = await get_db()
     if "password" in kwargs:
         kwargs["password"] = hash_password(kwargs.pop("password"))
-    kwargs["updated_at"] = "datetime('now','localtime')"
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [user_id]
-    await db.execute(f"UPDATE users SET {sets} WHERE id = ?", values)
+    await db.execute(f"UPDATE users SET {sets}, updated_at = datetime('now','localtime') WHERE id = ?", values)
     await db.commit()
 
 
@@ -1326,10 +1325,9 @@ async def update_template(tid: str, **kwargs):
     # 更新模板主表
     update_cols = {k: v for k, v in kwargs.items() if k != "fields"}
     if update_cols:
-        update_cols["updated_at"] = "datetime('now','localtime')"
         sets = ", ".join(f"{k} = ?" for k in update_cols)
         vals = list(update_cols.values()) + [tid]
-        await db.execute(f"UPDATE templates SET {sets} WHERE tid=?", vals)
+        await db.execute(f"UPDATE templates SET {sets}, updated_at = datetime('now','localtime') WHERE tid=?", vals)
 
     # 替换字段
     if "fields" in kwargs and kwargs["fields"] is not None:
@@ -1766,10 +1764,9 @@ async def get_task_detail(task_id: int, user_id: int = 0, allowed_user_ids: list
 async def update_task(task_id: int, **kwargs) -> bool:
     """更新任务字段（name/default_data/status/total_devices/success_count/failed_count/sent_at/completed_at）"""
     db = await get_db()
-    kwargs["updated_at"] = "datetime('now','localtime')"
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [task_id]
-    await db.execute(f"UPDATE update_tasks SET {sets} WHERE id=?", values)
+    await db.execute(f"UPDATE update_tasks SET {sets}, updated_at = datetime('now','localtime') WHERE id=?", values)
     await db.commit()
     return True
 

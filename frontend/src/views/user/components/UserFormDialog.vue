@@ -19,24 +19,23 @@
         <el-input
           v-model="formData.username"
           placeholder="请输入用户名"
-          :disabled="dialogType === 'edit'"
         />
       </el-form-item>
       
-      <el-form-item label="密码" prop="password" v-if="dialogType === 'create'">
+      <el-form-item label="新密码" prop="password">
         <el-input
           v-model="formData.password"
           type="password"
-          placeholder="请输入密码"
+          :placeholder="dialogType === 'edit' ? '留空则不修改密码' : '请输入密码'"
           show-password
         />
       </el-form-item>
       
-      <el-form-item label="确认密码" prop="confirmPassword" v-if="dialogType === 'create'">
+      <el-form-item label="确认新密码" prop="confirmPassword" v-if="formData.password">
         <el-input
           v-model="formData.confirmPassword"
           type="password"
-          placeholder="请再次输入密码"
+          :placeholder="dialogType === 'edit' ? '请再次输入新密码' : '请再次输入密码'"
           show-password
         />
       </el-form-item>
@@ -64,10 +63,20 @@
       
       <el-divider content-position="left">WIFI系统配置</el-divider>
       
+      <el-alert
+        v-if="isInheritedConfigLocked"
+        title="以下配置将从您的账号自动继承，不可修改"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px;"
+      />
+      
       <el-form-item label="WIFI用户名">
         <el-input
           v-model="formData.wifi_username"
           placeholder="请输入WIFI系统用户名"
+          :disabled="isInheritedConfigLocked"
         />
       </el-form-item>
       
@@ -77,6 +86,7 @@
           :type="showWifiPassword ? 'text' : 'password'"
           :placeholder="dialogType === 'edit' ? '留空表示不修改原密码' : '请输入WIFI系统密码'"
           :show-password="!showWifiPassword"
+          :disabled="isInheritedConfigLocked"
         >
           <template v-if="dialogType === 'edit' && props.userData?.wifi_password" #append>
             <el-button 
@@ -110,6 +120,9 @@
             隐藏
           </el-button>
         </div>
+        <div v-else-if="isInheritedConfigLocked" class="form-tips" style="color: #909399;">
+          🔒 自动从您的账号继承WIFI密码
+        </div>
         <div v-else-if="dialogType === 'create' && (formData.role === 'operator' || formData.role === 'user')" class="form-tips">
           留空将自动从上级用户继承WIFI配置
         </div>
@@ -125,6 +138,7 @@
         <el-input
           v-model="formData.wifi_apikey"
           placeholder="请输入API Key"
+          :disabled="isInheritedConfigLocked"
         />
         <div class="form-tips">
           用于MQTT订阅的API Key（与WIFI账号关联）
@@ -164,6 +178,7 @@
         <el-input
           v-model="formData.wifi_base_url"
           placeholder="请输入WIFI系统API地址"
+          :disabled="isInheritedConfigLocked"
         />
       </el-form-item>
       
@@ -171,6 +186,7 @@
         <el-input
           v-model="formData.wifi_mqtt_broker"
           placeholder="请输入MQTT broker地址（例如：192.168.1.100:1883）"
+          :disabled="isInheritedConfigLocked"
         />
         <div class="form-tips">
           用于设备状态实时订阅的MQTT broker地址（直接使用配置的地址）
@@ -181,6 +197,7 @@
         <el-input
           v-model="formData.mqtt_username"
           placeholder="请输入MQTT用户名（默认：test）"
+          :disabled="isInheritedConfigLocked"
         />
         <div class="form-tips">
           MQTT连接用户名，不填则使用默认值 test
@@ -193,6 +210,7 @@
           type="password"
           placeholder="请输入MQTT密码（默认：123456）"
           show-password
+          :disabled="isInheritedConfigLocked"
         />
         <div class="form-tips">
           MQTT连接密码，不填则使用默认值 123456
@@ -278,21 +296,21 @@ const formData = ref<UserFormData>({
   parent_user_id: undefined,
 })
 
-// 表单验证规则
-const formRules: FormRules = {
+// 表单验证规则（编辑模式下密码非必填）
+const formRules = computed<FormRules>(() => ({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' },
     { pattern: /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/, message: '用户名只能包含中文、字母、数字和下划线', trigger: 'blur' },
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
+    ...(props.dialogType === 'create' ? [{ required: true, message: '请输入密码', trigger: 'blur' }] : []),
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' },
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    ...(props.dialogType === 'create' || formData.value.password ? [{ required: true, message: '请确认密码', trigger: 'blur' }] : []),
     {
-      validator: (rule, value, callback) => {
+      validator: (_rule, value, callback) => {
         if (value !== formData.value.password) {
           callback(new Error('两次输入的密码不一致'))
         } else {
@@ -308,7 +326,7 @@ const formRules: FormRules = {
   status: [
     { required: true, message: '请选择用户状态', trigger: 'change' },
   ],
-}
+}))
 
 // 对话框标题
 const dialogTitle = computed(() => {
@@ -326,6 +344,11 @@ const currentRoleOptions = computed(() => {
   if (myRole === 'admin') return ['user', 'operator']  // admin 可创建 user 和 operator
   if (myRole === 'user') return ['user', 'operator']   // user 可创建 user 和 operator
   return []                                              // operator 不能创建任何用户
+})
+
+/** 普通用户创建子账号时，WIFI/MQTT配置字段应锁定（禁止修改继承的上级配置） */
+const isInheritedConfigLocked = computed(() => {
+  return props.dialogType === 'create' && authStore.getUserRole() === 'user'
 })
 
 // 重置表单

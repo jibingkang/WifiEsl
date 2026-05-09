@@ -137,17 +137,11 @@ async def update_user_wifi_config(
     if not update_fields:
         return False
     
-    # 添加更新时间
-
-    update_fields['updated_at'] = "datetime('now','localtime')"
-    
-    # 构建更新语句
-
     sets = ", ".join(f"{k} = ?" for k in update_fields)
     values = list(update_fields.values()) + [user_id]
     
     cursor = await db.execute(
-        f"UPDATE users SET {sets} WHERE id = ?",
+        f"UPDATE users SET {sets}, updated_at = datetime('now','localtime') WHERE id = ?",
         values
     )
     
