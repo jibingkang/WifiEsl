@@ -36,6 +36,16 @@
             </el-option>
           </el-select>
           <el-button v-if="!isOperator" size="default" @click="showCreateTaskDialog = true">+ 新建</el-button>
+          <el-tooltip v-if="!isOperator && currentTaskId" content="重命名任务" placement="bottom" effect="light">
+            <el-button size="default" @click="openRenameDialog" :disabled="!currentTaskId" class="task-op-btn">
+              <Pencil :size="14" />
+            </el-button>
+          </el-tooltip>
+          <el-tooltip v-if="!isOperator && currentTaskId" content="删除任务" placement="bottom" effect="light">
+            <el-button size="default" type="danger" @click="handleDeleteTaskClick" :disabled="!currentTaskId" class="task-op-btn">
+              <Trash2 :size="14" />
+            </el-button>
+          </el-tooltip>
         </div>
 
         <!-- 模板切换 -->
@@ -276,6 +286,30 @@
       </template>
     </el-dialog>
 
+    <!-- 重命名任务弹窗 -->
+    <el-dialog
+      v-model="showRenameTaskDialog"
+      title="重命名任务"
+      width="420px"
+      destroy-on-close
+      append-to-body
+    >
+      <el-form label-position="top">
+        <el-form-item label="任务名称" required>
+          <el-input v-model="renameTaskName" placeholder="请输入新的任务名称" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="关联模板">
+          <el-input :model-value="currentTaskTplName" disabled />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRenameTaskDialog = false">取消</el-button>
+        <el-button type="primary" :disabled="!renameTaskName.trim()" @click="handleRenameTask" :loading="renamingTask">
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- Excel导入弹窗 -->
     <el-dialog
       v-model="showImportDialog"
@@ -339,6 +373,7 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 import {
   Clock, Files, LayoutTemplate, Plus, Pencil, Smartphone,
   Send, Info, ListTodo, Download, Upload, ArrowUpDown, ArrowUpAZ, ArrowDownZA,
+  Trash2,
 } from 'lucide-vue-next'
 import { Search } from '@element-plus/icons-vue'
 import { useTemplate } from '@/composables/useTemplate'
@@ -369,6 +404,17 @@ const showCreateTaskDialog = ref(false)
 const newTaskName = ref('')
 const newTaskTid = ref('')
 const creatingTask = ref(false)
+
+// ── 重命名/删除任务 ──
+const showRenameTaskDialog = ref(false)
+const renameTaskName = ref('')
+const renamingTask = ref(false)
+
+/** 当前选中任务的模板名称（只读） */
+const currentTaskTplName = computed(() => {
+  const task = taskList.value.find(t => t.id === currentTaskId.value)
+  return task?.tname || '未知模板'
+})
 
 // ════════════ Excel导入导出 ════════════
 const showImportDialog = ref(false)
@@ -741,6 +787,82 @@ async function createNewTask() {
     ElMessage.error(`创建失败: ${e.message || '未知错误'}`)
   } finally {
     creatingTask.value = false
+  }
+}
+
+/** 打开重命名对话框 */
+function openRenameDialog() {
+  const task = taskList.value.find(t => t.id === currentTaskId.value)
+  renameTaskName.value = task?.name || `任务${currentTaskId.value}`
+  showRenameTaskDialog.value = true
+}
+
+/** 执行重命名 */
+async function handleRenameTask() {
+  if (!currentTaskId.value || !renameTaskName.value.trim()) return
+  renamingTask.value = true
+  try {
+    await taskApi.updateTask(currentTaskId.value, { name: renameTaskName.value.trim() })
+    showRenameTaskDialog.value = false
+    await fetchTaskList()
+    ElMessage.success('任务已重命名')
+  } catch (e: any) {
+    console.error('重命名任务失败:', e)
+    ElMessage.error(`重命名失败: ${e.message || '未知错误'}`)
+  } finally {
+    renamingTask.value = false
+  }
+}
+
+/** 删除任务 */
+async function handleDeleteTaskClick() {
+  if (!currentTaskId.value) return
+  const task = taskList.value.find(t => t.id === currentTaskId.value)
+  const taskName = task?.name || `任务${currentTaskId.value}`
+  const deviceCount = task?.total_devices || 0
+  const taskStatus = task?.status || ''
+
+  // 已执行的任务给出额外警告
+  const warnExtra = (taskStatus === 'sent' || taskStatus === 'completed')
+    ? `\n⚠ 该任务已执行过推送，删除后将同时清除所有推送记录。`
+    : ''
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除任务「${taskName}」吗？` +
+      `${deviceCount > 0 ? `\n\n该任务包含 ${deviceCount} 台设备，删除后将同时移除所有关联数据。` : ''}` +
+      `${warnExtra}\n\n此操作不可恢复！`,
+      '删除任务确认',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+        distinguishCancelAndClose: true,
+      }
+    )
+    await taskApi.deleteTask(currentTaskId.value!)
+
+    ElMessage.success(`任务「${taskName}」已删除`)
+    currentTaskId.value = null
+    taskDetail.value = null
+    selectedTid.value = ''
+    selectedTemplate.value = null
+    defaultData.value = {}
+    customOverrides.value = {}
+    checkedMacs.value = []
+
+    localStorage.removeItem(LAST_TASK_KEY)
+    await fetchTaskList()
+
+    // 自动选择下一个任务
+    if (taskList.value.length > 0) {
+      autoSelectTask()
+    }
+  } catch (e: any) {
+    if (e === 'cancel' || e === 'close') return
+    console.error('删除任务失败:', e)
+    ElMessage.error(`删除失败: ${e.message || '未知错误'}`)
   }
 }
 
@@ -2045,6 +2167,11 @@ onUnmounted(() => {
   color: #6366f1;
 
   .el-select { width: 200px; }
+
+  .task-op-btn {
+    width: 32px;
+    padding: 0;
+  }
 }
 .tpl-switcher {
   display: flex;
