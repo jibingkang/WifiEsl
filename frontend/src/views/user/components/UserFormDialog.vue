@@ -110,8 +110,8 @@
             隐藏
           </el-button>
         </div>
-        <div v-else-if="dialogType === 'create' && formData.role === 'operator'" class="form-tips">
-          留空将自动从上级用户继承WIFI密码
+        <div v-else-if="dialogType === 'create' && (formData.role === 'operator' || formData.role === 'user')" class="form-tips">
+          留空将自动从上级用户继承WIFI配置
         </div>
         <div v-else-if="dialogType === 'edit'" class="form-tips">
           当前未设置WIFI密码
@@ -324,7 +324,7 @@ const adminUsers = computed(() => {
 const currentRoleOptions = computed(() => {
   const myRole = authStore.getUserRole()
   if (myRole === 'admin') return ['user', 'operator']  // admin 可创建 user 和 operator
-  if (myRole === 'user') return ['operator']            // user 只能创建 operator
+  if (myRole === 'user') return ['user', 'operator']   // user 可创建 user 和 operator
   return []                                              // operator 不能创建任何用户
 })
 

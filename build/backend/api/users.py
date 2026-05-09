@@ -148,7 +148,7 @@ def check_create_permission(creator_role: str, target_role: str) -> bool:
     if creator_role == "admin":
         return target_role in ["user", "operator"]
     if creator_role == "user":
-        return target_role == "operator"
+        return target_role in ("user", "operator")
     return False  # operator不能创建
 
 # ============================================================
@@ -181,15 +181,19 @@ async def get_user_list(
             users = all_users
             logger.info(f"管理员 {current_user_id} ({current_user_role}) 查看所有用户: {len(users)} 个")
         elif current_user_role == "user":
-            # 普通用户：查看自己 + 自己创建的 operator
-            from services.db_service_extended import get_user_with_details
-            myself = await get_user_with_details(current_user_id)
-            child_users = await get_users_by_parent(current_user_id)
+            # 普通用户：查看整棵家族树成员（子管理员可监管全树）
+            from api.logs import get_family_tree_ids as _get_tree_uids
+            from services.db_service import get_db as _get_db_for_users
+            _u_db = await _get_db_for_users()
+            tree_uids = await _get_tree_uids(_u_db, current_user_id)
+
+            # 批量查询树内所有用户的详细信息
             users = []
-            if myself:
-                users.append(myself)
-            users.extend(child_users)
-            logger.info(f"普通用户 {current_user_id} ({current_user_role}) 查看自己+子用户: {len(users)} 个")
+            for uid in tree_uids:
+                u = await get_user_with_details(uid)
+                if u:
+                    users.append(u)
+            logger.info(f"普通用户 {current_user_id} ({current_user_role}) 查看家族树成员: {len(users)} 个")
         else:
             # operator 无权查看用户列表
             return {"code": 40300, "message": "无权查看用户列表", "data": None}
@@ -329,8 +333,8 @@ async def create_user(
         if existing_user:
             return {"code": 40001, "message": "用户名已存在", "data": None}
         
-        # 创建 operator 时，空的 WIFI 字段从 parent_user 继承
-        if user_data.role == "operator":
+        # 创建 operator 或 user 时，空的 WIFI 字段从 parent_user 继承
+        if user_data.role in ("operator", "user"):
             parent = await get_user_by_id(parent_user_id)
             if parent:
                 # 解密父用户的WIFI密码用于继承
@@ -419,8 +423,8 @@ async def update_user_info(
                 if user_data.role is not None and user_data.role != target_user.get("role"):
                     return {"code": 40300, "message": "不能修改自己的角色", "data": None}
             elif current_user_role == "user":
-                # user 角色：只能修改自己创建的 operator
-                if target_user.get("created_by") != current_user_id or target_user.get("role") != "operator":
+                # user 角色：可修改自己创建的非admin子用户（含user和operator）
+                if target_user.get("created_by") != current_user_id or target_user.get("role") == "admin" or target_user.get("role") == "super_admin":
                     return {"code": 40300, "message": "无权修改该用户信息", "data": None}
             elif current_user_role == "operator":
                 return {"code": 40300, "message": "操作员无权修改用户信息", "data": None}
@@ -505,8 +509,8 @@ async def delete_user(
         # 权限检查
         if not check_admin_permission(current_user_role):
             if current_user_role == "user":
-                # user 只能删除自己创建的 operator
-                if target_user.get("created_by") != current_user_id or target_user.get("role") != "operator":
+                # user 可删除自己创建的非admin子用户（含user和operator）
+                if target_user.get("created_by") != current_user_id or target_user.get("role") in ("admin", "super_admin"):
                     return {"code": 40300, "message": "无权删除该用户", "data": None}
             elif current_user_role == "operator":
                 return {"code": 40300, "message": "操作员无权删除用户", "data": None}

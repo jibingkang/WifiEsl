@@ -48,53 +48,102 @@ async def _get_user_info(request: Request) -> tuple[int, str, str]:
     return user_id, role, username
 
 
-async def _build_allowed_user_ids(user_id: int, role: str) -> list[int] | None:
+async def get_family_tree_ids(db, user_id: int) -> list[int]:
     """
-    根据角色构建可见的 user_id 列表
-    - admin: None (不过滤，看全部)
-    - user: 自己 + 以自己为 parent 的所有用户
-    - operator: 自己 + 自己的 parent
+    BFS获取 user_id 所在家族树的全部非admin用户ID。
+    普通用户的家族树以 admin 的直接下级为根，绝不包含 admin/super_admin。
     """
-    if role == "admin":
+    # Step 1: 向上找根，遇到 admin/super_admin 立即停止
+    root = user_id
+    visited = set()
+    while True:
+        if root in visited:
+            break  # 防环
+        visited.add(root)
+
+        # 查当前用户的角色和 parent_user_id
+        cur = await db.execute(
+            "SELECT id, role, parent_user_id FROM users WHERE id=?", (root,)
+        )
+        row = await cur.fetchone()
+        if not row:
+            break
+
+        pid = row["parent_user_id"] or 0
+        if pid and pid > 0:
+            # 检查父用户是否是 admin/super_admin
+            pcur = await db.execute("SELECT role FROM users WHERE id=?", (pid,))
+            prow = await pcur.fetchone()
+            if prow and prow["role"] in ("admin", "super_admin"):
+                # 父用户是管理员 → 停在这里，root 就是当前用户
+                break
+            root = pid
+        else:
+            break
+
+    # Step 2: 从 root 向下 BFS 收集所有后代（排除 admin/super_admin）
+    ids = set()
+    queue = [root]
+    while queue:
+        cid = queue.pop(0)
+        if cid in ids:
+            continue
+        ids.add(cid)
+
+        # 只收集 role 不是 admin/super_admin 的子用户
+        children = await db.execute(
+            "SELECT id FROM users WHERE parent_user_id=? AND status='active' AND role NOT IN ('admin','super_admin')",
+            (cid,),
+        )
+        for r in await children.fetchall():
+            if r["id"] not in ids:
+                queue.append(r["id"])
+
+    return list(ids)
+
+
+async def _build_allowed_user_ids(db, user_id: int, role: str) -> list[int] | None:
+    """
+    根据角色构建可见的 user_id 列表。
+    - admin / super_admin: None (不过滤，看全部)
+    - user: 整棵家族树 BFS（祖先 + 所有后代）→ 子管理员可监管全树
+    - operator: 仅自己
+    """
+    if role in ("admin", "super_admin"):
         return None  # 不过滤
 
     if role == "user":
-        # 自己 + 以自己为parent的所有用户
-        _db = await _get_db()
-        cur = await _db.execute(
-            "SELECT id FROM users WHERE id=? OR parent_user_id=?", (user_id, user_id)
-        )
-        rows = await cur.fetchall()
-        return [r["id"] for r in rows]
+        return await get_family_tree_ids(db, user_id)
 
-    elif role == "operator":
-        # 自己 + parent_user
-        user_info = await get_user_by_id(user_id)
-        parent_id = user_info.get("parent_user_id", 0) if user_info else 0
-        ids = [user_id]
-        if parent_id and parent_id > 0:
-            ids.append(parent_id)
-        return ids
+    if role == "operator":
+        return [user_id]  # 仅自己
 
     return [user_id]
 
 
-async def _build_allowed_macs(user_id: int, role: str) -> list[str] | None:
+# 兼容旧调用签名（db 参数位置不同时自动适配）
+async def _build_allowed_user_ids_legacy(user_id: int, role: str) -> list[int] | None:
+    """兼容旧版调用签名的包装"""
+    _db = await _get_db()
+    return await _build_allowed_user_ids(_db, user_id, role)
+
+
+async def _build_allowed_macs(db, user_id: int, role: str) -> list[str] | None:
     """
     根据角色构建可见的 MAC 列表（用于设备事件过滤）
     - admin: None (不过滤)
-    - user/operator: 通过 devices 表查 user_id 范围内的 MAC
+    - user: 通过家族树内 devices 表查 MAC
+    - operator: 仅自己的设备
     """
     if role == "admin":
         return None
 
-    allowed_uids = await _build_allowed_user_ids(user_id, role)
+    allowed_uids = await _build_allowed_user_ids(db, user_id, role)
     if allowed_uids is None:
         return None
 
-    _db = await _get_db()
     placeholders = ",".join("?" * len(allowed_uids))
-    cur = await _db.execute(
+    cur = await db.execute(
         f"SELECT DISTINCT mac FROM devices WHERE user_id IN ({placeholders})",
         allowed_uids,
     )
@@ -134,7 +183,8 @@ async def get_operation_logs_api(
         return {"code": 20000, "data": {"items": [], "total": 0, "page": page, "pageSize": page_size}}
 
     # 构建权限过滤
-    allowed_user_ids = await _build_allowed_user_ids(user_id, role)
+    _db = await _get_db()
+    allowed_user_ids = await _build_allowed_user_ids(_db, user_id, role)
 
     items, total = await get_logs(
         page=page,
@@ -181,7 +231,8 @@ async def get_push_logs_api(
     """查询设备推送日志（支持角色权限过滤）"""
     user_id, role, username = await _get_user_info(request)
 
-    allowed_user_ids = await _build_allowed_user_ids(user_id, role)
+    _db = await _get_db()
+    allowed_user_ids = await _build_allowed_user_ids(_db, user_id, role)
 
     items, total = await get_push_logs(
         page=page,
@@ -233,7 +284,8 @@ async def get_device_events_logs_api(
     """查询设备事件日志（支持角色权限过滤）"""
     user_id, role, username = await _get_user_info(request)
 
-    allowed_macs = await _build_allowed_macs(user_id, role)
+    _db = await _get_db()
+    allowed_macs = await _build_allowed_macs(_db, user_id, role)
 
     items, total = await get_device_events(
         mac=mac if mac else None,

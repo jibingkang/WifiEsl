@@ -182,23 +182,36 @@ async def _get_allowed_user_ids(request: Request) -> tuple[int, list[int] | None
     """
     获取当前用户ID和该用户可见任务的所有用户ID列表。
     
-    - admin/user: 只能看到自己的任务 → 返回 (user_id, None)
-    - operator: 能看到自己 + parent_user 的任务 → 返回 (user_id, [operator_id, parent_user_id])
+    - admin/super_admin: 看全部 → (user_id, None)
+    - user: 整棵家族树 BFS（祖先+所有后代）→ 子管理员可监管全树
+    - operator: 自己 + parent_user 的任务 → (user_id, [operator_id, parent_user_id])
     
     Returns: (current_user_id, allowed_user_ids_or_None)
     """
     user_id = await _get_current_user_id(request)
     
-    # 查询当前用户角色和 parent_user_id
     from services.db_service_extended import get_user_by_id
     user_info = await get_user_by_id(user_id)
+    role = user_info.get("role", "user") if user_info else "user"
     
-    if user_info and user_info.get("role") == "operator":
+    if role == "admin" or role == "super_admin":
+        return user_id, None
+    
+    if role == "user":
+        # user 角色：使用家族树 BFS
+        from api.logs import get_family_tree_ids as _get_tree_ids
+        from services.db_service import get_db as _get_db_for_tree
+        _db = await _get_db_for_tree()
+        tree_ids = await _get_tree_ids(_db, user_id)
+        return user_id, tree_ids
+    
+    # operator: 自己 + parent
+    if user_info:
         parent_id = user_info.get("parent_user_id", 0)
         if parent_id and parent_id > 0:
             return user_id, [user_id, parent_id]
     
-    return user_id, None
+    return user_id, [user_id]
 
 
 @router.post("")
@@ -421,10 +434,30 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     # 如果指定了设备列表，只推送指定的设备
     if body and "macs" in body and body["macs"]:
         target_macs = set(body["macs"])
-        push_devices = [d for d in devices if d["mac"] in target_macs and d["update_status"] in ("pending", "failed", "sent", "success")]
+        push_devices_all = [d for d in devices if d["mac"] in target_macs and d["update_status"] in ("pending", "failed", "sent", "success")]
     else:
         # 默认推送所有符合条件的设备
-        push_devices = [d for d in devices if d["update_status"] in ("pending", "failed", "sent", "success")]
+        push_devices_all = [d for d in devices if d["update_status"] in ("pending", "failed", "sent", "success")]
+
+    # 去重：同一MAC只推送一次，优先取 row_selections 匹配的行
+    push_devices = []
+    seen_macs = set()
+    for d in push_devices_all:
+        mac = d["mac"]
+        if mac in seen_macs:
+            continue
+        seen_macs.add(mac)
+        # 该MAC有指定的行选择时，找该子行所属的 task_device 记录
+        best = d
+        selected_rid = row_selections.get(mac)
+        if selected_rid:
+            for candidate in push_devices_all:
+                if candidate["mac"] == mac:
+                    candidate_rows = await get_task_device_rows(candidate["id"])
+                    if any(r["id"] == selected_rid for r in candidate_rows):
+                        best = candidate
+                        break
+        push_devices.append(best)
 
     if not push_devices:
         return {
@@ -452,11 +485,12 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
         mac = d["mac"]
         selected_rid = row_selections.get(mac)
         if selected_rid:
-            # 同步更新 selected_row_id，确保子行时间戳写入正确的行
+            # 先 commit selected_row_id，确保 _uds 的独立连接能读到最新值
             await _push_db.execute(
                 "UPDATE task_devices SET selected_row_id=? WHERE task_id=? AND mac=?",
                 (selected_rid, task_id, mac),
             )
+            await _push_db.commit()
         from services.db_service import update_task_device_status as _uds
         await _uds(task_id, mac, "sent")
     await _push_db.commit()
@@ -511,7 +545,7 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
                             data.update(row_custom)
 
                 result = await wifi_proxy.apply_template(mac, tid, data, wifi_token, template_name=tname, base_url=wifi_base_url)
-                return {"mac": mac, "success": True, "result": result}
+                return {"mac": mac, "success": True, "result": result, "push_data": data}
             except Exception as e:
                 logger.warning(f"[Task-{task_id}] 设备 {mac} 推送失败: {e}")
                 return {"mac": mac, "success": False, "error": str(e)}
@@ -546,16 +580,9 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     for r in results:
         mac = r.get("mac", "")
         try:
-            # 从推送设备中查找对应的 custom_data
-            push_data_json = "{}"
-            for d in push_devices:
-                if d["mac"] == mac:
-                    cd = d.get("custom_data", "{}")
-                    if isinstance(cd, dict):
-                        push_data_json = json.dumps(cd, ensure_ascii=False)
-                    elif isinstance(cd, str):
-                        push_data_json = cd
-                    break
+            # 直接使用 _push_one 返回的合并后推送数据（default_data + device_custom + row_custom）
+            merged_data = r.get("push_data", {})
+            push_data_json = json.dumps(merged_data, ensure_ascii=False) if merged_data else "{}"
 
             p_result = "sent" if r.get("success") else "failed"
             p_error = r.get("error", "") if not r.get("success") else ""

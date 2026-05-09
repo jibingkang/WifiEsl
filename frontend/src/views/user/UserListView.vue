@@ -165,6 +165,13 @@
           </template>
         </el-table-column>
         
+        <el-table-column label="上级用户" width="120">
+          <template #default="{ row }">
+            <span v-if="row.parent_user_id">{{ getParentUsername(row.parent_user_id) }}</span>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
+        
         <el-table-column prop="wifi_username" label="WIFI用户名" min-width="120" />
         <el-table-column prop="wifi_base_url" label="API地址" min-width="150" show-overflow-tooltip />
         
@@ -404,6 +411,12 @@ const handleWifiConfigSuccess = () => {
 }
 
 // 工具函数
+const getParentUsername = (parentId: number): string => {
+  if (!parentId) return '-'
+  const parent = userList.value.find(u => u.id === parentId)
+  return parent ? parent.username : `ID:${parentId}`
+}
+
 const getRoleLabel = (role: string) => {
   const roleMap: Record<string, string> = {
     admin: '管理员',

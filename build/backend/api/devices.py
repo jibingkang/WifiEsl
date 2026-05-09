@@ -327,6 +327,7 @@ async def create_device(request: Request, body: dict):
 
 @router.get("/events")
 async def get_device_events(
+    request: Request,
     mac: str = Query(default=None, description="按MAC过滤"),
     event_type: str = Query(default=None, description="事件类型: online/offline/button/battery_reply等"),
     page: int = Query(default=1, ge=1),
@@ -334,14 +335,27 @@ async def get_device_events(
 ):
     """
     查询本地存储的设备事件记录 (来自MQTT消息持久化)
-    
-    示例:
-      GET /api/v1/devices/events              → 最近50条所有事件
-      GET /api/v1/devices/events?mac=D4:3D:39 → 指定设备的最近事件
-      GET /api/v1/devices/events?event_type=online → 所有上线事件
-      GET /api/v1/devices/events?mac=D4:3D:39&event_type=button&page=1&page_size=20
+    按家族树权限过滤：user角色只能看到树内成员关联设备的事件
     """
     from services.db_service import get_device_events as _get_events
+    from services.auth_service import get_current_user_id_from_token as _get_uid_tok
+    from services.db_service import get_db as _get_dev_db
+
+    # 获取当前用户身份
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = _get_uid_tok(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_dev_macs
+            from services.db_service_extended import get_user_by_id as _get_dev_user
+            uinfo = await _get_dev_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _d_db = await _get_dev_db()
+            allowed_macs = await _build_dev_macs(_d_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备事件权限失败，回退到无过滤: {e}")
 
     try:
         items, total = await _get_events(
@@ -349,6 +363,7 @@ async def get_device_events(
             event_type=event_type,
             page=page,
             page_size=page_size,
+            allowed_macs=allowed_macs,
         )
         return {
             "code": 20000,
@@ -366,19 +381,34 @@ async def get_device_events(
 
 
 @router.get("/stats")
-async def get_device_stats():
+async def get_device_stats(request: Request):
     """
-    设备统计摘要 - 从本地DB获取实时统计
-    
+    设备统计摘要 - 从本地DB获取实时统计（按家族树权限过滤）
     返回: { total, online, offline, low_battery, online_rate }
     """
-    from services.db_service import get_device_stats as _get_stats, get_all_devices as _get_all
+    from services.db_service import get_device_stats as _get_stats, get_all_devices as _get_all, get_db as _get_stat_db
+
+    # 获取当前用户身份和权限范围
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = get_current_user_id_from_token(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_stat_macs
+            from services.db_service_extended import get_user_by_id as _get_stat_user
+            uinfo = await _get_stat_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _s_db = await _get_stat_db()
+            allowed_macs = await _build_stat_macs(_s_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备统计权限失败: {e}")
 
     try:
-        stats = await _get_stats()
-        
-        # 额外返回最近上线的10台设备
-        recent_online = await _get_all_devices(online_only=True)
+        stats = await _get_stats(allowed_macs=allowed_macs)
+
+        # 额外返回最近上线的10台设备（也受权限过滤）
+        recent_online = await _get_all(online_only=True, allowed_macs=allowed_macs)
         stats["recent_online"] = recent_online[:10]
 
         return {
@@ -392,41 +422,90 @@ async def get_device_stats():
 
 
 @router.get("/alerts")
-async def get_device_alerts():
+async def get_device_alerts(request: Request):
     """
-    登录后即时告警摘要 - 返回需要关注的异常设备
+    登录后即时告警摘要 - 返回需要关注的异常设备（按家族树权限过滤）
     返回: {
       offline_count, offline_devices(最近10台),
       low_battery_count, low_battery_devices(最近10台)
     }
     """
-    from services.db_service import get_db
+    from services.db_service import get_db as _get_alert_db
+
+    # 获取当前用户身份和权限范围
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = get_current_user_id_from_token(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_alert_macs
+            from services.db_service_extended import get_user_by_id as _get_alert_user
+            uinfo = await _get_alert_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _a_db = await _get_alert_db()
+            allowed_macs = await _build_alert_macs(_a_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备告警权限失败: {e}")
 
     try:
-        db = await get_db()
+        db = await _get_alert_db()
 
-        # 离线设备：is_online=0，按最后在线时间降序，取最近10台
+        # 构建MAC过滤条件
+        mac_filter = ""
+        mac_params: list = []
+        if allowed_macs is not None:
+            placeholders = ",".join("?" * len(allowed_macs))
+            mac_filter = f" AND mac IN ({placeholders})"
+            mac_params = list(allowed_macs)
+
+        # 离线/低电量判断：对每个MAC取最新 last_seen_at 的记录，以其 is_online 为准
+        # 使用 ROW_NUMBER() 窗口函数，按 MAC 分组、时间倒序，rn=1 即最新记录
+        inner_filter = mac_filter  # mac_filter 已带 " AND mac IN (...)" 前缀
+
+        # 离线设备数
         offline_cur = await db.execute(
-            "SELECT COUNT(*) as cnt FROM devices WHERE is_online=0"
+            f"SELECT COUNT(*) as cnt FROM ("
+            f"  SELECT mac, is_online,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 0",
+            mac_params,
         )
         offline_count = (await offline_cur.fetchone())["cnt"]
 
+        # 离线设备列表（最近10台）
         offline_rows_cur = await db.execute(
-            "SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at "
-            "FROM devices WHERE is_online=0 ORDER BY last_seen_at DESC LIMIT 10"
+            f"SELECT mac, name, is_online, voltage, last_seen_at FROM ("
+            f"  SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 0 "
+            f"ORDER BY last_seen_at DESC LIMIT 10",
+            mac_params,
         )
         offline_devices = [dict(r) for r in await offline_rows_cur.fetchall()]
 
-        # 低电量设备：在线且 voltage < 350（即 <3.50V），按电压升序，取最近10台
+        # 低电量设备数（最新记录在线且电压 < 3.50V）
         low_battery_cur = await db.execute(
-            "SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL"
+            f"SELECT COUNT(*) as cnt FROM ("
+            f"  SELECT mac, is_online, voltage,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 1 AND voltage < 350 AND voltage IS NOT NULL",
+            mac_params,
         )
         low_battery_count = (await low_battery_cur.fetchone())["cnt"]
 
+        # 低电量设备列表（电压最低的10台）
         low_battery_rows_cur = await db.execute(
-            "SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at FROM devices "
-            "WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL "
-            "ORDER BY voltage ASC LIMIT 10"
+            f"SELECT mac, name, is_online, voltage, last_seen_at FROM ("
+            f"  SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 1 AND voltage < 350 AND voltage IS NOT NULL "
+            f"ORDER BY voltage ASC LIMIT 10",
+            mac_params,
         )
         low_battery_devices = [dict(r) for r in await low_battery_rows_cur.fetchall()]
 

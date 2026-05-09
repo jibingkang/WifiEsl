@@ -1087,8 +1087,21 @@ async def add_push_log(
     error_msg: str = "",
     sent_at: str | None = None,
 ):
-    """记录一条设备推送日志"""
+    """记录一条设备推送日志（10秒内同任务同MAC去重）"""
     db = await get_db()
+
+    # 去重：10秒内同一任务+同一MAC+同一结果不重复写入
+    cur = await db.execute(
+        """SELECT id FROM device_push_logs
+           WHERE task_id=? AND mac=? AND result=?
+           AND created_at >= datetime('now', 'localtime', '-10 seconds')
+           LIMIT 1""",
+        (task_id, mac, result),
+    )
+    if await cur.fetchone():
+        logger.debug(f"[去重] 跳过重复推送日志: task={task_id} mac={mac} result={result}")
+        return
+
     await db.execute("""
         INSERT INTO device_push_logs
             (task_id, mac, user_id, username, template_id, template_name, push_data, result, error_msg, sent_at)
@@ -1178,7 +1191,8 @@ async def get_push_logs(
     total_row = await cursor.fetchone()
     total = total_row["total"]
 
-    # 分页数据：LEFT JOIN 获取设备名称 + 模板名 fallback（不 JOIN task_devices，每条记录独立）
+    # 分页数据：LEFT JOIN 获取设备名称 + 模板名 fallback
+    # 注意：devices 表有多用户共享同一 MAC 的情况，用子查询去重保证一行
     offset = (page - 1) * page_size
     sql = f"""
         SELECT
@@ -1186,7 +1200,7 @@ async def get_push_logs(
             d.name AS device_name,
             COALESCE(NULLIF(dpl.template_name, ''), ut.tname) AS template_name_final
         FROM device_push_logs dpl
-        LEFT JOIN devices d ON dpl.mac = d.mac
+        LEFT JOIN (SELECT mac, MAX(name) AS name FROM devices GROUP BY mac) d ON dpl.mac = d.mac
         LEFT JOIN update_tasks ut ON dpl.task_id = ut.id
         {where_sql}
         ORDER BY dpl.created_at DESC LIMIT ? OFFSET ?
@@ -1396,11 +1410,12 @@ async def upsert_device(mac: str, user_id: int = 0, **fields) -> dict:
     return dict(result)
 
 
-async def get_all_devices(user_id: int = None, online_only: bool = False) -> list[dict]:
+async def get_all_devices(user_id: int = None, online_only: bool = False, allowed_macs: list[str] | None = None) -> list[dict]:
     """
     获取设备列表
     user_id: 指定用户ID则只返回该用户的设备，None则返回所有
     online_only: 是否只返回在线设备
+    allowed_macs: 指定允许的MAC列表，None则不过滤
     """
     db = await get_db()
     conditions = []
@@ -1411,6 +1426,10 @@ async def get_all_devices(user_id: int = None, online_only: bool = False) -> lis
         params.append(user_id)
     if online_only:
         conditions.append("is_online = 1")
+    if allowed_macs is not None:
+        placeholders = ",".join("?" * len(allowed_macs))
+        conditions.append(f"mac IN ({placeholders})")
+        params.extend(allowed_macs)
     
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
     sql = f"SELECT * FROM devices{where_clause} ORDER BY last_seen_at DESC"
@@ -1428,12 +1447,19 @@ async def get_device_by_mac(mac: str) -> dict | None:
     return dict(row) if row else None
 
 
-async def get_device_stats() -> dict:
-    """获取设备统计摘要 (在线数/离线数/总数等)"""
+async def get_device_stats(allowed_macs: list[str] | None = None) -> dict:
+    """获取设备统计摘要 (在线数/离线数/总数等)，可选按MAC列表过滤"""
     db = await get_db()
-    total_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices")
-    online_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1")
-    low_battery_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL")
+    mac_filter = ""
+    mac_params: list = []
+    if allowed_macs is not None:
+        placeholders = ",".join("?" * len(allowed_macs))
+        mac_filter = f" AND mac IN ({placeholders})"
+        mac_params = list(allowed_macs)
+
+    total_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE 1=1{mac_filter}", mac_params)
+    online_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE is_online=1{mac_filter}", mac_params)
+    low_battery_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL{mac_filter}", mac_params)
 
     total = (await total_cur.fetchone())["cnt"]
     online = (await online_cur.fetchone())["cnt"]
@@ -1453,9 +1479,23 @@ async def get_device_stats() -> dict:
 # ============================================================
 
 async def add_device_event(mac: str, event_type: str, payload: dict | None = None):
-    """记录一条设备事件"""
+    """记录一条设备事件（5秒内同MAC同事件类型去重，防止多MQTT连接重复写入）"""
     db = await get_db()
     payload_json = json.dumps(payload, ensure_ascii=False) if payload else None
+
+    # 去重：检查5秒内是否已有相同的 mac+event_type 记录
+    cur = await db.execute(
+        """SELECT id FROM device_events 
+           WHERE mac=? AND event_type=? 
+           AND created_at >= datetime('now', 'localtime', '-5 seconds')
+           LIMIT 1""",
+        (mac, event_type),
+    )
+    existing = await cur.fetchone()
+    if existing:
+        logger.debug(f"[去重] 跳过重复事件: {mac} {event_type}（5秒内已存在）")
+        return
+
     await db.execute(
         "INSERT INTO device_events (mac, event_type, payload) VALUES (?, ?, ?)",
         (mac, event_type, payload_json),

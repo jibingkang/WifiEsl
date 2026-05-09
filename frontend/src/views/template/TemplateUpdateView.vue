@@ -659,20 +659,22 @@ async function _refreshTaskFromServer() {
       taskDetail.value.status = res.status
       taskDetail.value.progress = res.progress
       for (const dev of res.devices) {
-        const local = (taskDetail.value.devices as any[]).find((d: any) => d.mac === dev.mac)
-        if (local) {
+        // 更新所有匹配该 MAC 的设备行（同一MAC可能有多个子行记录）
+        const localDevs = (taskDetail.value.devices as any[]).filter((d: any) => d.mac === dev.mac)
+        for (const local of localDevs) {
           local.update_status = dev.update_status
           local.error_msg = dev.error_msg || ''
           local.sent_at = dev.sent_at || ''
           local.finished_at = dev.finished_at || ''
-          // 同步子行的 sent_at/finished_at
-          if (dev.rows && local.rows) {
-            for (const newRow of dev.rows) {
-              const localRow = (local.rows as any[]).find((r: any) => r.id === newRow.id)
-              if (localRow) {
-                localRow.sent_at = newRow.sent_at || ''
-                localRow.finished_at = newRow.finished_at || ''
-              }
+        }
+        // 子行按 id 精确匹配（不同 server 行的子行不同）
+        const exactLocal = (taskDetail.value.devices as any[]).find((d: any) => d.id === dev.id)
+        if (exactLocal && dev.rows && exactLocal.rows) {
+          for (const newRow of dev.rows) {
+            const localRow = (exactLocal.rows as any[]).find((r: any) => r.id === newRow.id)
+            if (localRow) {
+              localRow.sent_at = newRow.sent_at || ''
+              localRow.finished_at = newRow.finished_at || ''
             }
           }
         }
@@ -1842,18 +1844,18 @@ function onDisplayReply(data: any) {
   const result = data?.result ?? data?.code
   if (!mac || !taskDetail.value) return
 
-  // 在本地 taskDetail.devices 中找到对应设备，就地修改（立即响应）
-  const dev = taskDetail.value.devices.find((d: any) => d.mac === mac)
-  if (!dev) return
+  // 更新所有匹配的行（同一MAC可能有多条子行记录）
+  const matchedDevs = taskDetail.value.devices.filter((d: any) => d.mac === mac)
+  if (!matchedDevs.length) return
 
-  if (result === 200) {
-    dev.update_status = 'success'
-    dev.error_msg = ''
-    dev.finished_at = new Date().toLocaleString('zh-CN', { hour12: false })
-  } else {
-    dev.update_status = 'failed'
-    dev.error_msg = `result=${result}`
-    dev.finished_at = new Date().toLocaleString('zh-CN', { hour12: false })
+  const newStatus = result === 200 ? 'success' : 'failed'
+  const errorMsg = result === 200 ? '' : `result=${result}`
+  const now = new Date().toLocaleString('zh-CN', { hour12: false })
+
+  for (const dev of matchedDevs) {
+    dev.update_status = newStatus
+    dev.error_msg = errorMsg
+    dev.finished_at = now
   }
 
   // 从服务端刷新最新数据（轻量级，不覆盖自定义数据）
