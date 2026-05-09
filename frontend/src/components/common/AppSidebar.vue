@@ -60,7 +60,7 @@
 
     <!-- 底部版本 -->
     <div class="sidebar-footer">
-      <span v-show="!appStore.sidebarCollapsed" class="version">v1.1.2</span>
+      <span v-show="!appStore.sidebarCollapsed" class="version">v{{ appVersion }}</span>
     </div>
   </aside>
 </template>
@@ -75,6 +75,7 @@ const route = useRoute()
 const appStore = useAppStore()
 
 const activeMenu = computed(() => route.path)
+const appVersion = computed(() => __APP_VERSION__)
 </script>
 
 <style lang="scss" scoped>
