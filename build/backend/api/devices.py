@@ -577,11 +577,12 @@ async def get_template_devices(tid: str = Query(..., description="模板ID")):
 
 
 @router.delete("/template-devices/{tid}/{mac}")
-async def remove_template_device_binding(tid: str, mac: str):
+async def remove_template_device_binding(request: Request, tid: str, mac: str):
     """
     移除单条模板-设备绑定
     仅从当前模板的更新列表中移除该设备，不删除设备本身
     """
+    await _device_reject_operator(request)
     from services.db_service import remove_template_binding
 
     try:

@@ -157030,3 +157030,43 @@ httpx.ReadTimeout
 2026-05-10 15:53:17,201 - services.multi_user_mqtt_manager - INFO - [MQTT] display_reply: D4:3D:39:84:14:20 -> success, 更新行数: 0
 2026-05-10 15:53:17,201 - services.multi_user_mqtt_manager - WARNING - [MQTT] display_reply: D4:3D:39:84:14:20 没有更新任何行，检查task_devices表中是否存在该设备且状态为sent
 2026-05-10 15:53:17,202 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:84:14:20, action_type=display_reply
+2026-05-10 15:55:39,872 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 收到 [offline]: {"mac": "D4:3D:39:83:E5:E8", "msgId": "1778399750296"}
+2026-05-10 15:55:39,873 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E5:E8, action_type=offline
+2026-05-10 15:55:39,873 - services.ws_manager - INFO - [WS] 广播到用户 8: 1 个连接, 消息类型=offline
+2026-05-10 15:55:39,873 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 [offline] WebSocket广播成功
+2026-05-10 15:55:39,877 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 10 收到 [offline]: {"mac": "D4:3D:39:83:E5:E8", "msgId": "1778399750296"}
+2026-05-10 15:55:39,877 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E5:E8, action_type=offline
+2026-05-10 15:55:39,877 - services.ws_manager - INFO - [WS] 广播到用户 10: 1 个连接, 消息类型=offline
+2026-05-10 15:55:39,877 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 10 [offline] WebSocket广播成功
+2026-05-10 15:55:40,146 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E5:E8, action_type=offline
+2026-05-10 15:55:40,320 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E5:E8, action_type=offline
+2026-05-10 15:55:40,762 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 收到 [online]: {"mac": "D4:3D:39:83:E5:E8", "msgId": "1778399751177"}
+2026-05-10 15:55:40,762 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E5:E8, action_type=online
+2026-05-10 15:55:40,762 - services.ws_manager - INFO - [WS] 广播到用户 8: 1 个连接, 消息类型=online
+2026-05-10 15:55:40,762 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 [online] WebSocket广播成功
+2026-05-10 15:55:40,763 - services.wifi_client - INFO - [电量查询] 开始调用WIFI系统接口
+2026-05-10 15:55:40,763 - services.wifi_client - INFO - [电量查询] 目标地址: http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:83:E5:E8/battery
+2026-05-10 15:55:40,763 - services.wifi_client - INFO - [电量查询] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:55:40,763 - services.wifi_client - INFO - [电量查询] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:40,763 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 10 收到 [online]: {"mac": "D4:3D:39:83:E5:E8", "msgId": "1778399751177"}
+2026-05-10 15:55:40,764 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E5:E8, action_type=online
+2026-05-10 15:55:40,764 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-05-10 15:55:40,764 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:83:E5:E8
+2026-05-10 15:55:40,764 - services.wifi_client - INFO - [MAC查询设备] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:55:40,764 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:40,764 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:40,766 - services.ws_manager - INFO - [WS] 广播到用户 10: 1 个连接, 消息类型=online
+2026-05-10 15:55:40,766 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 10 [online] WebSocket广播成功
+2026-05-10 15:55:40,766 - services.wifi_client - INFO - [电量查询] 开始调用WIFI系统接口
+2026-05-10 15:55:40,766 - services.wifi_client - INFO - [电量查询] 目标地址: http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:83:E5:E8/battery
+2026-05-10 15:55:40,767 - services.wifi_client - INFO - [电量查询] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:55:40,767 - services.wifi_client - INFO - [电量查询] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:40,767 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-05-10 15:55:40,767 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:83:E5:E8
+2026-05-10 15:55:40,768 - services.wifi_client - INFO - [MAC查询设备] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:55:40,768 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:40,768 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:55:41,118 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E5:E8, action_type=online
+2026-05-10 15:55:41,192 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E5:E8, action_type=online
+2026-05-10 15:57:10,642 - services.ws_manager - INFO - [WS] 断开: ws-17, 总数: 1
+2026-05-10 15:57:10,643 - services.ws_manager - INFO - [WS] 断开: ws-31, 总数: 0
