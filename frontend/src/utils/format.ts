@@ -3,7 +3,7 @@
  */
 
 /**
- * 格式化MAC地址 (添加冒号分隔)
+ * 格式化 MAC 地址 (添加冒号分隔)
  */
 export function formatMac(mac: string): string {
   if (!mac) return '--'
@@ -54,7 +54,7 @@ export function formatRssi(rssi?: number | null): string {
 }
 
 /**
- * 格式化日期时间
+ * 格式化日期时间（后端时间统一为 UTC）
  */
 export function formatDateTime(dateStr: string | Date, fmt = 'YYYY-MM-DD HH:mm:ss'): string {
   if (!dateStr) return '--'
@@ -77,7 +77,7 @@ export function formatDateTime(dateStr: string | Date, fmt = 'YYYY-MM-DD HH:mm:s
 }
 
 /**
- * 相对时间 (xx前)
+ * 相对时间 (xx前)（后端时间统一为 UTC）
  */
 export function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return ''

@@ -36,25 +36,28 @@ export const useDeviceStore = defineStore('device', () => {
 
   // 计算属性
   /** 在线设备数 */
-  const onlineCount = computed(() => (devices.value ?? []).filter(d => d.is_online).length)
+  const onlineCount = computed(() => allDeviceList.value.filter(d => d.is_online).length)
 
   /** 离线设备数 */
-  const offlineCount = computed(() => (devices.value ?? []).filter(d => !d.is_online).length)
+  const offlineCount = computed(() => allDeviceList.value.filter(d => !d.is_online).length)
 
   /** 在线率 */
   const onlineRate = computed(() =>
-    (devices.value ?? []).length > 0 ? ((onlineCount.value / (devices.value ?? []).length) * 100).toFixed(1) : '0.0'
+    allDeviceList.value.length > 0 ? ((onlineCount.value / allDeviceList.value.length) * 100).toFixed(1) : '0.0'
   )
 
   /** 低电量设备 (<350, 对应3.50V以下) */
   const lowBatteryDevices = computed(() =>
-    (devices.value ?? []).filter(d => d.voltage && d.voltage < 350 && d.is_online)
+    allDeviceList.value.filter(d => d.voltage && d.voltage < 350 && d.is_online)
   )
 
   /** 弱信号设备 (< -70 dBm) */
   const weakSignalDevices = computed(() =>
-    (devices.value ?? []).filter(d => d.rssi && d.rssi < -70 && d.is_online)
+    allDeviceList.value.filter(d => d.rssi && d.rssi < -70 && d.is_online)
   )
+
+  /** 全量设备列表（优先 allDevices，兜底 devices；仪表盘/监控等依赖完整数据的视图应使用此属性） */
+  const allDeviceList = computed(() => allDevices.value.length > 0 ? allDevices.value : devices.value)
 
   /**
    * 加载设备列表
@@ -77,41 +80,18 @@ export const useDeviceStore = defineStore('device', () => {
   }
 
   /**
-   * 全量加载所有设备（循环拉取所有分页，缓存到 allDevices）
-   * 同时把第一页写入 devices 保持向后兼容
+   * 全量加载所有设备（单次请求，后端参数 all=true 跳过切片）
+   * 同时写入 devices 确保仪表盘/监控读到完整数据
    */
   async function fetchAllDevices() {
     loading.value = true
     try {
-      const MAX_PAGE_SIZE = 100  // 后端限制 le=100
-      let allItems: Device[] = []
-      let page = 1
-      let hasMore = true
-
-      while (hasMore) {
-        const res: PaginatedResponse<Device> = await deviceApi.getDeviceList({
-          page,
-          pageSize: MAX_PAGE_SIZE,
-        })
-        const items = res.items ?? []
-        allItems.push(...items)
-
-        // 第一页时设置 total
-        if (page === 1) {
-          total.value = res.total ?? 0
-        }
-
-        // 判断是否还有更多
-        hasMore = items.length === MAX_PAGE_SIZE && allItems.length < (res.total ?? 0)
-        page++
-      }
-
-      allDevices.value = allItems
-      // 同时填 devices 为第一页（向后兼容依赖 devices 的视图）
-      if (allItems.length > 0) {
-        devices.value = allItems.slice(0, MAX_PAGE_SIZE)
-      }
-      console.log(`[DeviceStore] 全量加载 ${allItems.length} 台设备`)
+      const res: any = await deviceApi.getDeviceList({ page: 1, pageSize: 1, all: true } as any)
+      const items: Device[] = res.items ?? []
+      allDevices.value = items
+      devices.value = items
+      total.value = res.total ?? items.length
+      console.log(`[DeviceStore] 全量加载 ${items.length} 台设备`)
     } catch (e) {
       console.error('[DeviceStore] Failed to fetch all devices:', e)
     } finally {
@@ -170,6 +150,7 @@ export const useDeviceStore = defineStore('device', () => {
     onlineRate,
     lowBatteryDevices,
     weakSignalDevices,
+    allDeviceList,
     fetchDevices,
     fetchAllDevices,
     getDeviceByMac,

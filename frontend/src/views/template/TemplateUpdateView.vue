@@ -678,6 +678,10 @@ async function loadTaskDetail(taskId: number) {
     // 初始化选中行：优先从 localStorage 草稿恢复，再降级到模板缓存，最后默认第1行
     _initSelectedRowIds(devices, taskId)
 
+    // ⭐ 注意：不再调用 _mergeActiveRowDataToOverrides，因为 task_devices.custom_data（主表）
+    // 已经是"最后一次推送成功的快照"，不需要被子行数据覆盖。
+    // 用户切换行预览时由 selectRow → _loadRowToOverrides 更新 customOverrides。
+
     // ⭐ 重要：将加载的数据保存到模板缓存（含行选择）
     if (selectedTemplate.value?.tid) {
       _saveTemplateCache()
@@ -705,6 +709,11 @@ async function _refreshTaskFromServer() {
       taskDetail.value.status = res.status
       taskDetail.value.progress = res.progress
       for (const dev of res.devices) {
+        // 找到本地对应的设备记录
+        const exactLocal = (taskDetail.value.devices as any[]).find((d: any) => d.id === dev.id)
+        // 记住旧状态（用于判断是否刚从 sent → success/failed）
+        const oldStatus = exactLocal?.update_status
+
         // 更新所有匹配该 MAC 的设备行（同一MAC可能有多个子行记录）
         const localDevs = (taskDetail.value.devices as any[]).filter((d: any) => d.mac === dev.mac)
         for (const local of localDevs) {
@@ -713,15 +722,33 @@ async function _refreshTaskFromServer() {
           local.sent_at = dev.sent_at || ''
           local.finished_at = dev.finished_at || ''
         }
-        // 子行按 id 精确匹配（不同 server 行的子行不同）
-        const exactLocal = (taskDetail.value.devices as any[]).find((d: any) => d.id === dev.id)
+        // 子行按 id 精确同步（时间戳 + 数据）——仅从服务端更新，不覆盖本地编辑缓存
         if (exactLocal && dev.rows && exactLocal.rows) {
           for (const newRow of dev.rows) {
             const localRow = (exactLocal.rows as any[]).find((r: any) => r.id === newRow.id)
             if (localRow) {
               localRow.sent_at = newRow.sent_at || ''
               localRow.finished_at = newRow.finished_at || ''
+              // 同步 custom_data（从服务端获取最新值，替代之前 onBlur 中的本地直接修改）
+              localRow.custom_data = newRow.custom_data || '{}'
             }
+          }
+        }
+        // ⭐ 同步后端的 selected_row_id + 主表 custom_data（最后推送成功的快照）
+        if (exactLocal && dev.selected_row_id !== undefined) {
+          exactLocal.selected_row_id = dev.selected_row_id
+
+          // Case 1: 状态刚转换 sent→success/failed（优先路径，WS回调触发）
+          if (oldStatus === 'sent' && dev.update_status !== 'sent' && dev.selected_row_id) {
+            selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
+            // 从主表 custom_data 恢复（后端已合并推送成功的子行数据）
+            _restoreOverridesFromMainData(dev.mac, dev.custom_data)
+          }
+          // Case 2: 兜底 — 设备已回执(非sent)且服务端 selected_row_id 与本地不一致时同步
+          else if (dev.update_status !== 'sent' && dev.selected_row_id && dev.selected_row_id !== selectedRowIds.value[dev.mac]) {
+            selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
+            _restoreOverridesFromMainData(dev.mac, dev.custom_data)
+            console.log(`[_refreshTaskFromServer] 兜底同步: ${dev.mac} → row ${dev.selected_row_id}`)
           }
         }
       }
@@ -1188,9 +1215,9 @@ async function executePush() {
         if (!r.success) checkedMacs.value = checkedMacs.value.filter((m: string) => m !== r.mac)
       }
 
-      // 刷新任务详情和进度
+      // 刷新任务状态（轻量级，不覆盖 selectedRowIds）
       if (currentTaskId.value) {
-        await loadTaskDetail(currentTaskId.value)
+        await _refreshTaskFromServer()
         // 启动轮询：每3秒刷新直到全部完成
         startProgressPolling()
       }
@@ -1272,7 +1299,7 @@ async function handlePushTableDevice(dev: any) {
   }
 }
 
-/** 单设备推送（核心实现） - 直接调用设备推送接口 */
+/** 单设备推送（核心实现） - 在任务中走任务接口，否则走设备直接推送 */
 async function executeSingleDevicePush(mac: string, deviceName?: string) {
   if (!selectedTemplate.value?.tid) {
     ElMessage.warning('请先选择一个模板')
@@ -1281,7 +1308,6 @@ async function executeSingleDevicePush(mac: string, deviceName?: string) {
   
   const name = deviceName || mac
   const templateId = selectedTemplate.value.tid
-  const templateName = selectedTemplate.value.tname || templateId
   
   executing.value = true
   
@@ -1295,54 +1321,47 @@ async function executeSingleDevicePush(mac: string, deviceName?: string) {
       }
     }
     
-    // 2. 准备推送数据（合并默认数据和自定义数据）
+    // 2. 如果设备在任务中，走任务执行接口（携带 rowSelections 让后端精确追踪推送行）
+    if (currentTaskId.value) {
+      const rowId = selectedRowIds.value[mac]
+      const rowSelections: Record<string, number> = rowId ? { [mac]: rowId } : {}
+      try {
+        const result: any = await taskApi.executeTask(currentTaskId.value, {
+          macs: [mac],
+          rowSelections
+        })
+        const data = result
+        if (data && data.total > 0) {
+          startProgressPolling()
+          ElMessage.success(`已向「${name}」发送推送指令`)
+        } else {
+          ElMessage.warning('没有可推送的设备')
+        }
+      } catch (e: any) {
+        ElMessage.error(`推送「${name}」失败: ${e.message || '未知错误'}`)
+      }
+      return
+    }
+    
+    // 3. 不在任务中 → 直接调用设备推送接口（无行追踪）
     const pushData = { ...defaultData.value }
     if (customOverrides.value[mac]) {
       Object.assign(pushData, customOverrides.value[mac])
     }
     
-    // 3. 直接调用单设备推送接口
     ElMessage.info(`正在向「${name}」推送模板...`)
     
     try {
       const result = await deviceApi.applyTemplate(mac, templateId, pushData)
       
       if (result.code === 20000) {
-        // 4. 如果设备在任务中，尝试更新状态（非必需，推送已成功）
-        if (currentTaskId.value) {
-          try {
-            // 尝试标记为发送中状态（后端接口可能有问题）
-            await taskApi.updateTaskDeviceStatus(currentTaskId.value, mac, 'sent')
-            // 启动进度轮询
-            startProgressPolling()
-            ElMessage.success(`已向「${name}」发送推送指令`)
-          } catch (statusErr) {
-            console.warn('更新任务设备状态失败（不影响推送）:', statusErr)
-            // 推送成功，即使状态更新失败，也显示成功
-            ElMessage.success(`已向「${name}」发送推送指令（状态更新异常，不影响推送）`)
-          }
-        } else {
-          // 不在任务中，但推送成功
-          ElMessage.success(`已向「${name}」发送推送指令（独立推送）`)
-        }
+        ElMessage.success(`已向「${name}」发送推送指令（独立推送）`)
       } else {
         ElMessage.error(`「${name}」推送失败: ${result.message || '未知错误'}`)
-        // 如果设备在任务中，标记为失败状态
-        if (currentTaskId.value) {
-          try {
-            await taskApi.updateTaskDeviceStatus(currentTaskId.value, mac, 'failed', result.message || '推送失败')
-          } catch {}
-        }
       }
     } catch (e: any) {
       console.error('单设备推送失败:', e)
-      ElMessage.error(`「${name}」推送失败: ${e.message || '网络错误'}`)
-      // 如果设备在任务中，标记为失败状态
-      if (currentTaskId.value) {
-        try {
-          await taskApi.updateTaskDeviceStatus(currentTaskId.value, mac, 'failed', e.message || '网络错误')
-        } catch {}
-      }
+      ElMessage.error(`推送「${name}」失败: ${e.message || '网络错误'}`)
     }
     
   } catch (e: any) {
@@ -1378,6 +1397,9 @@ async function handlePushRow(dev: any, row: any) {
   const name = dev.name || dev.mac
   try {
     const rowIndex = row.sort_order !== undefined ? row.sort_order + 1 : (dev.rows?.findIndex((r: any) => r.id === row.id) ?? 0) + 1
+    console.log(`[handlePushRow] 准备推送: MAC=${dev.mac}, row.id=${row.id}, rowIndex=#${rowIndex}`)
+    console.log(`[handlePushRow] row._origIndex=${row._origIndex}, row.sort_order=${row.sort_order}`)
+    console.log(`[handlePushRow] row.custom_data=`, row.custom_data)
     await ElMessageBox.confirm(
       `确定要将「数据行 #${rowIndex}」推送到设备「${name}」吗？`,
       '推送确认',
@@ -1399,11 +1421,9 @@ async function handlePushRow(dev: any, row: any) {
       const { success, failed } = data
       if (failed === 0) {
         ElMessage.success(`已向「${name}」发送推送指令`)
-        // 刷新任务详情并启动轮询
-        if (currentTaskId.value) {
-          await loadTaskDetail(currentTaskId.value)
-          startProgressPolling()
-        }
+        // 启动轮询（不调 loadTaskDetail，避免覆盖 selectedRowIds）
+        // selected_row_id 在回执成功后才由后端更新，前端通过轮询同步
+        startProgressPolling()
       } else {
         ElMessage.error(`「${name}」推送失败`)
       }
@@ -1774,16 +1794,22 @@ function updateAllChecked() {
 
 // ════════════ 行选择持久化辅助 ═════════════
 
-/** 初始化 selectedRowIds：优先从后端 DB 数据恢复 → localStorage 草稿 → 模板缓存 → 默认第1行 */
+/** 初始化 selectedRowIds：优先从后端 selected_row_id 恢复 → localStorage 草稿 → 模板缓存 → 默认第1行 */
 function _initSelectedRowIds(devices: any[], taskId?: number) {
-  // 0. 最优先：查找最后一次推送成功的子行（finished_at 最晚的行）
-  //   如果没有成功的，找 sent_at 最晚的（推送中）
-  //   这样刷新页面后看到的是最后一次更新成功的数据行
+  // 0. 最优先：从后端 DB 的 selected_row_id 恢复（由推送时设置，代表用户/系统当前选中的行）
   const result: Record<string, number> = {}
-  let hasLastSuccessRow = false
+  let hasDbData = false
   for (const d of devices) {
     if (d.rows && d.rows.length > 0) {
-      // 找 finished_at 最晚的行（推送成功）
+      if (d.selected_row_id) {
+        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
+        if (exists) {
+          result[d.mac] = d.selected_row_id
+          hasDbData = true
+          continue
+        }
+      }
+      // 没有 selected_row_id → fallback: 找最后一次推送成功的行
       let bestRow: any = null
       let bestTime = ''
       for (const r of d.rows) {
@@ -1794,7 +1820,6 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
       }
       if (bestRow) {
         result[d.mac] = bestRow.id
-        hasLastSuccessRow = true
         continue
       }
       // 没有成功的，找 sent_at 最晚的（推送中）
@@ -1808,49 +1833,18 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
       }
       if (bestSentRow) {
         result[d.mac] = bestSentRow.id
-        hasLastSuccessRow = true
         continue
-      }
-      // 没有推送记录，fallback 到 selected_row_id 或第1行
-      if (d.selected_row_id) {
-        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
-        if (exists) {
-          result[d.mac] = d.selected_row_id
-          continue
-        }
       }
       result[d.mac] = d.rows[0].id
     }
   }
-  if (hasLastSuccessRow) {
-    selectedRowIds.value = result
-    console.log('从最后一次推送成功的行恢复选中行:', result)
-    return
-  }
-
-  // 1. 尝试从后端 selected_row_id 恢复
-  const fromDb: Record<string, number> = {}
-  let hasDbData = false
-  for (const d of devices) {
-    if (d.rows && d.rows.length > 0) {
-      if (d.selected_row_id) {
-        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
-        if (exists) {
-          fromDb[d.mac] = d.selected_row_id
-          hasDbData = true
-          continue
-        }
-      }
-      fromDb[d.mac] = d.rows[0].id
-    }
-  }
   if (hasDbData) {
-    selectedRowIds.value = fromDb
-    console.log('从后端DB恢复选中行:', fromDb)
+    selectedRowIds.value = result
+    console.log('从后端DB恢复选中行:', result)
     return
   }
 
-  // 2. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
+  // 1. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
   if (taskId) {
     const draft = readDraftRaw()
     if (draft?.selectedRowIds && draft.taskId === taskId) {
@@ -1892,6 +1886,26 @@ function _initSelectedRowIds(devices: any[], taskId?: number) {
     }
   }
   selectedRowIds.value = defaults
+}
+
+/** 从主表 custom_data 恢复 customOverrides[mac]（回执成功/刷新后调用） */
+function _restoreOverridesFromMainData(mac: string, mainCustomData: any) {
+  if (!mainCustomData) return
+  let data: Record<string, any> = {}
+  try {
+    if (typeof mainCustomData === 'string') data = JSON.parse(mainCustomData)
+    else if (typeof mainCustomData === 'object') data = mainCustomData
+  } catch { return }
+  if (Object.keys(data).length === 0) return
+
+  if (!customOverrides.value[mac]) {
+    customOverrides.value[mac] = {}
+  }
+  for (const [k, v] of Object.entries(data)) {
+    if (v !== '' && v != null) {
+      customOverrides.value[mac][k] = v
+    }
+  }
 }
 
 /** 将当前数据（含行选择）保存到模板缓存 */
@@ -1960,27 +1974,17 @@ function restoreDraft() {
 
 // ════════════ 生命周期 ═════════════
 
-/** WS display_reply 监听器：收到设备回执后就地更新任务状态 */
+/** WS display_reply 监听器：触发从服务端刷新状态（不直接修改本地，由 _refreshTaskFromServer 处理状态转换检测） */
 function onDisplayReply(data: any) {
   const mac = data?.mac
   const result = data?.result ?? data?.code
-  if (!mac || !taskDetail.value) return
+  if (!mac || !result || !taskDetail.value) return
 
-  // 更新所有匹配的行（同一MAC可能有多条子行记录）
-  const matchedDevs = taskDetail.value.devices.filter((d: any) => d.mac === mac)
-  if (!matchedDevs.length) return
+  // 检查是否有匹配的设备（只要MAC匹配就刷新）
+  const matched = taskDetail.value.devices.some((d: any) => d.mac === mac)
+  if (!matched) return
 
-  const newStatus = result === 200 ? 'success' : 'failed'
-  const errorMsg = result === 200 ? '' : `result=${result}`
-  const now = new Date().toLocaleString('zh-CN', { hour12: false })
-
-  for (const dev of matchedDevs) {
-    dev.update_status = newStatus
-    dev.error_msg = errorMsg
-    dev.finished_at = now
-  }
-
-  // 从服务端刷新最新数据（轻量级，不覆盖自定义数据）
+  // 直接从服务端刷新最新数据（_refreshTaskFromServer 会检测 sent→success/failed 转换并同步 selectedRowIds）
   _refreshTaskFromServer().catch(() => {})
 }
 
@@ -2082,28 +2086,13 @@ watch([defaultData, customOverrides, selectedRowIds], () => {
   }, 2000)
 }, { deep: true })
 
-// ── selectedRowIds 单独同步到后端（快速防抖 500ms，确保跨设备同步） ──
-let selectedRowSyncTimer: ReturnType<typeof setTimeout> | null = null
-watch(selectedRowIds, (newVal) => {
-  if (!currentTaskId.value) return
-  if (selectedRowSyncTimer) clearTimeout(selectedRowSyncTimer)
-  selectedRowSyncTimer = setTimeout(async () => {
-    try {
-      for (const [mac, rowId] of Object.entries(newVal)) {
-        if (rowId) {
-          await taskApi.updateSelectedRow(currentTaskId.value!, mac, rowId as number)
-        }
-      }
-    } catch (e) {
-      console.warn('[Task] 选中行同步失败:', e)
-    }
-  }, 500)
-}, { deep: true })
+// ⭐ 注意：selected_row_id 不再在用户切换行时同步到后端
+// selected_row_id 只由推送操作和回执结果决定（代表"最后一次成功推送的行"）
+// 用户单纯切换查看行不应影响 DB 中的 selected_row_id
 
 onUnmounted(() => {
   if (autoSaveTimer) clearInterval(autoSaveTimer)
   if (dbAutoSaveTimer) clearTimeout(dbAutoSaveTimer)
-  if (selectedRowSyncTimer) clearTimeout(selectedRowSyncTimer)
   stopProgressPolling()
   offWsMessage('display_reply', onDisplayReply)
 })

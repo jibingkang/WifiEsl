@@ -549,43 +549,13 @@ function selectRow(mac: string, rowId: number) {
   // 如果行没变，无需处理
   if (oldRowId === rowId) return
 
-  // 1. Flush 旧行的 customOverrides 缓存到后端
-  if (oldRowId) {
-    _flushMainEditsToRow(mac, oldRowId)
-  }
-
-  // 2. 切换选中行
+  // 切换选中行
   selectedRowIds.value = { ...selectedRowIds.value, [mac]: rowId }
 
-  // 3. 用新行数据重新填充 customOverrides[mac]
+  // 用新行数据重新填充 customOverrides[mac]
   _loadRowToOverrides(mac, rowId)
 
   _syncToParent()
-}
-
-/**
- * 将主行 customOverrides[mac] 的缓存数据持久化到后端对应子行
- */
-function _flushMainEditsToRow(mac: string, rowId: number) {
-  const overrides = props.customOverrides[mac]
-  if (!overrides || Object.keys(overrides).length === 0) return
-
-  // 找到旧行，合并缓存数据
-  const dev = props.devices.find(d => d.mac === mac)
-  const row = dev?.rows?.find((r: any) => r.id === rowId)
-  if (!row) return
-
-  const currentData = parseRowCustomData(row)
-  for (const [k, v] of Object.entries(overrides)) {
-    if (v !== '' && v != null) {
-      currentData[k] = v
-    } else {
-      delete currentData[k]
-    }
-  }
-  taskApi.updateDeviceRow(rowId, currentData).catch((e: any) => {
-    console.error('[DeviceDataTable] flush旧行缓存失败:', e)
-  })
 }
 
 /**
@@ -716,21 +686,13 @@ function getActiveRowIndex(mac: string): number {
 }
 
 function getEffective(mac: string, key: string): string {
-  // 1. 优先看本地编辑缓存
+  // 1. 优先看 customOverrides[mac]（由 selectRow / 回执成功 / 主行编辑 更新）
   if (props.customOverrides[mac]?.[key] != null && props.customOverrides[mac][key] !== '') {
     return String(props.customOverrides[mac][key])
   }
 
-  // 2. 如果有子表行，显示当前选中行的数据（而非固定第1行）
-  const activeRow = getActiveRow(mac)
-  if (activeRow) {
-    const rowData = parseRowCustomData(activeRow)
-    if (rowData[key] != null && rowData[key] !== '') {
-      return String(rowData[key])
-    }
-  }
-
-  // 3. 最后显示默认值
+  // 2. 兜底显示默认值
+  // ⭐ 不再读取子表行数据（activeRow.custom_data），确保主行只反映推送成功的数据
   if (props.defaultData[key] != null) return String(props.defaultData[key])
   return ''
 }
@@ -959,6 +921,8 @@ async function onRowBlur(rowId: number, mac: string, _taskId: number | undefined
       }
     }
     await taskApi.updateDeviceRow(rowId, currentData)
+    // 注意：不修改本地 row.custom_data，也不通知主行。
+    // 子行编辑只影响子行（通过 rowEdits 缓存显示），不影响主行（主行由回执成功后刷新）。
   } catch (e) {
     console.error('[DeviceDataTable] 更新子行失败:', e)
   }
@@ -996,6 +960,7 @@ async function clearRowField(rowId: number, mac: string, key: string) {
       }
     }
     await taskApi.updateDeviceRow(rowId, currentData)
+    // 注意：不修改本地 row.custom_data，清除操作不影响主行显示。
   } catch (e) {
     console.error('[DeviceDataTable] 清除子行字段失败:', e)
   }

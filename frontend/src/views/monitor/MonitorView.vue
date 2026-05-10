@@ -132,7 +132,7 @@ const deviceStore = useDeviceStore()
 
 // 核心统计
 const topStats = computed(() => [
-  { label: '总设备数', value: String((deviceStore.devices ?? []).length || 0), colorClass: 'text-blue' },
+  { label: '总设备数', value: String(deviceStore.allDeviceList.length || 0), colorClass: 'text-blue' },
   { label: '在线数', value: String(deviceStore.onlineCount || 0), colorClass: 'text-green' },
   { label: '离线数', value: String(deviceStore.offlineCount || 0), colorClass: 'text-red' },
   { label: '低电量', value: String(deviceStore.lowBatteryDevices?.length || 0), colorClass: 'text-yellow' },
@@ -142,7 +142,7 @@ const topStats = computed(() => [
 const animatedValues = ref<string[]>([])
 
 const onlineRate = computed(() => {
-  const devs = deviceStore.devices ?? []
+  const devs = deviceStore.allDeviceList
   if (!devs.length) return 0
   return ((deviceStore.onlineCount / devs.length) * 100).toFixed(1)
 })
@@ -164,7 +164,7 @@ function pushEvent(message: string, type: string) {
 
 // 信号分布
 const signalData = computed(() => {
-  const devs = deviceStore.devices ?? []
+  const devs = deviceStore.allDeviceList
   return [
     { label: '优秀\n>-50dBm', count: devs.filter(d => d.rssi != null && d.rssi >= -50).length, height: '40%', color: '#22c55e' },
     { label: '良好\n-60dBm', count: devs.filter(d => d.rssi != null && d.rssi >= -60 && d.rssi < -50).length, height: '65%', color: '#4ade80' },
@@ -181,13 +181,13 @@ const alertCount = computed(() => alerts.value.length)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 async function refresh() {
-  await deviceStore.fetchDevices()
+  await deviceStore.fetchAllDevices()
 
   // 更新动画值
   animatedValues.value = topStats.value.map(s => s.value)
 
   // 构建设备网格
-  const devs = deviceStore.devices ?? []
+  const devs = deviceStore.allDeviceList
   deviceList.value = devs.slice(0, 30).map(d => ({
     mac: d.mac,
     name: d.name || d.mac,

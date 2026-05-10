@@ -24,7 +24,7 @@ import { formatNumber } from '@/utils/format'
 const deviceStore = useDeviceStore()
 
 const cards = computed(() => {
-  const devList = deviceStore.devices ?? []
+  const devList = deviceStore.allDeviceList
   const onlineCount = devList.filter(d => d.is_online).length
   const offlineCount = devList.filter(d => !d.is_online).length
   const lowBattery = devList.filter(d => d.voltage && d.voltage < 3000 && d.is_online)

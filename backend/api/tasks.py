@@ -469,25 +469,43 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     tid = task["tid"]
     tname = task.get("tname", "")
 
+    # ⭐ 如果任务自身 tname 为空，从模板表补全并持久化
+    if not tname:
+        try:
+            tpl = await get_template_by_tid(tid)
+            if tpl:
+                tname = tpl.get("tname", "")
+                if tname:
+                    # 回写 update_tasks，避免下次执行时再查
+                    from services.db_service import get_db as _get_exec_db
+                    _exec_db = await _get_exec_db()
+                    await _exec_db.execute("UPDATE update_tasks SET tname=? WHERE id=?", (tname, task_id))
+                    await _exec_db.commit()
+                    logger.info(f"[Task-{task_id}] 补全模板名称: {tname}")
+        except Exception as e:
+            logger.warning(f"[Task-{task_id}] 补全模板名称失败: {e}")
+
     logger.info(f"[Task-{task_id}] 开始执行推送，目标 {len(push_devices)} 台设备")
     print(f"\n========== [TASK] 任务 {task_id} 开始推送 ==========")
     print(f"   模板: {tid} ({tname}), 设备数: {len(push_devices)}")
     print(f"   设备MAC列表: {[d['mac'] for d in push_devices]}")
+    print(f"   行选择参数: {row_selections}")
     # 打印每台设备的推送参数
     for d in push_devices[:5]:  # 最多打印5台设备参数
         cd = d.get("custom_data", "{}")
-        print(f"   设备 {d['mac']}: custom_data={cd}")
+        print(f"   设备 {d['mac']} (dev_id={d['id']}): custom_data={cd}")
 
-    # 将所有设备状态先置为 sent，同时同步 selected_row_id
+    # 将所有设备状态先置为 sent，同时设置 pending_reply_row_id（仅记录推送行，不改 selected_row_id）
+    # selected_row_id 只在回执成功时更新，推送中不改变当前显示行
     from services.db_service import get_db as _get_db
     _push_db = await _get_db()
     for d in push_devices:
         mac = d["mac"]
         selected_rid = row_selections.get(mac)
         if selected_rid:
-            # 先 commit selected_row_id，确保 _uds 的独立连接能读到最新值
+            # pending_reply_row_id: 正在等待回执的行（回执成功后才写入 selected_row_id）
             await _push_db.execute(
-                "UPDATE task_devices SET selected_row_id=? WHERE task_id=? AND mac=?",
+                "UPDATE task_devices SET pending_reply_row_id=? WHERE task_id=? AND mac=?",
                 (selected_rid, task_id, mac),
             )
             await _push_db.commit()
@@ -520,21 +538,31 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
                 # 检查是否有指定行选择
                 selected_row_id = row_selections.get(mac)
                 target_row = None
+                target_row_idx = 0  # 1-based 行号
                 
                 if selected_row_id:
                     # 获取指定行
                     rows = await get_task_device_rows(dev["id"])
-                    for r in rows:
+                    print(f"   [{mac}] dev_id={dev['id']}, 期望行ID={selected_row_id}, 子行数量={len(rows)}")
+                    print(f"   [{mac}] 子行ID列表: {[(r['id'], r.get('sort_order')) for r in rows]}")
+                    for idx, r in enumerate(rows):
                         if r["id"] == selected_row_id:
                             target_row = r
+                            target_row_idx = idx + 1
                             break
+                    
+                    if not target_row:
+                        print(f"   [警告] {mac}: 未找到 row_id={selected_row_id}，将使用第一行")
+                        print(f"   [警告] 前端选中行ID {selected_row_id} 不在 dev_id={dev['id']} 的子行列表中")
                 
                 # 如果没有指定行或指定行不存在，使用第一行
                 if not target_row:
                     target_row = await get_first_task_device_row(dev["id"])
+                    target_row_idx = 1
                 
                 if target_row:
                     row_custom = target_row.get("custom_data")
+                    print(f"   [{mac}] 推送行: row_id={target_row.get('id')} (第{target_row_idx}行), custom_data={row_custom}")
                     if row_custom:
                         if isinstance(row_custom, str) and row_custom.strip():
                             try:

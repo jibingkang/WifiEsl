@@ -139,6 +139,7 @@ async def batch_apply_template(request: Request, body: dict):
     try:
         detail = json.dumps({
             "templateId": template_id,
+            "templateName": template_name,
             "deviceCount": len(macs),
             "successCount": success_count,
             "failedCount": failed_count,

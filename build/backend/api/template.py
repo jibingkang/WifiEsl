@@ -174,7 +174,7 @@ async def get_update_history_api(
     items, total = await get_logs(
         page=page,
         page_size=pageSize,
-        action="batch_update_template",
+        action=["task_push", "batch_update_template"],
         allowed_user_ids=allowed,
     )
     return {

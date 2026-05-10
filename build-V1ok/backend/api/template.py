@@ -17,7 +17,10 @@ from services.db_service import (
     update_template,
     delete_template,
     get_logs,
+    get_db as _get_tpl_db,
 )
+from services.auth_service import get_current_user_id_from_token
+from services.db_service_extended import get_user_by_id
 
 router = APIRouter(prefix="/templates", tags=["模板管理"])
 logger = logging.getLogger(__name__)
@@ -149,14 +152,30 @@ history_router = APIRouter(prefix="/update-history", tags=["更新历史"])
 
 @history_router.get("")
 async def get_update_history_api(
+    request: Request,
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=100),
 ):
-    """分页查询批量更新历史记录（仅 batch_update_template 类型）"""
+    """分页查询批量更新历史记录（按家族树权限过滤）"""
+    # 获取当前用户信息
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    user_id = get_current_user_id_from_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="未授权")
+
+    # 计算权限范围
+    from api.logs import get_family_tree_ids as _get_history_tree, _build_allowed_user_ids as _build_hist_allowed
+    _h_db = await _get_tpl_db()
+    user_info = await get_user_by_id(user_id)
+    role = user_info.get("role", "user") if user_info else "user"
+    allowed = await _build_hist_allowed(_h_db, user_id, role)
+
     items, total = await get_logs(
         page=page,
         page_size=pageSize,
-        action="batch_update_template",
+        action=["task_push", "batch_update_template"],
+        allowed_user_ids=allowed,
     )
     return {
         "code": 20000,

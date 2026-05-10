@@ -54,12 +54,12 @@ const deviceStore = useDeviceStore()
 const { mqttConnected } = useBackendWs()
 
 onMounted(() => {
-  deviceStore.fetchDevices()
+  deviceStore.fetchAllDevices()
   console.log('DashboardView: WebSocket连接状态 - MQTT连接:', mqttConnected.value)
 })
 
 function handleRefresh() {
-  deviceStore.fetchDevices()
+  deviceStore.fetchAllDevices()
 }
 </script>
 

@@ -33,6 +33,11 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.info("WIFI标签管理系统启动，日志级别: INFO")
 
+# ── 版本与启动时间（供 /system/info 接口使用） ──
+import datetime
+APP_VERSION = "1.1.5"
+APP_START_TIME = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 from config import settings
 
 from api.auth import router as auth_router
@@ -43,6 +48,7 @@ from api.batch import router as batch_router
 from api.tasks import router as tasks_router
 from api.settings import router as settings_router
 from api.websocket import ws_endpoint
+from api.logs import router as logs_router
 
 
 @asynccontextmanager
@@ -86,7 +92,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="WIFI标签管理系统",
     description="智能电子价签控制平台 - 后端API服务",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 
@@ -157,6 +163,7 @@ app.include_router(batch_router, prefix="/api/v1", tags=["批量操作"])
 app.include_router(tasks_router, prefix="/api/v1", tags=["更新任务"])
 app.include_router(update_history_router, prefix="/api/v1", tags=["更新历史"])
 app.include_router(settings_router, prefix="/api/v1", tags=["系统设置"])
+app.include_router(logs_router, prefix="/api/v1", tags=["操作记录"])
 
 # 导入并注册用户管理API
 try:
@@ -177,7 +184,7 @@ async def health_check():
 
 @app.get("/", tags=["系统"])
 async def root():
-    return {"message": "WIFI标签管理系统后端服务运行中", "version": "1.0.0"}
+    return {"message": "WIFI标签管理系统后端服务运行中", "version": APP_VERSION}
 
 
 if __name__ == "__main__":

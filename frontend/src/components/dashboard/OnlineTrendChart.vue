@@ -36,7 +36,7 @@ function generateTrendData() {
     const base = deviceStore.onlineCount || 0
     const variance = Math.floor(Math.random() * (base > 0 ? base * 0.1 : 5))
     onlineData.push(base + variance)
-    totalData.push(deviceStore.devices.length || base + variance + Math.floor(Math.random() * 3))
+    totalData.push(deviceStore.allDeviceList.length || base + variance + Math.floor(Math.random() * 3))
   }
 
   return { times, onlineData, totalData }

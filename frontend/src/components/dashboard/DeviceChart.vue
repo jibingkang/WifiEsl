@@ -28,11 +28,11 @@ const chartRef = ref<HTMLDivElement>()
 let chartInstance: echarts.ECharts | null = null
 const chartType = ref<'type' | 'screen' | 'status'>('type')
 
-const isEmpty = computed(() => (deviceStore.devices ?? []).length === 0)
+const isEmpty = computed(() => deviceStore.allDeviceList.length === 0)
 
 /** 根据当前类型获取图表数据 */
 function getChartData() {
-  const devices = deviceStore.devices
+  const devices = deviceStore.allDeviceList
 
   switch (chartType.value) {
     case 'type': {

@@ -100,6 +100,7 @@ async def get_device_list(
     page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     search: str = Query(default=""),
     status: str = Query(default=None),
+    all: bool = Query(default=False, description="返回全量设备，忽略分页"),
 ):
     """获取设备列表"""
     logger.info(f"[API /devices] ========== 获取设备列表请求开始 ==========")
@@ -261,9 +262,13 @@ async def get_device_list(
 
         total = len(normalized_items)
 
-        # 分页切片
-        start = (page - 1) * page_size
-        paged_items = normalized_items[start:start + page_size]
+        # 分页切片（all=true 时跳过切片，返回全量）
+        if all:
+            paged_items = normalized_items
+            page_size = total  # 实际返回条数
+        else:
+            start = (page - 1) * page_size
+            paged_items = normalized_items[start:start + page_size]
 
         return {
             "code": 20000,

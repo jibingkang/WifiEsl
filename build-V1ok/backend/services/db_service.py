@@ -99,8 +99,8 @@ async def init_db():
             parent_user_id   INTEGER DEFAULT 0,  -- 上级用户ID（0为根用户）
             created_by       INTEGER DEFAULT 0,   -- 创建者用户ID
             
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
-            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+            created_at  TEXT    DEFAULT (datetime('now','localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now','localtime'))
         );
         
         -- 为增强的用户表创建索引
@@ -151,7 +151,7 @@ async def init_db():
             description TEXT    DEFAULT '',
             is_secret   INTEGER NOT NULL DEFAULT 0,
             updated_by  TEXT,
-            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+            updated_at  TEXT    DEFAULT (datetime('now','localtime'))
         );
     """)
 
@@ -166,12 +166,58 @@ async def init_db():
             detail      TEXT,
             result      TEXT    DEFAULT 'success',
             ip_address  TEXT,
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+            user_id     INTEGER NOT NULL DEFAULT 0,
+            task_id     INTEGER,
+            created_at  TEXT    DEFAULT (datetime('now','localtime'))
         );
 
-        -- 索引优化查询
+        -- 基本索引（不依赖 user_id，确保旧表升级时不崩溃）
         CREATE INDEX IF NOT EXISTS idx_logs_action ON operation_logs(action);
         CREATE INDEX IF NOT EXISTS idx_logs_time ON operation_logs(created_at);
+    """)
+
+    # 迁移：为旧 operation_logs 表添加缺失列
+    try:
+        existing = await (await db.execute("PRAGMA table_info(operation_logs)")).fetchall()
+        col_names = {row[1] for row in existing}
+        if 'user_id' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 operation_logs.user_id")
+        if 'task_id' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN task_id INTEGER")
+            logger.info("[DB] 已添加列 operation_logs.task_id")
+        if 'ip_address' not in col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN ip_address TEXT DEFAULT ''")
+            logger.info("[DB] 已添加列 operation_logs.ip_address")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 添加 operation_logs 列失败: {e}")
+
+    # 在确认列存在后创建 user_id 索引
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_user ON operation_logs(user_id)")
+
+    # ── 设备推送审计日志表（每台设备每次推送的详细记录）──
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS device_push_logs (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id         INTEGER,
+            mac             TEXT    NOT NULL,
+            user_id         INTEGER NOT NULL DEFAULT 0,
+            username        TEXT,
+            template_id     TEXT,
+            template_name   TEXT,
+            push_data       TEXT    DEFAULT '{}',
+            result          TEXT    DEFAULT 'pending',
+            error_msg       TEXT    DEFAULT '',
+            sent_at         TEXT,
+            replied_at      TEXT,
+            created_at      TEXT    DEFAULT (datetime('now','localtime'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_dpl_mac ON device_push_logs(mac);
+        CREATE INDEX IF NOT EXISTS idx_dpl_task ON device_push_logs(task_id);
+        CREATE INDEX IF NOT EXISTS idx_dpl_user ON device_push_logs(user_id);
+        CREATE INDEX IF NOT EXISTS idx_dpl_time ON device_push_logs(created_at DESC);
     """)
 
     # ── 模板表 ──
@@ -183,8 +229,8 @@ async def init_db():
             description TEXT    DEFAULT '',
             screen_type TEXT    DEFAULT '',
             status      TEXT    NOT NULL DEFAULT 'active',
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
-            updated_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+            created_at  TEXT    DEFAULT (datetime('now','localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now','localtime'))
         );
 
         CREATE TABLE IF NOT EXISTS template_fields (
@@ -198,7 +244,7 @@ async def init_db():
             placeholder TEXT DEFAULT '',
             options     TEXT    DEFAULT '[]',
             sort_order  INTEGER NOT NULL DEFAULT 0,
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            created_at  TEXT    DEFAULT (datetime('now','localtime')),
             UNIQUE(template_id, field_key)
         );
 
@@ -222,9 +268,9 @@ async def init_db():
             screen_type     TEXT    DEFAULT '',
             firmware_ver    TEXT    DEFAULT '',
             last_seen_at    TEXT,
-            first_seen_at   TEXT    DEFAULT (datetime('now', 'localtime')),
-            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
-            updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            first_seen_at   TEXT    DEFAULT (datetime('now','localtime')),
+            created_at      TEXT    DEFAULT (datetime('now','localtime')),
+            updated_at      TEXT    DEFAULT (datetime('now','localtime')),
             UNIQUE(mac, user_id)
         );
     """)
@@ -266,9 +312,9 @@ async def init_db():
                     screen_type     TEXT    DEFAULT '',
                     firmware_ver    TEXT    DEFAULT '',
                     last_seen_at    TEXT,
-                    first_seen_at   TEXT    DEFAULT (datetime('now', 'localtime')),
-                    created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
-                    updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+                    first_seen_at   TEXT    DEFAULT (datetime('now','localtime')),
+                    created_at      TEXT    DEFAULT (datetime('now','localtime')),
+                    updated_at      TEXT    DEFAULT (datetime('now','localtime')),
                     UNIQUE(mac, user_id)
                 );
             """)
@@ -319,7 +365,7 @@ async def init_db():
             mac         TEXT    NOT NULL,
             event_type  TEXT    NOT NULL,           -- online/offline/button/battery_reply/led_reply/reboot_reply/display_reply
             payload     TEXT,                        -- JSON格式的原始数据
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime'))
+            created_at  TEXT    DEFAULT (datetime('now','localtime'))
         );
 
         -- 索引: 按MAC和时间查询最常见
@@ -335,8 +381,8 @@ async def init_db():
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             tid         TEXT    NOT NULL,
             mac         TEXT    NOT NULL,
-            created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
-            updated_at  TEXT    DEFAULT (datetime('now', 'localtime')),
+            created_at  TEXT    DEFAULT (datetime('now','localtime')),
+            updated_at  TEXT    DEFAULT (datetime('now','localtime')),
             UNIQUE(tid, mac)
         );
 
@@ -357,8 +403,8 @@ async def init_db():
             total_devices   INTEGER NOT NULL DEFAULT 0,
             success_count   INTEGER NOT NULL DEFAULT 0,
             failed_count    INTEGER NOT NULL DEFAULT 0,
-            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
-            updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            created_at      TEXT    DEFAULT (datetime('now','localtime')),
+            updated_at      TEXT    DEFAULT (datetime('now','localtime')),
             sent_at         TEXT,
             completed_at    TEXT
         );
@@ -394,8 +440,9 @@ async def init_db():
             retry_count     INTEGER NOT NULL DEFAULT 0,
             sent_at         TEXT,
             finished_at     TEXT,
-            updated_at      TEXT    DEFAULT (datetime('now', 'localtime')),
-            created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+            selected_row_id INTEGER,
+            updated_at      TEXT    DEFAULT (datetime('now','localtime')),
+            created_at      TEXT    DEFAULT (datetime('now','localtime')),
             UNIQUE(task_id, mac)
         );
         CREATE INDEX IF NOT EXISTS idx_tdevices_task ON task_devices(task_id);
@@ -403,7 +450,34 @@ async def init_db():
         CREATE INDEX IF NOT EXISTS idx_tdevices_status ON task_devices(update_status);
     """)
 
+    # ── 设备多行数据子表（同一设备支持多条自定义数据记录）═══
+    await db.executescript("""
+        CREATE TABLE IF NOT EXISTS task_device_rows (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_device_id  INTEGER NOT NULL REFERENCES task_devices(id) ON DELETE CASCADE,
+            sort_order      INTEGER NOT NULL DEFAULT 0,
+            custom_data     TEXT    DEFAULT '{}',
+            created_at      TEXT    DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_rows_tdev_id ON task_device_rows(task_device_id);
+        CREATE INDEX IF NOT EXISTS idx_rows_sort ON task_device_rows(task_device_id, sort_order);
+    """)
+
     await db.commit()
+
+    # ═══ 兼容旧数据库：确保 operation_logs 有 user_id / task_id 列 ═══
+    try:
+        existing_ol = await (await db.execute("PRAGMA table_info(operation_logs)")).fetchall()
+        ol_col_names = {row[1] for row in existing_ol}
+        if 'user_id' not in ol_col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            logger.info("[DB] 已添加列 operation_logs.user_id")
+        if 'task_id' not in ol_col_names:
+            await db.execute("ALTER TABLE operation_logs ADD COLUMN task_id INTEGER")
+            logger.info("[DB] 已添加列 operation_logs.task_id")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加 operation_logs 兼容列失败（可忽略）: {e}")
 
     # ═══ 兼容旧数据库：确保 task_devices 有新列 ═══
     try:
@@ -416,9 +490,26 @@ async def init_db():
         if 'finished_at' not in col_names:
             await db.execute("ALTER TABLE task_devices ADD COLUMN finished_at TEXT")
             print("[DB] 已添加列 task_devices.finished_at")
+        if 'selected_row_id' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN selected_row_id INTEGER")
+            print("[DB] 已添加列 task_devices.selected_row_id")
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
+    
+    # ═══ 兼容旧数据库：确保 task_device_rows 有 sent_at/finished_at 列 ═══
+    try:
+        existing_rows = await (await db.execute("PRAGMA table_info(task_device_rows)")).fetchall()
+        rows_col_names = {row[1] for row in existing_rows}
+        if 'sent_at' not in rows_col_names:
+            await db.execute("ALTER TABLE task_device_rows ADD COLUMN sent_at TEXT")
+            print("[DB] 已添加列 task_device_rows.sent_at")
+        if 'finished_at' not in rows_col_names:
+            await db.execute("ALTER TABLE task_device_rows ADD COLUMN finished_at TEXT")
+            print("[DB] 已添加列 task_device_rows.finished_at")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加 task_device_rows 兼容列失败（可忽略）: {e}")
     
     # 检查并添加users表的新字段
     try:
@@ -458,6 +549,18 @@ async def init_db():
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加users表兼容列失败（可忽略）: {e}")
+
+    # ── 回填历史数据：device_push_logs.template_name 为空时从 update_tasks 补全 ──
+    try:
+        await db.execute("""
+            UPDATE device_push_logs SET template_name = (
+                SELECT tname FROM update_tasks WHERE update_tasks.id = device_push_logs.task_id
+            ) WHERE (template_name IS NULL OR template_name = '')
+        """)
+        await db.commit()
+        logger.info("[DB] 已回填 device_push_logs.template_name")
+    except Exception as e:
+        logger.debug(f"[DB] 回填 device_push_logs.template_name 跳过: {e}")
 
     # ── 插入默认数据 (仅当表为空时) ──
     await _seed_default_data(db)
@@ -535,7 +638,7 @@ async def _seed_default_data(db: aiosqlite.Connection):
                         wifi_password = ?, 
                         wifi_apikey = ?, 
                         wifi_base_url = ?,
-                        updated_at = datetime('now', 'localtime')
+                        updated_at = datetime('now','localtime')
                     WHERE username = 'admin'""",
                     (
                         settings.wifi_username,
@@ -762,10 +865,9 @@ async def update_user(user_id: int, **kwargs):
     db = await get_db()
     if "password" in kwargs:
         kwargs["password"] = hash_password(kwargs.pop("password"))
-    kwargs["updated_at"] = "datetime('now','localtime')"
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [user_id]
-    await db.execute(f"UPDATE users SET {sets} WHERE id = ?", values)
+    await db.execute(f"UPDATE users SET {sets}, updated_at = datetime('now','localtime') WHERE id = ?", values)
     await db.commit()
 
 
@@ -892,35 +994,70 @@ async def add_log(
     detail: str = "",
     result: str = "success",
     ip_address: str = "",
+    user_id: int = 0,
+    task_id: int | None = None,
 ):
     """记录一条操作日志"""
     db = await get_db()
     await db.execute("""
-        INSERT INTO operation_logs (username, action, target_type, target_id, detail, result, ip_address)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (username, action, target_type, target_id, detail, result, ip_address))
+        INSERT INTO operation_logs (username, action, target_type, target_id, detail, result, ip_address, user_id, task_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (username, action, target_type, target_id, detail, result, ip_address, user_id, task_id))
     await db.commit()
 
 
 async def get_logs(
     page: int = 1,
     page_size: int = 20,
-    action: str = "",
+    action: str | list[str] = "",
+    user_id: int | None = None,
+    allowed_user_ids: list[int] | None = None,
+    start_time: str = "",
+    end_time: str = "",
+    mac: str = "",
 ) -> tuple[list[dict], int]:
     """
-    分页查询操作日志
+    分页查询操作日志（支持权限过滤）
+    action: 单个操作类型字符串，或多个操作类型的列表
     Returns: (items列表, total总数)
     """
     db = await get_db()
 
-    where = ""
+    where_parts = []
     params: list = []
-    if action:
-        where = "WHERE action LIKE ?"
-        params.append(f"%{action}%")
+
+    if isinstance(action, list) and action:
+        placeholders = ",".join("?" * len(action))
+        where_parts.append(f"action IN ({placeholders})")
+        params.extend(action)
+    elif isinstance(action, str) and action:
+        where_parts.append("action = ?")
+        params.append(action)
+
+    # 权限过滤：按用户ID范围
+    if allowed_user_ids is not None:
+        placeholders = ",".join("?" * len(allowed_user_ids))
+        where_parts.append(f"user_id IN ({placeholders})")
+        params.extend(allowed_user_ids)
+    elif user_id is not None:
+        where_parts.append("user_id = ?")
+        params.append(user_id)
+
+    if start_time:
+        where_parts.append("created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("created_at <= ?")
+        params.append(end_time)
+
+    if mac:
+        where_parts.append("detail LIKE ?")
+        params.append(f"%{mac}%")
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
     # 总数
-    cnt_sql = f"SELECT COUNT(*) as total FROM operation_logs {where}"
+    cnt_sql = f"SELECT COUNT(*) as total FROM operation_logs {where_sql}"
     cursor = await db.execute(cnt_sql, params)
     total_row = await cursor.fetchone()
     total = total_row["total"]
@@ -928,8 +1065,149 @@ async def get_logs(
     # 分页数据
     offset = (page - 1) * page_size
     sql = f"""
-        SELECT * FROM operation_logs {where}
+        SELECT * FROM operation_logs {where_sql}
         ORDER BY created_at DESC LIMIT ? OFFSET ?
+    """
+    cursor = await db.execute(sql, params + [page_size, offset])
+    rows = await cursor.fetchall()
+    items = [dict(r) for r in rows]
+
+    return items, total
+
+
+# ============================================================
+# DevicePushLogs 表操作
+# ============================================================
+
+async def add_push_log(
+    task_id: int,
+    mac: str,
+    user_id: int = 0,
+    username: str = "",
+    template_id: str = "",
+    template_name: str = "",
+    push_data: str = "{}",
+    result: str = "pending",
+    error_msg: str = "",
+    sent_at: str | None = None,
+):
+    """记录一条设备推送日志（10秒内同任务同MAC去重）"""
+    db = await get_db()
+
+    # 去重：10秒内同一任务+同一MAC+同一结果不重复写入
+    cur = await db.execute(
+        """SELECT id FROM device_push_logs
+           WHERE task_id=? AND mac=? AND result=?
+           AND created_at >= datetime('now', '-10 seconds')
+           LIMIT 1""",
+        (task_id, mac, result),
+    )
+    if await cur.fetchone():
+        logger.debug(f"[去重] 跳过重复推送日志: task={task_id} mac={mac} result={result}")
+        return
+
+    await db.execute("""
+        INSERT INTO device_push_logs
+            (task_id, mac, user_id, username, template_id, template_name, push_data, result, error_msg, sent_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (task_id, mac, user_id, username, template_id, template_name, push_data, result, error_msg, sent_at))
+    await db.commit()
+
+
+async def update_push_log_result(mac: str, task_id: int | None, result: str, error_msg: str = ""):
+    """更新推送日志的结果（设备回执时调用）"""
+    db = await get_db()
+    import datetime as dt
+    now_iso = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if task_id:
+        await db.execute(
+            "UPDATE device_push_logs SET result=?, error_msg=?, replied_at=? WHERE mac=? AND task_id=? AND result='sent'",
+            (result, error_msg, now_iso, mac, task_id),
+        )
+    else:
+        # 找到该MAC最近一条sent记录，通过子查询获取其id再更新
+        await db.execute(
+            "UPDATE device_push_logs SET result=?, error_msg=?, replied_at=? "
+            "WHERE id = ("
+            "  SELECT id FROM device_push_logs "
+            "  WHERE mac=? AND result='sent' "
+            "  ORDER BY created_at DESC LIMIT 1"
+            ")",
+            (result, error_msg, now_iso, mac),
+        )
+    await db.commit()
+
+
+async def get_push_logs(
+    page: int = 1,
+    page_size: int = 20,
+    task_id: int | None = None,
+    mac: str = "",
+    user_id: int | None = None,
+    allowed_user_ids: list[int] | None = None,
+    start_time: str = "",
+    end_time: str = "",
+    result: str = "",
+) -> tuple[list[dict], int]:
+    """
+    分页查询设备推送日志（支持权限过滤）
+    - LEFT JOIN devices 获取设备别名
+    - LEFT JOIN task_devices 获取 fallback 完成时间/结果
+    Returns: (items列表, total总数)
+    """
+    db = await get_db()
+
+    # 使用前缀避免歧义：dpl = device_push_logs, td = task_devices
+    where_parts = []
+    params: list = []
+
+    if task_id is not None:
+        where_parts.append("dpl.task_id = ?")
+        params.append(task_id)
+    if mac:
+        where_parts.append("dpl.mac LIKE ?")
+        params.append(f"%{mac}%")
+
+    # 权限过滤
+    if allowed_user_ids is not None:
+        placeholders = ",".join("?" * len(allowed_user_ids))
+        where_parts.append(f"dpl.user_id IN ({placeholders})")
+        params.extend(allowed_user_ids)
+    elif user_id is not None:
+        where_parts.append("dpl.user_id = ?")
+        params.append(user_id)
+
+    if start_time:
+        where_parts.append("dpl.created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("dpl.created_at <= ?")
+        params.append(end_time)
+    if result:
+        where_parts.append("dpl.result = ?")
+        params.append(result)
+
+    where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+    # 总数（仅主表计数）
+    cnt_sql = f"SELECT COUNT(*) as total FROM device_push_logs dpl {where_sql}"
+    cursor = await db.execute(cnt_sql, params)
+    total_row = await cursor.fetchone()
+    total = total_row["total"]
+
+    # 分页数据：LEFT JOIN 获取设备名称 + 模板名 fallback
+    # 注意：devices 表有多用户共享同一 MAC 的情况，用子查询去重保证一行
+    offset = (page - 1) * page_size
+    sql = f"""
+        SELECT
+            dpl.*,
+            d.name AS device_name,
+            COALESCE(NULLIF(dpl.template_name, ''), ut.tname) AS template_name_final
+        FROM device_push_logs dpl
+        LEFT JOIN (SELECT mac, MAX(name) AS name FROM devices GROUP BY mac) d ON dpl.mac = d.mac
+        LEFT JOIN update_tasks ut ON dpl.task_id = ut.id
+        {where_sql}
+        ORDER BY dpl.created_at DESC LIMIT ? OFFSET ?
     """
     cursor = await db.execute(sql, params + [page_size, offset])
     rows = await cursor.fetchall()
@@ -1052,10 +1330,9 @@ async def update_template(tid: str, **kwargs):
     # 更新模板主表
     update_cols = {k: v for k, v in kwargs.items() if k != "fields"}
     if update_cols:
-        update_cols["updated_at"] = "datetime('now','localtime')"
         sets = ", ".join(f"{k} = ?" for k in update_cols)
         vals = list(update_cols.values()) + [tid]
-        await db.execute(f"UPDATE templates SET {sets} WHERE tid=?", vals)
+        await db.execute(f"UPDATE templates SET {sets}, updated_at = datetime('now','localtime') WHERE tid=?", vals)
 
     # 替换字段
     if "fields" in kwargs and kwargs["fields"] is not None:
@@ -1136,11 +1413,12 @@ async def upsert_device(mac: str, user_id: int = 0, **fields) -> dict:
     return dict(result)
 
 
-async def get_all_devices(user_id: int = None, online_only: bool = False) -> list[dict]:
+async def get_all_devices(user_id: int = None, online_only: bool = False, allowed_macs: list[str] | None = None) -> list[dict]:
     """
     获取设备列表
     user_id: 指定用户ID则只返回该用户的设备，None则返回所有
     online_only: 是否只返回在线设备
+    allowed_macs: 指定允许的MAC列表，None则不过滤
     """
     db = await get_db()
     conditions = []
@@ -1151,6 +1429,10 @@ async def get_all_devices(user_id: int = None, online_only: bool = False) -> lis
         params.append(user_id)
     if online_only:
         conditions.append("is_online = 1")
+    if allowed_macs is not None:
+        placeholders = ",".join("?" * len(allowed_macs))
+        conditions.append(f"mac IN ({placeholders})")
+        params.extend(allowed_macs)
     
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
     sql = f"SELECT * FROM devices{where_clause} ORDER BY last_seen_at DESC"
@@ -1168,12 +1450,19 @@ async def get_device_by_mac(mac: str) -> dict | None:
     return dict(row) if row else None
 
 
-async def get_device_stats() -> dict:
-    """获取设备统计摘要 (在线数/离线数/总数等)"""
+async def get_device_stats(allowed_macs: list[str] | None = None) -> dict:
+    """获取设备统计摘要 (在线数/离线数/总数等)，可选按MAC列表过滤"""
     db = await get_db()
-    total_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices")
-    online_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1")
-    low_battery_cur = await db.execute("SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL")
+    mac_filter = ""
+    mac_params: list = []
+    if allowed_macs is not None:
+        placeholders = ",".join("?" * len(allowed_macs))
+        mac_filter = f" AND mac IN ({placeholders})"
+        mac_params = list(allowed_macs)
+
+    total_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE 1=1{mac_filter}", mac_params)
+    online_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE is_online=1{mac_filter}", mac_params)
+    low_battery_cur = await db.execute(f"SELECT COUNT(*) as cnt FROM devices WHERE is_online=1 AND voltage < 350 AND voltage IS NOT NULL{mac_filter}", mac_params)
 
     total = (await total_cur.fetchone())["cnt"]
     online = (await online_cur.fetchone())["cnt"]
@@ -1193,9 +1482,23 @@ async def get_device_stats() -> dict:
 # ============================================================
 
 async def add_device_event(mac: str, event_type: str, payload: dict | None = None):
-    """记录一条设备事件"""
+    """记录一条设备事件（5秒内同MAC同事件类型去重，防止多MQTT连接重复写入）"""
     db = await get_db()
     payload_json = json.dumps(payload, ensure_ascii=False) if payload else None
+
+    # 去重：检查5秒内是否已有相同的 mac+event_type 记录
+    cur = await db.execute(
+        """SELECT id FROM device_events 
+           WHERE mac=? AND event_type=? 
+           AND created_at >= datetime('now', '-5 seconds')
+           LIMIT 1""",
+        (mac, event_type),
+    )
+    existing = await cur.fetchone()
+    if existing:
+        logger.debug(f"[去重] 跳过重复事件: {mac} {event_type}（5秒内已存在）")
+        return
+
     await db.execute(
         "INSERT INTO device_events (mac, event_type, payload) VALUES (?, ?, ?)",
         (mac, event_type, payload_json),
@@ -1208,9 +1511,12 @@ async def get_device_events(
     event_type: str | None = None,
     page: int = 1,
     page_size: int = 50,
+    allowed_macs: list[str] | None = None,
+    start_time: str = "",
+    end_time: str = "",
 ) -> tuple[list[dict], int]:
     """
-    分页查询设备事件
+    分页查询设备事件（支持权限过滤）
     Returns: (事件列表, 总数)
     """
     db = await get_db()
@@ -1223,6 +1529,21 @@ async def get_device_events(
     if event_type:
         where_parts.append("event_type = ?")
         params.append(event_type)
+
+    # 权限过滤：只查看有权限的MAC
+    if allowed_macs is not None:
+        if not allowed_macs:
+            return [], 0  # 无权限设备，直接返回空
+        placeholders = ",".join("?" * len(allowed_macs))
+        where_parts.append(f"mac IN ({placeholders})")
+        params.extend(allowed_macs)
+
+    if start_time:
+        where_parts.append("created_at >= ?")
+        params.append(start_time)
+    if end_time:
+        where_parts.append("created_at <= ?")
+        params.append(end_time)
 
     where_sql = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
@@ -1256,7 +1577,7 @@ async def cleanup_old_events(days: int = 30):
     """清理 N 天前的事件记录，返回清理数量"""
     db = await get_db()
     cur = await db.execute(
-        "DELETE FROM device_events WHERE created_at < datetime('now', 'localtime', ? || ' days')",
+        "DELETE FROM device_events WHERE created_at < datetime('now', ? || ' days')",
         (str(-days),),
     )
     deleted = cur.rowcount
@@ -1348,15 +1669,24 @@ async def get_task_list(
     page_size: int = 20,
     status_filter: str = "",
     user_id: int = 0,
+    allowed_user_ids: list[int] | None = None,
 ) -> tuple[list[dict], int]:
     """
     分页查询更新任务列表（含摘要统计）
     Returns: (items列表, total总数)
+    
+    allowed_user_ids: 如果提供，查询这些用户ID的任务（operator继承parent_user时使用）
     """
     db = await get_db()
 
-    where_parts = ["user_id = ?"]
-    params: list = [user_id]
+    if allowed_user_ids is not None:
+        placeholders = ",".join(["?"] * len(allowed_user_ids))
+        where_parts = [f"user_id IN ({placeholders})"]
+        params: list = list(allowed_user_ids)
+    else:
+        where_parts = ["user_id = ?"]
+        params: list = [user_id]
+
     if status_filter:
         where_parts.append("status = ?")
         params.append(status_filter)
@@ -1377,27 +1707,52 @@ async def get_task_list(
     return items, total
 
 
-async def get_task_detail(task_id: int, user_id: int = 0) -> dict | None:
-    """获取单个任务详情（含设备列表和状态统计）"""
+async def get_task_detail(task_id: int, user_id: int = 0, allowed_user_ids: list[int] | None = None) -> dict | None:
+    """获取单个任务详情（含设备列表和状态统计）
+    
+    allowed_user_ids: 如果提供，这些用户ID都有权查看该任务
+    """
     db = await get_db()
 
     # 主表信息（带用户权限检查）
-    cursor = await db.execute(
-        "SELECT * FROM update_tasks WHERE id=? AND user_id=?", 
-        (task_id, user_id)
-    )
+    if allowed_user_ids is not None:
+        placeholders = ",".join(["?"] * len(allowed_user_ids))
+        cursor = await db.execute(
+            f"SELECT * FROM update_tasks WHERE id=? AND user_id IN ({placeholders})", 
+            [task_id] + list(allowed_user_ids)
+        )
+    else:
+        cursor = await db.execute(
+            "SELECT * FROM update_tasks WHERE id=? AND user_id=?", 
+            (task_id, user_id)
+        )
     row = await cursor.fetchone()
     if not row:
         return None
 
     task = dict(row)
 
-    # 设备明细
+    # 设备明细（含子表行数据）
     dcur = await db.execute(
         "SELECT * FROM task_devices WHERE task_id=? ORDER BY created_at",
         (task_id,),
     )
     devices = [dict(d) for d in await dcur.fetchall()]
+
+    # 批量查询所有设备的子表行数据（避免 N+1）
+    if devices:
+        dev_ids = [str(d["id"]) for d in devices]
+        rcur = await db.execute(
+            f"SELECT * FROM task_device_rows WHERE task_device_id IN ({','.join(['?']*len(dev_ids))}) ORDER BY task_device_id, sort_order",
+            dev_ids,
+        )
+        rows_map: dict[int, list[dict]] = {}
+        for row in await rcur.fetchall():
+            rd = dict(row)
+            rows_map.setdefault(rd["task_device_id"], []).append(rd)
+        for d in devices:
+            d["rows"] = rows_map.get(d["id"], [])
+
     task["devices"] = devices
 
     # 状态统计
@@ -1414,10 +1769,9 @@ async def get_task_detail(task_id: int, user_id: int = 0) -> dict | None:
 async def update_task(task_id: int, **kwargs) -> bool:
     """更新任务字段（name/default_data/status/total_devices/success_count/failed_count/sent_at/completed_at）"""
     db = await get_db()
-    kwargs["updated_at"] = "datetime('now','localtime')"
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [task_id]
-    await db.execute(f"UPDATE update_tasks SET {sets} WHERE id=?", values)
+    await db.execute(f"UPDATE update_tasks SET {sets}, updated_at = datetime('now','localtime') WHERE id=?", values)
     await db.commit()
     return True
 
@@ -1531,14 +1885,39 @@ async def update_task_device_status(
     now_col = "datetime('now','localtime')"
 
     if status in ("sent",):
-        sql = f"""UPDATE task_devices SET update_status=?, sent_at=datetime('now','localtime')
+        # 设置 sent_at，同时清除旧的 finished_at（重新推送时恢复为"推送中"状态）
+        sql = f"""UPDATE task_devices SET update_status=?, sent_at=datetime('now','localtime'), finished_at=NULL
                   WHERE task_id=? AND mac=?"""
         await db.execute(sql, (status, task_id, mac))
+        # 同步更新子行 sent_at：只看 pending_reply_row_id（推送时锁定的行）
+        cur = await db.execute("SELECT id, pending_reply_row_id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac))
+        dev_row = await cur.fetchone()
+        if dev_row and dev_row["pending_reply_row_id"]:
+            await update_task_device_row_time(dev_row["id"], "sent", row_id=dev_row["pending_reply_row_id"])
     elif status in ("success", "failed"):
+        # ⭐ 先读取 pending_reply_row_id（更新前），回执成功时用于写入 selected_row_id
+        cur = await db.execute("SELECT id, pending_reply_row_id FROM task_devices WHERE task_id=? AND mac=?", (task_id, mac))
+        dev_row = await cur.fetchone()
+        push_row_id = dev_row["pending_reply_row_id"] if dev_row else None
+
         sql = f"""UPDATE task_devices SET update_status=?, error_msg=?,
-                  finished_at=datetime('now','localtime')
+                  finished_at=datetime('now','localtime'), pending_reply_row_id=NULL
                   WHERE task_id=? AND mac=?"""
         await db.execute(sql, (status, error_msg or "", task_id, mac))
+
+        if dev_row and push_row_id:
+            # 精确更新子行 finished_at
+            await update_task_device_row_time(dev_row["id"], "finished", row_id=push_row_id)
+
+            if status == "success":
+                # 回执成功：pending_reply_row_id → selected_row_id（主行显示切到刚成功的行）
+                await db.execute(
+                    "UPDATE task_devices SET selected_row_id=? WHERE id=?",
+                    (push_row_id, dev_row["id"]),
+                )
+                # ⭐ 同时把推送成功的子行数据合并写入主表 custom_data（作为"最后推送成功的快照"）
+                await _sync_display_data_to_main(db, dev_row["id"], push_row_id)
+            # 回执失败：只清空 pending_reply_row_id（已在 UPDATE 中处理），selected_row_id 不变
     else:
         await db.execute(
             "UPDATE task_devices SET update_status=? WHERE task_id=? AND mac=?",
@@ -1555,18 +1934,48 @@ async def update_device_status_by_mac(
     error_msg: str = "",
 ) -> int:
     """
-    根据 MAC 地址批量更新所有任务中该设备的状态
+    根据 MAC 地址批量更新所有任务中该设备的状态（display_reply 回调）
     只更新 update_status='sent' 的记录（避免重复标记已完成的设备）
+    使用 pending_reply_row_id 精确匹配回执到推送时指定的子行
     status: success / failed
     Returns: 更新的行数
     """
     db = await get_db()
+
+    # ⭐ 先获取每条 sent 记录的 pending_reply_row_id，用于精确匹配子行
+    cur_info = await db.execute(
+        "SELECT id, pending_reply_row_id FROM task_devices WHERE mac=? AND update_status='sent'",
+        (mac,),
+    )
+    sent_records = await cur_info.fetchall()
+
     await db.execute(
         """UPDATE task_devices SET update_status=?, error_msg=?,
-           finished_at=datetime('now','localtime')
+           finished_at=datetime('now','localtime'),
+           pending_reply_row_id=NULL
            WHERE mac=? AND update_status='sent'""",
         (status, error_msg or "", mac),
     )
+    await db.commit()
+
+    # ⭐ 精确更新子行 finished_at：使用推送时锁定的 pending_reply_row_id
+    #   成功 → selected_row_id = 推送行（主行显示切到刚成功的行）
+    #   失败 → selected_row_id 不变（保持之前成功的行，不跳到未成功行）
+    for rec in sent_records:
+        push_row_id = rec["pending_reply_row_id"]
+        if push_row_id:
+            await update_task_device_row_time(rec["id"], "finished", row_id=push_row_id)
+
+            if status == "success":
+                # 回执成功：pending_reply_row_id → selected_row_id
+                await db.execute(
+                    "UPDATE task_devices SET selected_row_id=? WHERE id=?",
+                    (push_row_id, rec["id"]),
+                )
+                # ⭐ 同时把推送成功的子行数据合并写入主表 custom_data
+                await _sync_display_data_to_main(db, rec["id"], push_row_id)
+            # 回执失败：selected_row_id 不变，保持之前成功的行
+
     await db.commit()
 
     # 查找受影响的 task_id 并刷新任务汇总
@@ -1582,6 +1991,43 @@ async def update_device_status_by_mac(
     cnt_cur = await db.execute("SELECT changes()")
     cnt_row = await cnt_cur.fetchone()
     return cnt_row[0] if cnt_row else 0
+
+
+async def _sync_display_data_to_main(db, dev_id: int, row_id: int):
+    """回执成功时，把推送成功的子行 custom_data 合并写入主表 custom_data（作为"最后推送成功的快照"）"""
+    row_cur = await db.execute(
+        "SELECT custom_data FROM task_device_rows WHERE id=?", (row_id,)
+    )
+    row_data_row = await row_cur.fetchone()
+    if not row_data_row or not row_data_row["custom_data"]:
+        return
+
+    try:
+        row_data = json.loads(row_data_row["custom_data"])
+    except Exception:
+        return
+
+    if not row_data:
+        return
+
+    # 读取当前主表 custom_data
+    main_cur = await db.execute(
+        "SELECT custom_data FROM task_devices WHERE id=?", (dev_id,)
+    )
+    main_row = await main_cur.fetchone()
+    main_data = {}
+    if main_row and main_row["custom_data"]:
+        try:
+            main_data = json.loads(main_row["custom_data"])
+        except Exception:
+            pass
+
+    # 子行数据覆盖主表
+    main_data.update(row_data)
+    await db.execute(
+        "UPDATE task_devices SET custom_data=? WHERE id=?",
+        (json.dumps(main_data, ensure_ascii=False), dev_id),
+    )
 
 
 async def _refresh_task_summary(db, task_id: int):
@@ -1696,3 +2142,164 @@ async def batch_update_device_statuses(
         "failed_count": failed_cnt,
         "pending_count": pending_cnt,
     }
+
+
+# ============================================================
+# TaskDeviceRows 表操作（设备多行数据子表）
+# ============================================================
+
+async def add_task_device_row(
+    task_device_id: int,
+    custom_data: dict,
+    sort_order: int | None = None,
+) -> int:
+    """
+    为某台任务设备添加一条子表数据行
+    如果 sort_order 为 None，自动取当前最大值+1
+    返回新行的 id
+    """
+    db = await get_db()
+    if sort_order is None:
+        cur = await db.execute(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM task_device_rows WHERE task_device_id=?",
+            (task_device_id,),
+        )
+        sort_order = (await cur.fetchone())[0]
+
+    custom_json = json.dumps(custom_data, ensure_ascii=False)
+    cur = await db.execute(
+        """INSERT INTO task_device_rows (task_device_id, sort_order, custom_data, created_at)
+           VALUES (?, ?, ?, datetime('now','localtime'))""",
+        (task_device_id, sort_order, custom_json),
+    )
+    await db.commit()
+    return cur.lastrowid
+
+
+async def get_task_device_rows(task_device_id: int) -> list[dict]:
+    """获取某台设备的所有子表行（按 sort_order 排序）"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM task_device_rows WHERE task_device_id=? ORDER BY sort_order",
+        (task_device_id,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_first_task_device_row(task_device_id: int) -> dict | None:
+    """获取某台设备排序第一的子表行（sort_order 最小），用于推送时合并数据"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM task_device_rows WHERE task_device_id=? ORDER BY sort_order ASC LIMIT 1",
+        (task_device_id,),
+    )
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def update_task_device_row(row_id: int, custom_data: dict) -> bool:
+    """更新单条子表行的自定义数据"""
+    db = await get_db()
+    custom_json = json.dumps(custom_data, ensure_ascii=False)
+    cur = await db.execute(
+        "UPDATE task_device_rows SET custom_data=? WHERE id=?",
+        (custom_json, row_id),
+    )
+    await db.commit()
+    return cur.rowcount > 0
+
+
+async def update_task_device_row_time(task_device_id: int, field: str, row_id: int | None = None):
+    """
+    更新子表行的时间戳（sent_at 或 finished_at）
+    如果指定 row_id 则只更新该行，否则更新该设备 selected_row_id 对应的行
+    """
+    db = await get_db()
+
+    if row_id is None:
+        # 从 task_devices 获取 selected_row_id
+        cur = await db.execute(
+            "SELECT selected_row_id FROM task_devices WHERE id=?",
+            (task_device_id,),
+        )
+        dev = await cur.fetchone()
+        if not dev or not dev["selected_row_id"]:
+            # 没有选中的行，更新第一行
+            first_row = await get_first_task_device_row(task_device_id)
+            if not first_row:
+                return
+            row_id = first_row["id"]
+        else:
+            row_id = dev["selected_row_id"]
+
+    if field == "sent":
+        # 设置 sent_at 并清除旧的 finished_at（重新推送时恢复为"推送中"状态）
+        await db.execute(
+            "UPDATE task_device_rows SET sent_at=datetime('now','localtime'), finished_at=NULL WHERE id=?",
+            (row_id,),
+        )
+    elif field == "finished":
+        await db.execute(
+            "UPDATE task_device_rows SET finished_at=datetime('now','localtime') WHERE id=?",
+            (row_id,),
+        )
+    await db.commit()
+
+
+async def delete_task_device_row(row_id: int) -> bool:
+    """删除单条子表行"""
+    db = await get_db()
+    cur = await db.execute("DELETE FROM task_device_rows WHERE id=?", (row_id,))
+    await db.commit()
+    return cur.rowcount > 0
+
+
+async def delete_all_task_device_rows(task_device_id: int) -> int:
+    """清空某台设备的所有子表行，返回删除数量"""
+    db = await get_db()
+    cur = await db.execute(
+        "DELETE FROM task_device_rows WHERE task_device_id=?", (task_device_id,)
+    )
+    await db.commit()
+    deleted = cur.rowcount
+    # 重新编排剩余行的 sort_order（如果有并发插入需注意，但此处简单处理）
+    if deleted > 0:
+        rows = await get_task_device_rows(task_device_id)
+        for idx, r in enumerate(rows):
+            await db.execute(
+                "UPDATE task_device_rows SET sort_order=? WHERE id=?", (idx, r["id"])
+            )
+        await db.commit()
+    return deleted
+
+
+async def batch_add_task_device_rows(
+    task_device_id: int,
+    data_list: list[dict],
+) -> int:
+    """
+    批量添加子表行数据
+    data_list: [custom_data_dict, ...]
+    从当前最大 sort_order 开始递增
+    返回新增数量
+    """
+    db = await get_db()
+    cur = await db.execute(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM task_device_rows WHERE task_device_id=?",
+        (task_device_id,),
+    )
+    base_sort = (await cur.fetchone())[0]
+
+    added = 0
+    for idx, data in enumerate(data_list):
+        custom_json = json.dumps(data, ensure_ascii=False)
+        await db.execute(
+            """INSERT INTO task_device_rows (task_device_id, sort_order, custom_data, created_at)
+               VALUES (?, ?, ?, datetime('now','localtime'))""",
+            (task_device_id, base_sort + idx, custom_json),
+        )
+        added += 1
+
+    await db.commit()
+    return added

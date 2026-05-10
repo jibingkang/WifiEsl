@@ -137,17 +137,11 @@ async def update_user_wifi_config(
     if not update_fields:
         return False
     
-    # 添加更新时间
-
-    update_fields['updated_at'] = "datetime('now','localtime')"
-    
-    # 构建更新语句
-
     sets = ", ".join(f"{k} = ?" for k in update_fields)
     values = list(update_fields.values()) + [user_id]
     
     cursor = await db.execute(
-        f"UPDATE users SET {sets} WHERE id = ?",
+        f"UPDATE users SET {sets}, updated_at = datetime('now','localtime') WHERE id = ?",
         values
     )
     
@@ -306,6 +300,27 @@ async def list_all_users() -> List[Dict[str, Any]]:
     logger.info(f"共获取 {len(users)} 个用户")
     
     return users
+
+async def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    根据用户ID获取用户基本信息（用于配置继承查询）
+    """
+    db = await get_db()
+    
+    cursor = await db.execute(
+        """SELECT id, username, role, wifi_username, wifi_password, wifi_apikey, wifi_base_url,
+           wifi_mqtt_broker, mqtt_username, mqtt_password, parent_user_id, status
+        FROM users WHERE id = ?""",
+        (user_id,)
+    )
+    
+    row = await cursor.fetchone()
+    
+    if not row:
+        return None
+    
+    return dict(row)
+
 
 async def get_user_with_details(user_id: int) -> Optional[Dict[str, Any]]:
     """

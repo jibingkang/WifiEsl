@@ -24,6 +24,7 @@ export interface DeviceListParams {
   status?: string
   search?: string
   group_id?: string
+  all?: boolean
 }
 
 export const deviceApi = {

@@ -1,0 +1,1 @@
+import{U as t}from"./index-C7ZoA_N2.js";function r(){return t.get("/templates")}function n(e){return t.post("/templates",e)}function s(e,a){return t.put(`/templates/${e}`,a)}function u(e){return t.delete(`/templates/${e}`)}export{n as c,u as d,r as g,s as u};
