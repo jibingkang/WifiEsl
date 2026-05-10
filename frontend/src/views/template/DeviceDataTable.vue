@@ -124,6 +124,7 @@
                 <input
                   type="text"
                   class="cell-input"
+                  :disabled="isOperator"
                   :value="getEffective(dev.mac, field.key)"
                   :placeholder="defaultPlaceholder(field)"
                   @focus="onFocus(dev.mac, field.key)"
@@ -131,7 +132,7 @@
                   @keydown.enter="($event.target as HTMLInputElement).blur()"
                 />
                 <button
-                  v-if="isOverridden(dev.mac, field.key)"
+                  v-if="isOverridden(dev.mac, field.key) && !isOperator"
                   class="cell-clear"
                   title="恢复默认值"
                   @click.stop="clearField(dev.mac, field.key)"
@@ -144,10 +145,10 @@
                   <button class="btn-push" title="推送到该设备" :class="{ disabled: dev.status !== 'online' }" @click="$emit('pushDevice', dev)">
                     推送
                   </button>
-                  <button class="btn-add-row-main" title="为该设备新增一条数据行" @click="handleAddRow(dev.mac, dev.taskId)">
+                  <button v-if="!isOperator" class="btn-add-row-main" title="为该设备新增一条数据行" @click="handleAddRow(dev.mac, dev.taskId)">
                     <Plus :size="12" /> 新增行
                   </button>
-                  <button class="btn-remove" title="从更新列表移除该设备" @click="$emit('removeBinding', dev)">
+                  <button v-if="!isOperator" class="btn-remove" title="从更新列表移除该设备" @click="$emit('removeBinding', dev)">
                     移除
                   </button>
                 </div>
@@ -156,8 +157,8 @@
 
             <!-- 子表行（折叠展示） -->
             <template v-if="expandedMacs.includes(dev.mac)">
-              <!-- 子行筛选栏（子行数 > 3 时显示） -->
-              <tr v-if="(dev.rows || []).length > 3" class="sub-row sub-row-filter">
+              <!-- 子行筛选栏（有子行时显示） -->
+              <tr v-if="(dev.rows || []).length > 0" class="sub-row sub-row-filter">
                 <td class="col-check sub-check" />
                 <td class="col-index sub-index-cell" />
                 <td class="col-name sub-name" :colspan="4 + templateInfo.fields.length + 1">
@@ -232,6 +233,7 @@
                   <input
                     type="text"
                     class="cell-input sub-input"
+                    :disabled="isOperator"
                     :value="getRowEffective(row, field.key)"
                     :placeholder="defaultPlaceholder(field)"
                     @focus="onRowFocus(row.id, field.key, getRowEffective(row, field.key))"
@@ -239,7 +241,7 @@
                     @keydown.enter="($event.target as HTMLInputElement).blur()"
                   />
                   <button
-                    v-if="isRowOverridden(row.id, field.key)"
+                    v-if="isRowOverridden(row.id, field.key) && !isOperator"
                     class="cell-clear"
                     title="恢复默认值"
                     @click.stop="clearRowField(row.id, dev.mac, field.key)"
@@ -254,12 +256,12 @@
                       title="仅推送此行数据到设备"
                       @click="$emit('pushRow', dev, row)"
                     >推送此行</button>
-                    <button class="btn-remove-sub" title="删除此数据行" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
+                    <button v-if="!isOperator" class="btn-remove-sub" title="删除此数据行" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
                   </div>
                 </td>
               </tr>
               <!-- 新增子行按钮行 -->
-              <tr class="sub-row sub-row-add">
+              <tr v-if="!isOperator" class="sub-row sub-row-add">
                 <td class="col-check sub-check" />
                 <td class="col-index sub-index-cell" />
                 <td class="col-name sub-name" :colspan="4 + templateInfo.fields.length + 1">
@@ -334,6 +336,7 @@
               <input
                 type="text"
                 class="cell-input card-input"
+                :disabled="isOperator"
                 :value="getEffective(dev.mac, field.key)"
                 :placeholder="defaultPlaceholder(field)"
                 @focus="onFocus(dev.mac, field.key)"
@@ -341,7 +344,7 @@
                 @keydown.enter="($event.target as HTMLInputElement).blur()"
               />
               <button
-                v-if="isOverridden(dev.mac, field.key)"
+                v-if="isOverridden(dev.mac, field.key) && !isOperator"
                 class="cell-clear card-clear"
                 title="恢复默认值"
                 @click.stop="clearField(dev.mac, field.key)"
@@ -380,7 +383,7 @@
               />
               <span class="sub-tag">#{{ row._origIndex + 1 }}</span>
               <span v-if="row._origIndex === 0" class="sub-row-first-tag-mob">主行</span>
-              <button class="btn-remove-sub" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
+              <button v-if="!isOperator" class="btn-remove-sub" @click="handleDeleteRow(row.id, dev.mac, dev.taskId)">删除</button>
             </div>
             <div
               v-for="field in templateInfo.fields"
@@ -393,6 +396,7 @@
                 <input
                   type="text"
                   class="cell-input card-input"
+                  :disabled="isOperator"
                   :value="getRowEffective(row, field.key)"
                   :placeholder="defaultPlaceholder(field)"
                   @focus="onRowFocus(row.id, field.key, getRowEffective(row, field.key))"
@@ -400,7 +404,7 @@
                   @keydown.enter="($event.target as HTMLInputElement).blur()"
                 />
                 <button
-                  v-if="isRowOverridden(row.id, field.key)"
+                  v-if="isRowOverridden(row.id, field.key) && !isOperator"
                   class="cell-clear card-clear"
                   title="恢复默认值"
                   @click.stop="clearRowField(row.id, dev.mac, field.key)"
@@ -409,7 +413,7 @@
             </div>
           </div>
           <!-- 新增子行按钮 -->
-          <button class="card-add-row-btn" @click="handleAddRow(dev.mac, dev.taskId)">
+          <button v-if="!isOperator" class="card-add-row-btn" @click="handleAddRow(dev.mac, dev.taskId)">
             <Plus :size="14" />
             新增数据行
           </button>
@@ -422,10 +426,10 @@
             :class="{ disabled: dev.status !== 'online' }"
             @click="$emit('pushDevice', dev)"
           >推送</button>
-          <button class="btn-add-row-mob" @click="handleAddRow(dev.mac, dev.taskId)">
+          <button v-if="!isOperator" class="btn-add-row-mob" @click="handleAddRow(dev.mac, dev.taskId)">
             <Plus :size="14" /> 新增行
           </button>
-          <button class="btn-remove" @click="$emit('removeBinding', dev)">移除</button>
+          <button v-if="!isOperator" class="btn-remove" @click="$emit('removeBinding', dev)">移除</button>
         </div>
       </div>
     </div>
@@ -463,9 +467,11 @@ const props = withDefaults(defineProps<{
   customOverrides: Record<string, Record<string, any>>
   checkedMacs: string[]
   selectedRows?: Record<string, number> // mac -> row_id
+  isOperator?: boolean
 }>(), {
   checkedMacs: () => [],
   selectedRows: () => ({}),
+  isOperator: false,
 })
 
 const emit = defineEmits<{

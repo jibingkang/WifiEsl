@@ -218,6 +218,7 @@
           :devices="filteredDeviceTableData"
           :default-data="defaultData"
           :custom-overrides="customOverrides"
+          :is-operator="isOperator"
           @update:custom-overrides="customOverrides = $event"
           @remove-device="removeMac"
           @push-device="handlePushTableDevice"

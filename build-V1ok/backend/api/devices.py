@@ -42,7 +42,7 @@ async def _get_user_wifi_token(request: Request) -> str | None:
 
 def _extract_timestamp(item: dict) -> tuple[str, str]:
     """从原始设备数据中提取创建/更新时间，返回 (created_at, updated_at)"""
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     created = (
         item.get("created_at") or item.get("createdAt")
         or item.get("created") or item.get("registerTime") or now
@@ -97,13 +97,15 @@ def _normalize_single_device(raw_data: dict) -> dict | None:
 async def get_device_list(
     request: Request,
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     search: str = Query(default=""),
     status: str = Query(default=None),
+    all: bool = Query(default=False, description="返回全量设备，忽略分页"),
 ):
     """获取设备列表"""
     logger.info(f"[API /devices] ========== 获取设备列表请求开始 ==========")
     logger.info(f"[API /devices] 请求参数: page={page}, page_size={page_size}, search={search}, status={status}")
+    logger.info(f"[API /devices] 全部query参数: {dict(request.query_params)}")
     logger.debug(f"[API /devices] 请求头: {dict(request.headers)}")
     
     # 从请求头提取Authorization
@@ -140,24 +142,16 @@ async def get_device_list(
     logger.info(f"[API /devices] ✅ WIFI系统token: {api_key[:8]}... (长度: {len(api_key)})")
     
     try:
-        query_parts = []
-        if status:
-            query_parts.append(status)
-        if search:
-            query_parts.append(search)
-        
-        query_str = ",".join(query_parts)
-        logger.info(f"[API /devices] 构造的查询参数: {query_str}")
+        # 不传 query 给 WIFI，拿全量数据后在本地做模糊筛选
+        logger.info(f"[API /devices] 构造的查询参数: search={search}, status={status}")
+        logger.info(f"[API /devices] 开始调用WIFI系统获取设备列表(全量)...")
 
-        logger.info(f"[API /devices] 开始调用WIFI系统获取设备列表...")
-        # 需要重新导入wifi_proxy，因为现在的连接管理是独立的
         from services.wifi_client import wifi_proxy
         raw_data = await wifi_proxy.get_devices(
                 api_key=api_key,
                 base_url=base_url,
-                page=page,
-                page_size=page_size,
-                query=query_str,
+                page=1,
+                page_size=20,  # WIFI标准分页大小
         )
 
         # DEBUG: 打印原始数据用于调试
@@ -175,30 +169,64 @@ async def get_device_list(
         # inner_data 可能是 { items:[], total:N } 或直接是列表
         if isinstance(inner_data, dict):
             items = inner_data.get("items", [])
-            total = inner_data.get("total", len(items))
+            wf_total = inner_data.get("total", len(items))
         elif isinstance(inner_data, list):
             items = inner_data
-            total = len(inner_data)
+            wf_total = len(inner_data)
         else:
             items = []
-            total = 0
+            wf_total = 0
+
+        # 如果WIFI系统返回的total>当前items数量，翻页获取全部数据
+        if isinstance(items, list) and wf_total > len(items) and isinstance(inner_data, dict):
+            import math
+            remaining = wf_total - len(items)
+            logger.info(f"[API /devices] WIFI系统返回 total={wf_total}, items={len(items)}, 还需获取 {remaining} 条")
+            for wp in range(2, math.ceil(wf_total / len(items)) + 1):
+                try:
+                    next_raw = await wifi_proxy.get_devices(
+                        api_key=api_key,
+                        base_url=base_url,
+                        page=wp,
+                        page_size=20,
+                    )
+                    n_inner = next_raw.get("data", next_raw) if isinstance(next_raw, dict) else next_raw
+                    n_items = n_inner.get("items", []) if isinstance(n_inner, dict) else (n_inner if isinstance(n_inner, list) else [])
+                    items.extend(n_items)
+                    logger.info(f"[API /devices]  第{wp}页获取 {len(n_items)} 条，累计 {len(items)} 条")
+                except Exception as e:
+                    logger.warning(f"[API /devices] 获取第{wp}页失败: {e}")
+                    break
+        total = wf_total
 
         # 统一设备数据格式 (真实系统返回小写字段)
         normalized_items = []
+        status_samples = []  # 调试：收集status值
         for item in (items if isinstance(items, list) else []):
             if isinstance(item, dict):
+                raw_status = item.get("status")
+                if len(status_samples) < 5:
+                    status_samples.append(f"{item.get('mac','?')}: status={raw_status}({type(raw_status).__name__})")
                 # 提取嵌套的子对象字段
                 station = item.get("station") or {}
                 screentype = item.get("screentype") or item.get("screen_type") or {}
                 devtype = item.get("devtype") or item.get("device_type") or {}
                 created_at, updated_at = _extract_timestamp(item)
                 
+                # 归一化 is_online：WIFI可能返回 bool/int/str
+                if raw_status is True or raw_status == 1 or (isinstance(raw_status, str) and raw_status.lower() in ("online", "true", "1")):
+                    is_online = True
+                elif raw_status is False or raw_status == 0 or (isinstance(raw_status, str) and raw_status.lower() in ("offline", "false", "0")):
+                    is_online = False
+                else:
+                    is_online = False  # 默认离线
+                
                 normalized_items.append({
                     "id": item.get("_id", item.get("id", "")),
                     "mac": item.get("mac", ""),
                     "ip": item.get("ip", ""),
                     "name": item.get("alias", item.get("name")),
-                    "is_online": item.get("status", False),
+                    "is_online": is_online,
                     "voltage": item.get("voltage"),
                     "rssi": station.get("rssi"),
                     "usb_state": item.get("usbState", item.get("usb_state")),
@@ -211,6 +239,37 @@ async def get_device_list(
                     "updated_at": updated_at,
                 })
 
+        # 调试日志：打印status采样值，检查在线/离线状态来源
+        if status_samples:
+            logger.info(f"[API /devices] status采样: {status_samples}")
+
+        # 本地过滤：模糊搜索（MAC + 名称）
+        if search:
+            kw = search.lower()
+            normalized_items = [
+                d for d in normalized_items
+                if kw in d.get("mac", "").lower() or kw in d.get("name", "").lower()
+            ]
+            logger.info(f"[API /devices] 搜索过滤后: {len(normalized_items)} 台设备 (search={search})")
+
+        # 本地过滤：在线状态筛选
+        if status:
+            if status == "online":
+                normalized_items = [d for d in normalized_items if d.get("is_online")]
+            elif status == "offline":
+                normalized_items = [d for d in normalized_items if not d.get("is_online")]
+            logger.info(f"[API /devices] 状态过滤后: {len(normalized_items)} 台设备 (status={status})")
+
+        total = len(normalized_items)
+
+        # 分页切片（all=true 时跳过切片，返回全量）
+        if all:
+            paged_items = normalized_items
+            page_size = total  # 实际返回条数
+        else:
+            start = (page - 1) * page_size
+            paged_items = normalized_items[start:start + page_size]
+
         return {
             "code": 20000,
             "message": "",
@@ -218,7 +277,7 @@ async def get_device_list(
                 "total": total,
                 "page": page,
                 "pageSize": page_size,
-                "items": normalized_items,
+                "items": paged_items,
             },
         }
     except Exception as e:
@@ -273,6 +332,7 @@ async def create_device(request: Request, body: dict):
 
 @router.get("/events")
 async def get_device_events(
+    request: Request,
     mac: str = Query(default=None, description="按MAC过滤"),
     event_type: str = Query(default=None, description="事件类型: online/offline/button/battery_reply等"),
     page: int = Query(default=1, ge=1),
@@ -280,14 +340,27 @@ async def get_device_events(
 ):
     """
     查询本地存储的设备事件记录 (来自MQTT消息持久化)
-    
-    示例:
-      GET /api/v1/devices/events              → 最近50条所有事件
-      GET /api/v1/devices/events?mac=D4:3D:39 → 指定设备的最近事件
-      GET /api/v1/devices/events?event_type=online → 所有上线事件
-      GET /api/v1/devices/events?mac=D4:3D:39&event_type=button&page=1&page_size=20
+    按家族树权限过滤：user角色只能看到树内成员关联设备的事件
     """
     from services.db_service import get_device_events as _get_events
+    from services.auth_service import get_current_user_id_from_token as _get_uid_tok
+    from services.db_service import get_db as _get_dev_db
+
+    # 获取当前用户身份
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = _get_uid_tok(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_dev_macs
+            from services.db_service_extended import get_user_by_id as _get_dev_user
+            uinfo = await _get_dev_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _d_db = await _get_dev_db()
+            allowed_macs = await _build_dev_macs(_d_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备事件权限失败，回退到无过滤: {e}")
 
     try:
         items, total = await _get_events(
@@ -295,6 +368,7 @@ async def get_device_events(
             event_type=event_type,
             page=page,
             page_size=page_size,
+            allowed_macs=allowed_macs,
         )
         return {
             "code": 20000,
@@ -312,19 +386,34 @@ async def get_device_events(
 
 
 @router.get("/stats")
-async def get_device_stats():
+async def get_device_stats(request: Request):
     """
-    设备统计摘要 - 从本地DB获取实时统计
-    
+    设备统计摘要 - 从本地DB获取实时统计（按家族树权限过滤）
     返回: { total, online, offline, low_battery, online_rate }
     """
-    from services.db_service import get_device_stats as _get_stats, get_all_devices as _get_all
+    from services.db_service import get_device_stats as _get_stats, get_all_devices as _get_all, get_db as _get_stat_db
+
+    # 获取当前用户身份和权限范围
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = get_current_user_id_from_token(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_stat_macs
+            from services.db_service_extended import get_user_by_id as _get_stat_user
+            uinfo = await _get_stat_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _s_db = await _get_stat_db()
+            allowed_macs = await _build_stat_macs(_s_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备统计权限失败: {e}")
 
     try:
-        stats = await _get_stats()
-        
-        # 额外返回最近上线的10台设备
-        recent_online = await _get_all_devices(online_only=True)
+        stats = await _get_stats(allowed_macs=allowed_macs)
+
+        # 额外返回最近上线的10台设备（也受权限过滤）
+        recent_online = await _get_all(online_only=True, allowed_macs=allowed_macs)
         stats["recent_online"] = recent_online[:10]
 
         return {
@@ -334,6 +423,109 @@ async def get_device_stats():
         }
     except Exception as e:
         logger.error(f"获取设备统计失败: {e}")
+        return {"code": 50000, "message": f"查询失败: {e}", "data": None}
+
+
+@router.get("/alerts")
+async def get_device_alerts(request: Request):
+    """
+    登录后即时告警摘要 - 返回需要关注的异常设备（按家族树权限过滤）
+    返回: {
+      offline_count, offline_devices(最近10台),
+      low_battery_count, low_battery_devices(最近10台)
+    }
+    """
+    from services.db_service import get_db as _get_alert_db
+
+    # 获取当前用户身份和权限范围
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else auth_header
+    uid = get_current_user_id_from_token(token) if token else 0
+    allowed_macs = None
+    if uid:
+        try:
+            from api.logs import _build_allowed_macs as _build_alert_macs
+            from services.db_service_extended import get_user_by_id as _get_alert_user
+            uinfo = await _get_alert_user(uid)
+            role = uinfo.get("role", "user") if uinfo else "user"
+            _a_db = await _get_alert_db()
+            allowed_macs = await _build_alert_macs(_a_db, uid, role)
+        except Exception as e:
+            logger.warning(f"获取设备告警权限失败: {e}")
+
+    try:
+        db = await _get_alert_db()
+
+        # 构建MAC过滤条件
+        mac_filter = ""
+        mac_params: list = []
+        if allowed_macs is not None:
+            placeholders = ",".join("?" * len(allowed_macs))
+            mac_filter = f" AND mac IN ({placeholders})"
+            mac_params = list(allowed_macs)
+
+        # 离线/低电量判断：对每个MAC取最新 last_seen_at 的记录，以其 is_online 为准
+        # 使用 ROW_NUMBER() 窗口函数，按 MAC 分组、时间倒序，rn=1 即最新记录
+        inner_filter = mac_filter  # mac_filter 已带 " AND mac IN (...)" 前缀
+
+        # 离线设备数
+        offline_cur = await db.execute(
+            f"SELECT COUNT(*) as cnt FROM ("
+            f"  SELECT mac, is_online,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 0",
+            mac_params,
+        )
+        offline_count = (await offline_cur.fetchone())["cnt"]
+
+        # 离线设备列表（最近10台）
+        offline_rows_cur = await db.execute(
+            f"SELECT mac, name, is_online, voltage, last_seen_at FROM ("
+            f"  SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 0 "
+            f"ORDER BY last_seen_at DESC LIMIT 10",
+            mac_params,
+        )
+        offline_devices = [dict(r) for r in await offline_rows_cur.fetchall()]
+
+        # 低电量设备数（最新记录在线且电压 < 3.50V）
+        low_battery_cur = await db.execute(
+            f"SELECT COUNT(*) as cnt FROM ("
+            f"  SELECT mac, is_online, voltage,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 1 AND voltage < 350 AND voltage IS NOT NULL",
+            mac_params,
+        )
+        low_battery_count = (await low_battery_cur.fetchone())["cnt"]
+
+        # 低电量设备列表（电压最低的10台）
+        low_battery_rows_cur = await db.execute(
+            f"SELECT mac, name, is_online, voltage, last_seen_at FROM ("
+            f"  SELECT mac, COALESCE(NULLIF(name, ''), mac) AS name, is_online, voltage, last_seen_at,"
+            f"  ROW_NUMBER() OVER (PARTITION BY mac ORDER BY last_seen_at DESC) as rn "
+            f"  FROM devices WHERE 1=1{inner_filter}"
+            f") sub WHERE rn = 1 AND is_online = 1 AND voltage < 350 AND voltage IS NOT NULL "
+            f"ORDER BY voltage ASC LIMIT 10",
+            mac_params,
+        )
+        low_battery_devices = [dict(r) for r in await low_battery_rows_cur.fetchall()]
+
+        return {
+            "code": 20000,
+            "message": "",
+            "data": {
+                "offline_count": offline_count,
+                "offline_devices": offline_devices,
+                "low_battery_count": low_battery_count,
+                "low_battery_devices": low_battery_devices,
+            },
+        }
+    except Exception as e:
+        logger.error(f"获取设备告警失败: {e}")
         return {"code": 50000, "message": f"查询失败: {e}", "data": None}
 
 
@@ -385,11 +577,12 @@ async def get_template_devices(tid: str = Query(..., description="模板ID")):
 
 
 @router.delete("/template-devices/{tid}/{mac}")
-async def remove_template_device_binding(tid: str, mac: str):
+async def remove_template_device_binding(request: Request, tid: str, mac: str):
     """
     移除单条模板-设备绑定
     仅从当前模板的更新列表中移除该设备，不删除设备本身
     """
+    await _device_reject_operator(request)
     from services.db_service import remove_template_binding
 
     try:

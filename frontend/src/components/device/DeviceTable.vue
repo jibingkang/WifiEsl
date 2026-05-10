@@ -99,7 +99,7 @@
                   <el-dropdown-item command="battery">查询电量</el-dropdown-item>
                   <el-dropdown-item command="led">LED灯</el-dropdown-item>
                   <el-dropdown-item command="template" divided>应用模板</el-dropdown-item>
-                  <el-dropdown-item command="delete" style="color: #ef4444;">删除</el-dropdown-item>
+                  <el-dropdown-item v-if="!isOperator" command="delete" style="color: #ef4444;">删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -137,6 +137,7 @@ const props = defineProps<{
   selectedMacs?: string[]
   currentPage?: number
   pageSize?: number
+  isOperator?: boolean
 }>()
 
 const emit = defineEmits<{

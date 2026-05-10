@@ -154,8 +154,9 @@ async def update_device_row(request: Request, row_id: int, body: TaskDeviceRowUp
 
 
 @router.delete("/device-rows/{row_id}")
-async def delete_device_row(row_id: int):
+async def delete_device_row(request: Request, row_id: int):
     """删除单条子表行"""
+    await _reject_operator(request)
     ok = await delete_task_device_row(row_id)
     if not ok:
         raise HTTPException(status_code=404, detail="子表行不存在")
@@ -212,6 +213,16 @@ async def _get_allowed_user_ids(request: Request) -> tuple[int, list[int] | None
             return user_id, [user_id, parent_id]
     
     return user_id, [user_id]
+
+
+async def _reject_operator(request: Request):
+    """如果当前用户是 operator，拒绝操作（operator 只能推送，不能增删改）"""
+    from services.db_service_extended import get_user_by_id
+    user_id = await _get_current_user_id(request)
+    user_info = await get_user_by_id(user_id)
+    role = user_info.get("role", "user") if user_info else "user"
+    if role == "operator":
+        raise HTTPException(status_code=403, detail="操作员无此权限")
 
 
 @router.post("")
@@ -290,6 +301,7 @@ async def update_task_info(request: Request, task_id: int, body: TaskUpdate):
 @router.delete("/{task_id}")
 async def delete_one_task(request: Request, task_id: int):
     """删除任务（级联删除所有设备明细）"""
+    await _reject_operator(request)
     user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
     detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
@@ -322,6 +334,7 @@ async def add_devices_to_task(request: Request, task_id: int, body: DevicesAdd):
 @router.delete("/{task_id}/devices/{mac}")
 async def remove_device_from_task(request: Request, task_id: int, mac: str):
     """从任务中移除单台设备"""
+    await _reject_operator(request)
     user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 先验证任务存在且有权限
     detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)
@@ -781,6 +794,7 @@ async def batch_add_device_rows(
 @router.delete("/{task_id}/devices/{mac}/rows")
 async def clear_device_rows(request: Request, task_id: int, mac: str):
     """清空某设备的所有子表行数据"""
+    await _reject_operator(request)
     user_id, allowed_ids = await _get_allowed_user_ids(request)
     # 验证任务权限
     detail = await get_task_detail(task_id, user_id=user_id, allowed_user_ids=allowed_ids)

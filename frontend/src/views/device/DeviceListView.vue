@@ -22,7 +22,7 @@
           <el-button size="small" :icon="Document" type="primary" plain @click="handleBatchTemplate">
             批量数据更新
           </el-button>
-          <el-button size="small" :icon="Delete" type="danger" plain @click="handleBatchDelete">
+          <el-button v-if="!isOperator" size="small" :icon="Delete" type="danger" plain @click="handleBatchDelete">
             批量删除
           </el-button>
           <el-button size="small" text @click="clearSelection">取消选择</el-button>
@@ -38,6 +38,7 @@
       :total="deviceStore.total ?? 0"
       :current-page="deviceStore.currentPage"
       :page-size="deviceStore.pageSize"
+      :is-operator="isOperator"
       v-model:selected-macs="selectedMacs"
       @selection-change="onSelectionChange"
       @control="handleControl"
@@ -98,11 +99,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Delete } from '@element-plus/icons-vue'
 import { useDeviceStore } from '@/stores/device'
+import { useAuthStore } from '@/stores/auth'
 import { deviceApi } from '@/api/device'
 import { useResponsive } from '@/composables/useResponsive'
 import DeviceFilterBar from '@/components/device/DeviceFilterBar.vue'
@@ -114,7 +116,9 @@ import DeviceEditDialog from '@/components/device/DeviceEditDialog.vue'
 
 const router = useRouter()
 const deviceStore = useDeviceStore()
+const authStore = useAuthStore()
 const { isMobile } = useResponsive()
+const isOperator = computed(() => authStore.getUserRole() === 'operator')
 
 // 筛选条件 (用const保持响应式，通过Object.assign更新)
 const filters = reactive({
