@@ -153177,3 +153177,229 @@ httpx.ReadTimeout
 2026-05-10 14:57:00,130 - services.ws_manager - INFO - [WS] 断开: ws-3, 总数: 2
 2026-05-10 14:57:00,131 - services.ws_manager - INFO - [WS] 断开: ws-1, 总数: 1
 2026-05-10 14:57:00,131 - services.ws_manager - INFO - [WS] 断开: ws-2, 总数: 0
+2026-05-10 15:04:46,401 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 收到 [offline]: {"mac": "D4:3D:39:83:E6:A8", "msgId": "1778396696667"}
+2026-05-10 15:04:46,404 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E6:A8, action_type=offline
+2026-05-10 15:04:46,404 - services.multi_user_mqtt_manager - ERROR - [MQTT消息] 用户 8 [offline] WebSocket广播失败: 用户 8 没有活跃的WebSocket连接 (组名=user_8, 现有组=['all', 'user_8'])
+2026-05-10 15:04:46,702 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E6:A8, action_type=offline
+2026-05-10 15:04:47,316 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 收到 [online]: {"mac": "D4:3D:39:83:E6:A8", "msgId": "1778396697572"}
+2026-05-10 15:04:47,316 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E6:A8, action_type=online
+2026-05-10 15:04:47,316 - services.multi_user_mqtt_manager - ERROR - [MQTT消息] 用户 8 [online] WebSocket广播失败: 用户 8 没有活跃的WebSocket连接 (组名=user_8, 现有组=['all', 'user_8'])
+2026-05-10 15:04:47,317 - services.wifi_client - INFO - [电量查询] 开始调用WIFI系统接口
+2026-05-10 15:04:47,318 - services.wifi_client - INFO - [电量查询] 目标地址: http://192.144.234.153:4000/user/api/mqtt/publish/D4:3D:39:83:E6:A8/battery
+2026-05-10 15:04:47,318 - services.wifi_client - INFO - [电量查询] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:04:47,318 - services.wifi_client - INFO - [电量查询] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:04:47,319 - services.wifi_client - INFO - [MAC查询设备] 开始调用WIFI系统接口
+2026-05-10 15:04:47,319 - services.wifi_client - INFO - [MAC查询设备] 目标地址: http://192.144.234.153:4000/user/api/rest/devices/mac/D4:3D:39:83:E6:A8
+2026-05-10 15:04:47,319 - services.wifi_client - INFO - [MAC查询设备] Token: cef24a6d1fffaf23d2eb... (长度: 24)
+2026-05-10 15:04:47,320 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:04:47,320 - services.wifi_client - INFO - [MAC查询设备] Token完整内容: cef24a6d1fffaf23d2eb72ff
+2026-05-10 15:04:47,572 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E6:A8, action_type=online
+2026-05-10 15:14:04,571 - main - INFO - WIFI标签管理系统启动，日志级别: INFO
+2026-05-10 15:14:04,748 - main - INFO - 用户管理API已注册
+2026-05-10 15:14:04,833 - services.db_service - INFO - 数据库已连接: F:\pick\AI项目\CodeBuddy\WifiEsl\backend\data\wifi_esl.db
+2026-05-10 15:14:04,838 - services.db_service - INFO - [DB] 检测到mac字段的唯一约束，需要迁移到(mac, user_id)组合唯一
+2026-05-10 15:14:05,380 - services.db_service - INFO - [DB] 已成功迁移devices表：mac唯一约束改为(mac, user_id)组合唯一
+2026-05-10 15:14:05,384 - services.db_service - INFO - [DB] 已回填 device_push_logs.template_name
+2026-05-10 15:14:05,386 - services.db_service - INFO - 数据库表结构初始化完成
+2026-05-10 15:14:07,490 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=57863)
+2026-05-10 15:14:07,490 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=57863)
+2026-05-10 15:14:07,491 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-05-10 15:14:07,491 - services.ws_manager - INFO - [WS] 新连接: ws-0, 总数: 1
+2026-05-10 15:14:07,492 - services.ws_manager - INFO - [WS] 前端连接建立: ws-0
+2026-05-10 15:14:13,778 - services.auth_service - INFO - [AUTH] ========== 开始登录WIFI系统获取JWT token ==========
+2026-05-10 15:14:13,781 - services.auth_service - INFO - [AUTH] 本地用户名: jibk
+2026-05-10 15:14:13,781 - services.auth_service - INFO - [AUTH] ✅ 使用用户独立的WIFI配置:
+2026-05-10 15:14:13,781 - services.auth_service - INFO - [AUTH]   WIFI用户名: W123456
+2026-05-10 15:14:13,782 - services.auth_service - INFO - [AUTH]   WIFI密码长度: 44 字符
+2026-05-10 15:14:13,782 - services.auth_service - INFO - [AUTH]   API Key: cef24a6d... (长度: 24)
+2026-05-10 15:14:13,782 - services.auth_service - INFO - [AUTH]   WIFI地址: http://192.144.234.153:4000
+2026-05-10 15:14:13,786 - services.auth_service - INFO - [AUTH] 即将调用 wifi_proxy.login()...
+2026-05-10 15:14:14,689 - services.wifi_client - INFO - 创建新的WIFI客户端: http://192.144.234.153:4000
+2026-05-10 15:14:14,690 - services.wifi_client - INFO - [登录WIFI系统] ========== 开始登录 ==========
+2026-05-10 15:14:14,690 - services.wifi_client - INFO - [登录WIFI系统] 目标地址: http://192.144.234.153:4000/user/api/login
+2026-05-10 15:14:14,691 - services.wifi_client - INFO - [登录WIFI系统] 传入的用户名: W123456
+2026-05-10 15:14:14,691 - services.wifi_client - INFO - [登录WIFI系统] 传入的密码长度: 6 字符
+2026-05-10 15:14:14,691 - services.wifi_client - INFO - [登录WIFI系统] 密码哈希表示: ******
+2026-05-10 15:14:14,691 - services.wifi_client - INFO - [登录WIFI系统] 完整请求体: {"username": "W123456", "password": "123456"}
+2026-05-10 15:14:14,846 - services.wifi_client - INFO - [登录WIFI系统] 响应状态码: 200
+2026-05-10 15:14:14,846 - services.wifi_client - INFO - [登录WIFI系统] 登录成功, 用户: W123456
+2026-05-10 15:14:14,846 - services.auth_service - INFO - [AUTH] ✅ WIFI系统登录调用成功!
+2026-05-10 15:14:14,847 - services.auth_service - INFO - [AUTH]   响应类型: dict
+2026-05-10 15:14:14,847 - services.auth_service - INFO - [AUTH]   响应是否字典: True
+2026-05-10 15:14:14,847 - services.auth_service - INFO - [AUTH]   响应键: ['code', 'data']
+2026-05-10 15:14:14,848 - services.auth_service - INFO - [AUTH]   响应数据 (前200字符): {"code": 20000, "data": {"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3ODM5NzI2NX0.JOy-25hQbVdyupR1dys9RfrbKgUn_SQiL8kTzQkzJpo"}}
+2026-05-10 15:14:14,848 - services.auth_service - INFO - [AUTH] ✅ 成功获取JWT token
+2026-05-10 15:14:14,848 - services.auth_service - INFO - [AUTH]    token开头: eyJhbGci...
+2026-05-10 15:14:14,848 - services.auth_service - INFO - [AUTH]    token长度: 148 字符
+2026-05-10 15:14:14,848 - services.auth_service - INFO - [AUTH]    JWT格式: ✅ 标准JWT (eyJ开头)
+2026-05-10 15:14:14,849 - services.auth_service - INFO - [AUTH] 🔄 用户 jibk 的WIFI连接初始化已放入后台任务
+2026-05-10 15:14:14,849 - services.auth_service - INFO - [AUTH] 🔄 [后台] 开始初始化用户 jibk 的WIFI连接...
+2026-05-10 15:14:15,039 - services.auth_service - INFO - 用户登录成功: jibk
+2026-05-10 15:14:15,040 - services.wifi_connection_manager - INFO - 正在为用户 8 登录WIFI系统: http://192.144.234.153:4000
+2026-05-10 15:14:15,040 - services.wifi_client - INFO - [登录WIFI系统] ========== 开始登录 ==========
+2026-05-10 15:14:15,041 - services.wifi_client - INFO - [登录WIFI系统] 目标地址: http://192.144.234.153:4000/user/api/login
+2026-05-10 15:14:15,041 - services.wifi_client - INFO - [登录WIFI系统] 传入的用户名: W123456
+2026-05-10 15:14:15,041 - services.wifi_client - INFO - [登录WIFI系统] 传入的密码长度: 6 字符
+2026-05-10 15:14:15,041 - services.wifi_client - INFO - [登录WIFI系统] 密码哈希表示: ******
+2026-05-10 15:14:15,043 - services.wifi_client - INFO - [登录WIFI系统] 完整请求体: {"username": "W123456", "password": "123456"}
+2026-05-10 15:14:15,169 - services.wifi_client - INFO - [登录WIFI系统] 响应状态码: 200
+2026-05-10 15:14:15,170 - services.wifi_client - INFO - [登录WIFI系统] 登录成功, 用户: W123456
+2026-05-10 15:14:15,170 - services.wifi_connection_manager - INFO - 用户 8 WIFI登录结果: {"code": 20000, "data": {"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3ODM5NzI2NX0.JOy-25hQbVdyupR1dys9RfrbKgUn_SQiL8kTzQkzJpo"}}
+2026-05-10 15:14:15,171 - services.wifi_connection_manager - INFO -   从data.token获取token: eyJhbGci
+2026-05-10 15:14:15,171 - services.wifi_connection_manager - INFO - 用户 8 获取到token: eyJhbGci...
+2026-05-10 15:14:15,258 - services.db_service_extended - INFO - 已更新用户 8 的WIFI配置
+2026-05-10 15:14:15,261 - services.wifi_connection_manager - INFO - 用户 8 WIFI token已保存到数据库
+2026-05-10 15:14:15,261 - services.wifi_connection_manager - INFO - 用户 8 WIFI登录成功，token: eyJhbGci...
+2026-05-10 15:14:15,261 - services.auth_service - INFO - [AUTH] ✅ [后台] 用户 jibk 的WIFI连接已初始化
+2026-05-10 15:14:15,262 - services.multi_user_mqtt_manager - INFO - ============================================================
+2026-05-10 15:14:15,262 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 用户 8
+2026-05-10 15:14:15,262 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息]   - MQTT订阅API Key: cef24a6d1fffaf23d2eb...
+2026-05-10 15:14:15,263 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息]   - API Key长度: 24
+2026-05-10 15:14:15,263 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息]   - 配置的Broker: mqtt://192.144.234.153:8883
+2026-05-10 15:14:15,263 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息]   - MQTT用户名: W123456
+2026-05-10 15:14:15,263 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息]   - MQTT密码: ******
+2026-05-10 15:14:15,263 - services.multi_user_mqtt_manager - INFO - ============================================================
+2026-05-10 15:14:15,264 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 解析后的Broker地址: 192.144.234.153:8883
+2026-05-10 15:14:15,265 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] Client ID: wifi-esl-user-8-1778397255
+2026-05-10 15:14:15,266 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] MQTT用户名密码已设置 (用户名: W123456)
+2026-05-10 15:14:15,267 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 用户 8 开始连接 192.144.234.153:8883
+2026-05-10 15:14:15,314 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] connect() 返回结果: 0
+2026-05-10 15:14:15,316 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 用户 8 MQTT loop已启动
+2026-05-10 15:14:15,495 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 用户 8 _on_connect 被调用, reason_code: Success
+2026-05-10 15:14:15,495 - services.multi_user_mqtt_manager - INFO - [MQTT连接信息] 用户 8 MQTT连接成功
+2026-05-10 15:14:15,496 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: online -> /client/cef24a6d1fffaf23d2eb72ff/action/online, mid=1
+2026-05-10 15:14:15,497 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: offline -> /client/cef24a6d1fffaf23d2eb72ff/action/offline, mid=2
+2026-05-10 15:14:15,497 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: usb_state -> /client/cef24a6d1fffaf23d2eb72ff/action/usb_state, mid=3
+2026-05-10 15:14:15,498 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: button -> /client/cef24a6d1fffaf23d2eb72ff/action/button, mid=4
+2026-05-10 15:14:15,498 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: battery_reply -> /client/cef24a6d1fffaf23d2eb72ff/action/battery_reply, mid=5
+2026-05-10 15:14:15,498 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: led_reply -> /client/cef24a6d1fffaf23d2eb72ff/action/led_reply, mid=6
+2026-05-10 15:14:15,499 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: reboot_reply -> /client/cef24a6d1fffaf23d2eb72ff/action/reboot_reply, mid=7
+2026-05-10 15:14:15,499 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 订阅成功: display_reply -> /client/cef24a6d1fffaf23d2eb72ff/action/display_reply, mid=8
+2026-05-10 15:14:15,499 - services.multi_user_mqtt_manager - INFO - [MQTT订阅] 用户 8 共订阅了 8 个主题: online, offline, usb_state, button, battery_reply, led_reply, reboot_reply, display_reply
+2026-05-10 15:14:15,526 - api.devices - INFO - [API /devices] ========== 获取设备列表请求开始 ==========
+2026-05-10 15:14:15,527 - api.devices - INFO - [API /devices] 请求参数: page=1, page_size=1, search=, status=None
+2026-05-10 15:14:15,527 - api.devices - INFO - [API /devices] 全部query参数: {'page': '1', 'pageSize': '1', 'all': 'true'}
+2026-05-10 15:14:15,527 - api.devices - INFO - [API /devices] Authorization头: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW...
+2026-05-10 15:14:15,528 - api.devices - INFO - [API /devices] ✅ 用户ID: 8
+2026-05-10 15:14:15,528 - api.devices - INFO - [API /devices] ✅ 使用用户 8 的WIFI配置: base_url=http://192.144.234.153:4000
+2026-05-10 15:14:15,528 - api.devices - INFO - [API /devices] ✅ WIFI系统token: eyJhbGci... (长度: 148)
+2026-05-10 15:14:15,529 - api.devices - INFO - [API /devices] 构造的查询参数: search=, status=None
+2026-05-10 15:14:15,529 - api.devices - INFO - [API /devices] 开始调用WIFI系统获取设备列表(全量)...
+2026-05-10 15:14:15,530 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-05-10 15:14:15,530 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-05-10 15:14:15,530 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-05-10 15:14:15,531 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=1, page_size=20, query=
+2026-05-10 15:14:15,531 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-05-10 15:14:15,531 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-05-10 15:14:15,532 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3ODM5NzI2NX0.JOy-25hQbVdyupR1dys9RfrbKgUn_SQiL8kTzQkzJpo
+2026-05-10 15:14:15,533 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-05-10 15:14:15,533 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-05-10 15:14:15,543 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=1 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,584 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=2 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,597 - services.multi_user_mqtt_manager - INFO - 用户 8 MQTT连接成功
+2026-05-10 15:14:15,598 - services.multi_user_mqtt_manager - INFO - 用户 8 MQTT连接已成功建立
+2026-05-10 15:14:15,598 - services.auth_service - INFO - [AUTH] ✅ [后台] 用户 jibk 的MQTT连接已启动
+2026-05-10 15:14:15,614 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-05-10 15:14:15,614 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 10
+2026-05-10 15:14:15,615 - services.wifi_client - INFO - [获取设备列表] WIFI系统 total=13, items_count=10
+2026-05-10 15:14:15,615 - api.devices - INFO - [API /devices] RAW device data type=dict
+2026-05-10 15:14:15,615 - api.devices - INFO - [API /devices] RAW device data keys=['code', 'data']
+2026-05-10 15:14:15,616 - api.devices - INFO - [API /devices] RAW device data (first 800 chars): {
+  "code": 20000,
+  "data": {
+    "items": [
+      {
+        "led": {
+          "color": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          }
+        },
+        "station": {
+          "ssid": "cddc001",
+          "password": "1234567890",
+          "rssi": -41
+        },
+        "mqtt": {
+          "broker": "192.144.234.153",
+          "port": 8883,
+          "username": "test",
+          "password": "123456"
+        },
+        "sms": {
+          "display": {
+            "fail": 0,
+            "success": 0
+          },
+          "network": {
+            "conn": 0,
+            "conn_fail": 0,
+            "discon": 0
+          },
+          "reboot": 0
+        },
+        "images": {
+          "binFile": "",
+          "imageFile": "http://192.144.234.153:4000/upl
+2026-05-10 15:14:15,616 - api.devices - INFO - [API /devices] WIFI系统返回 total=13, items=10, 还需获取 3 条
+2026-05-10 15:14:15,616 - services.wifi_client - INFO - [获取设备列表] ========== 开始调用WIFI系统接口 ==========
+2026-05-10 15:14:15,616 - services.wifi_client - INFO - [获取设备列表] 目标地址: http://192.144.234.153:4000/user/api/rest/devices
+2026-05-10 15:14:15,617 - services.wifi_client - INFO - [获取设备列表] Token: eyJhbGciOiJIUzI1NiIs... (长度: 148)
+2026-05-10 15:14:15,617 - services.wifi_client - INFO - [获取设备列表] 请求参数: page=2, page_size=20, query=
+2026-05-10 15:14:15,617 - services.wifi_client - INFO - [获取设备列表] Token详细信息:
+2026-05-10 15:14:15,617 - services.wifi_client - INFO - [获取设备列表]   - Token前20字符: eyJhbGciOiJIUzI1NiIs
+2026-05-10 15:14:15,618 - services.wifi_client - INFO - [获取设备列表]   - Token完整内容: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Y2I4ZTgyZDMzMzAwZGEyMWY0MDgzNCIsImlhdCI6MTc3ODM5NzI2NX0.JOy-25hQbVdyupR1dys9RfrbKgUn_SQiL8kTzQkzJpo
+2026-05-10 15:14:15,618 - services.wifi_client - INFO - [获取设备列表]   - Token长度: 148 字符
+2026-05-10 15:14:15,619 - services.wifi_client - INFO - [获取设备列表]   - Token是否JWT格式: 是
+2026-05-10 15:14:15,667 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=3 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,667 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=4 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,667 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=5 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,667 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=6 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,668 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=7 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,668 - services.multi_user_mqtt_manager - INFO - [MQTT订阅确认] 用户 8 订阅请求 mid=8 已确认, reason_codes=[ReasonCode(Suback, 'Granted QoS 1')]
+2026-05-10 15:14:15,692 - services.wifi_client - INFO - [获取设备列表] 响应状态码: 200
+2026-05-10 15:14:15,692 - services.wifi_client - INFO - [获取设备列表] 成功获取设备列表，设备数量: 3
+2026-05-10 15:14:15,693 - services.wifi_client - INFO - [获取设备列表] WIFI系统 total=13, items_count=3
+2026-05-10 15:14:15,693 - api.devices - INFO - [API /devices]  第2页获取 3 条，累计 13 条
+2026-05-10 15:14:15,694 - api.devices - INFO - [API /devices] status采样: ['D4:3D:39:66:A0:92: status=True(bool)', 'D4:3D:39:83:D5:64: status=True(bool)', 'D4:3D:39:83:D9:06: status=True(bool)', 'D4:3D:39:84:20:60: status=True(bool)', 'D4:3D:39:83:DA:1A: status=True(bool)']
+2026-05-10 15:14:15,820 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=58400)
+2026-05-10 15:14:15,820 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=58400)
+2026-05-10 15:14:15,821 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-05-10 15:14:15,822 - services.ws_manager - INFO - [WS] 新连接: ws-1, 总数: 2
+2026-05-10 15:14:15,822 - services.ws_manager - INFO - [WS] 前端连接建立: ws-1
+2026-05-10 15:14:15,824 - services.ws_manager - INFO - [WS] 连接 ws-1 认证为用户 8, 已添加到组 user_8
+2026-05-10 15:14:15,824 - services.multi_user_mqtt_manager - INFO - 用户 8 MQTT连接已存在且已连接
+2026-05-10 15:14:15,824 - services.ws_manager - INFO - [WS] 用户 8 MQTT连接状态: True
+2026-05-10 15:14:15,825 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-05-10 15:14:15,825 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-05-10 15:14:15,997 - services.ws_manager - INFO - [WS] 广播到用户 8: 1 个连接, 消息类型=mqtt_status
+2026-05-10 15:14:19,606 - services.ws_manager - INFO - [WS] 断开: ws-1, 总数: 1
+2026-05-10 15:14:20,226 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=59488)
+2026-05-10 15:14:20,227 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=59488)
+2026-05-10 15:14:20,227 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-05-10 15:14:20,227 - services.ws_manager - INFO - [WS] 新连接: ws-2, 总数: 2
+2026-05-10 15:14:20,227 - services.ws_manager - INFO - [WS] 前端连接建立: ws-2
+2026-05-10 15:14:20,229 - services.ws_manager - INFO - [WS] 连接 ws-2 认证为用户 8, 已添加到组 user_8
+2026-05-10 15:14:20,230 - services.multi_user_mqtt_manager - INFO - 用户 8 MQTT连接已存在且已连接
+2026-05-10 15:14:20,230 - services.ws_manager - INFO - [WS] 用户 8 MQTT连接状态: True
+2026-05-10 15:14:20,231 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-05-10 15:14:20,233 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-05-10 15:14:23,305 - services.ws_manager - INFO - [WS] 断开: ws-2, 总数: 1
+2026-05-10 15:14:23,842 - main - INFO - [WS] WebSocket连接已接受 from Address(host='127.0.0.1', port=50310)
+2026-05-10 15:14:23,842 - services.ws_manager - INFO - [WS] ws_endpoint被调用，client: Address(host='127.0.0.1', port=50310)
+2026-05-10 15:14:23,843 - services.ws_manager - INFO - [WS] WebSocket开始处理业务逻辑
+2026-05-10 15:14:23,843 - services.ws_manager - INFO - [WS] 新连接: ws-3, 总数: 2
+2026-05-10 15:14:23,843 - services.ws_manager - INFO - [WS] 前端连接建立: ws-3
+2026-05-10 15:14:23,846 - services.ws_manager - INFO - [WS] 连接 ws-3 认证为用户 8, 已添加到组 user_8
+2026-05-10 15:14:23,846 - services.multi_user_mqtt_manager - INFO - 用户 8 MQTT连接已存在且已连接
+2026-05-10 15:14:23,847 - services.ws_manager - INFO - [WS] 用户 8 MQTT连接状态: True
+2026-05-10 15:14:23,848 - services.ws_manager - INFO - [WS] 已发送connected消息，mqtt_connected=True
+2026-05-10 15:14:23,848 - services.ws_manager - INFO - [WS] 已发送mqtt_status消息
+2026-05-10 15:16:48,864 - services.ws_manager - INFO - [WS] 断开: ws-3, 总数: 1
+2026-05-10 15:16:48,865 - services.ws_manager - INFO - [WS] 断开: ws-0, 总数: 0
+2026-05-10 15:19:59,851 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 用户 8 收到 [display_reply]: {"mac": "D4:3D:39:83:E6:A8", "result": 200, "msgId": "1778397583443"}
+2026-05-10 15:19:59,852 - services.multi_user_mqtt_manager - ERROR - [MQTT消息] 用户 8 [display_reply] WebSocket广播失败: 用户 8 没有活跃的WebSocket连接 (组名=user_8, 现有组=['all', 'user_8'])
+2026-05-10 15:19:59,852 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 准备持久化: mac=D4:3D:39:83:E6:A8, action_type=display_reply
+2026-05-10 15:20:00,321 - services.multi_user_mqtt_manager - INFO - [MQTT] display_reply: D4:3D:39:83:E6:A8 -> success, 更新行数: 1
+2026-05-10 15:20:00,323 - services.multi_user_mqtt_manager - INFO - [MQTT消息] 持久化完成: mac=D4:3D:39:83:E6:A8, action_type=display_reply

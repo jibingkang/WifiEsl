@@ -441,6 +441,7 @@ async def init_db():
             sent_at         TEXT,
             finished_at     TEXT,
             selected_row_id INTEGER,
+            pending_reply_row_id INTEGER,
             updated_at      TEXT    DEFAULT (datetime('now','localtime')),
             created_at      TEXT    DEFAULT (datetime('now','localtime')),
             UNIQUE(task_id, mac)
@@ -493,6 +494,9 @@ async def init_db():
         if 'selected_row_id' not in col_names:
             await db.execute("ALTER TABLE task_devices ADD COLUMN selected_row_id INTEGER")
             print("[DB] 已添加列 task_devices.selected_row_id")
+        if 'pending_reply_row_id' not in col_names:
+            await db.execute("ALTER TABLE task_devices ADD COLUMN pending_reply_row_id INTEGER")
+            print("[DB] 已添加列 task_devices.pending_reply_row_id")
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加兼容列失败（可忽略）: {e}")
