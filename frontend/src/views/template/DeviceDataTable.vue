@@ -529,16 +529,20 @@ watch(() => props.selectedRows, (val) => {
   }
 }, { immediate: true, deep: true })
 
-// 初始化默认选中第一行（仅当该设备没有选中行时）
+// 初始化默认选中第一行（仅当父组件也未提供选中行时）
 watch(() => props.devices, (devices) => {
   let changed = false
   devices.forEach(dev => {
     if (dev.rows && dev.rows.length > 0 && !selectedRowIds.value[dev.mac]) {
-      selectedRowIds.value[dev.mac] = dev.rows[0].id
+      // ⭐ 只有父组件也没有提供值时才设默认值，否则保持父组件的值
+      if (props.selectedRows && props.selectedRows[dev.mac]) {
+        selectedRowIds.value[dev.mac] = props.selectedRows[dev.mac]
+      } else {
+        selectedRowIds.value[dev.mac] = dev.rows[0].id
+      }
       changed = true
     }
   })
-  // 只在确实有变化时才通知父组件
   if (changed) {
     emit('update:selectedRows', { ...selectedRowIds.value })
   }

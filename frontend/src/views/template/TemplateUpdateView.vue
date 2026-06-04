@@ -659,7 +659,7 @@ async function loadTaskDetail(taskId: number) {
       defaultData.value = {}
     }
 
-    // 恢复自定义数据覆盖
+    // 恢复自定义数据覆盖：从主表 custom_data（最后一次推送成功的快照）
     const devices = detail.devices || []
     const overrides: Record<string, any> = {}
     for (const d of devices) {
@@ -676,10 +676,8 @@ async function loadTaskDetail(taskId: number) {
     }
     customOverrides.value = overrides
 
-    // 初始化选中行：优先从 localStorage 草稿恢复，再降级到模板缓存，最后默认第1行
-    _initSelectedRowIds(devices, taskId)
-
-    // ⭐ 注意：不再调用 _mergeActiveRowDataToOverrides，因为 task_devices.custom_data（主表）
+    // 初始化选中行：从后端 selected_row_id 恢复，找不到则找 finished_at 最晚的行（最后一次推送成功）
+    _initSelectedRowIds(devices)
     // 已经是"最后一次推送成功的快照"，不需要被子行数据覆盖。
     // 用户切换行预览时由 selectRow → _loadRowToOverrides 更新 customOverrides。
 
@@ -744,11 +742,14 @@ async function _refreshTaskFromServer() {
             selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
             // 从主表 custom_data 恢复（后端已合并推送成功的子行数据）
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
+            // ⭐ 回执成功后立即保存缓存（防止刷新后用 localstorage 中 selectRow 时的旧状态覆盖）
+            _saveTemplateCache()
           }
           // Case 2: 兜底 — 设备已回执(非sent)且服务端 selected_row_id 与本地不一致时同步
           else if (dev.update_status !== 'sent' && dev.selected_row_id && dev.selected_row_id !== selectedRowIds.value[dev.mac]) {
             selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
+            _saveTemplateCache()
             console.log(`[_refreshTaskFromServer] 兜底同步: ${dev.mac} → row ${dev.selected_row_id}`)
           }
         }
@@ -996,7 +997,7 @@ async function handleTemplateChange(tid: string) {
       }
       selectedRowIds.value = valid
     } else {
-      _initSelectedRowIds(currentDevices, currentTaskId.value ?? undefined)
+      _initSelectedRowIds(currentDevices)
     }
     
     // 再次等待DOM更新
@@ -1795,98 +1796,54 @@ function updateAllChecked() {
 
 // ════════════ 行选择持久化辅助 ═════════════
 
-/** 初始化 selectedRowIds：优先从后端 selected_row_id 恢复 → localStorage 草稿 → 模板缓存 → 默认第1行 */
-function _initSelectedRowIds(devices: any[], taskId?: number) {
-  // 0. 最优先：从后端 DB 的 selected_row_id 恢复（由推送时设置，代表用户/系统当前选中的行）
+/** 初始化 selectedRowIds：完全从后端数据恢复（selected_row_id → finished_at → sent_at → 第1行），不使用 localStorage */
+function _initSelectedRowIds(devices: any[]) {
   const result: Record<string, number> = {}
-  let hasDbData = false
+
   for (const d of devices) {
-    if (d.rows && d.rows.length > 0) {
-      if (d.selected_row_id) {
-        const exists = d.rows.find((r: any) => r.id === d.selected_row_id)
-        if (exists) {
-          result[d.mac] = d.selected_row_id
-          hasDbData = true
-          continue
-        }
-      }
-      // 没有 selected_row_id → fallback: 找最后一次推送成功的行
-      let bestRow: any = null
+    if (!d.rows || d.rows.length === 0) continue
+
+    let selectedId: number | null = null
+
+    // 1. 优先：selected_row_id（display_reply 设置）
+    if (d.selected_row_id) {
+      const exists = d.rows.some((r: any) => String(r.id) === String(d.selected_row_id))
+      if (exists) selectedId = Number(d.selected_row_id)
+    }
+
+    // 2. fallback：finished_at 最晚的行（最后一次推送成功）
+    if (selectedId == null) {
+      let bestId: number | null = null
       let bestTime = ''
       for (const r of d.rows) {
         if (r.finished_at && r.finished_at > bestTime) {
           bestTime = r.finished_at
-          bestRow = r
+          bestId = r.id
         }
       }
-      if (bestRow) {
-        result[d.mac] = bestRow.id
-        continue
-      }
-      // 没有成功的，找 sent_at 最晚的（推送中）
-      let bestSentRow: any = null
-      let bestSentTime = ''
+      if (bestId != null) selectedId = bestId
+    }
+
+    // 3. fallback：sent_at 最晚的行（最后一次推送中）
+    if (selectedId == null) {
+      let bestId: number | null = null
+      let bestTime = ''
       for (const r of d.rows) {
-        if (r.sent_at && r.sent_at > bestSentTime) {
-          bestSentTime = r.sent_at
-          bestSentRow = r
+        if (r.sent_at && r.sent_at > bestTime) {
+          bestTime = r.sent_at
+          bestId = r.id
         }
       }
-      if (bestSentRow) {
-        result[d.mac] = bestSentRow.id
-        continue
-      }
-      result[d.mac] = d.rows[0].id
+      if (bestId != null) selectedId = bestId
     }
-  }
-  if (hasDbData) {
-    selectedRowIds.value = result
-    console.log('从后端DB恢复选中行:', result)
-    return
+
+    // 4. 兜底：第1行
+    result[d.mac] = selectedId ?? d.rows[0].id
   }
 
-  // 1. 尝试从 localStorage 草稿恢复（页面刷新后内存缓存丢失，草稿是备用来源）
-  if (taskId) {
-    const draft = readDraftRaw()
-    if (draft?.selectedRowIds && draft.taskId === taskId) {
-      const valid: Record<string, number> = {}
-      for (const d of devices) {
-        if (d.rows && d.rows.length > 0) {
-          const cachedId = draft.selectedRowIds[d.mac]
-          const exists = d.rows.find((r: any) => r.id === cachedId)
-          valid[d.mac] = exists ? cachedId : d.rows[0].id
-        }
-      }
-      selectedRowIds.value = valid
-      console.log('从 localStorage 草稿恢复选中行:', valid)
-      return
-    }
-  }
-
-  // 3. 尝试从模板缓存恢复
-  const cached = selectedTemplate.value?.tid ? templateDataCache.value[selectedTemplate.value.tid] : null
-  if (cached?.selectedRowIds) {
-    const valid: Record<string, number> = {}
-    for (const d of devices) {
-      if (d.rows && d.rows.length > 0) {
-        const cachedId = cached.selectedRowIds[d.mac]
-        const exists = d.rows.find((r: any) => r.id === cachedId)
-        valid[d.mac] = exists ? cachedId : d.rows[0].id
-      }
-    }
-    selectedRowIds.value = valid
-    console.log('从模板缓存恢复选中行:', valid)
-    return
-  }
-
-  // 4. 无缓存：默认选第1行
-  const defaults: Record<string, number> = {}
-  for (const d of devices) {
-    if (d.rows && d.rows.length > 0) {
-      defaults[d.mac] = d.rows[0].id
-    }
-  }
-  selectedRowIds.value = defaults
+  selectedRowIds.value = result
+  console.log('[_initSelectedRowIds] 已恢复:', JSON.stringify(result))
+  clearDraftSelectedRows()
 }
 
 /** 从主表 custom_data 恢复 customOverrides[mac]（回执成功/刷新后调用） */
@@ -1937,6 +1894,20 @@ function saveDraft() {
   } catch (e) {
     console.warn('草稿保存失败:', e)
   }
+}
+
+/** 清除 localStorage 草稿中的 selectedRowIds（DB 恢复优先级更高） */
+function clearDraftSelectedRows() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (raw) {
+      const draft = JSON.parse(raw)
+      if (draft?.selectedRowIds) {
+        delete draft.selectedRowIds
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 function readDraftRaw(): any {

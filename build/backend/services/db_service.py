@@ -2004,14 +2004,17 @@ async def _sync_display_data_to_main(db, dev_id: int, row_id: int):
     )
     row_data_row = await row_cur.fetchone()
     if not row_data_row or not row_data_row["custom_data"]:
+        logger.info(f"[sync_main] dev_id={dev_id} row_id={row_id}: 子行无数据，跳过合并")
         return
 
     try:
         row_data = json.loads(row_data_row["custom_data"])
     except Exception:
+        logger.warning(f"[sync_main] dev_id={dev_id} row_id={row_id}: JSON 解析失败")
         return
 
     if not row_data:
+        logger.info(f"[sync_main] dev_id={dev_id} row_id={row_id}: 子行数据为空对象")
         return
 
     # 读取当前主表 custom_data
@@ -2028,10 +2031,12 @@ async def _sync_display_data_to_main(db, dev_id: int, row_id: int):
 
     # 子行数据覆盖主表
     main_data.update(row_data)
+    merged_json = json.dumps(main_data, ensure_ascii=False)
     await db.execute(
         "UPDATE task_devices SET custom_data=? WHERE id=?",
-        (json.dumps(main_data, ensure_ascii=False), dev_id),
+        (merged_json, dev_id),
     )
+    logger.info(f"[sync_main] dev_id={dev_id} row_id={row_id}: 主表 custom_data ← {merged_json}")
 
 
 async def _refresh_task_summary(db, task_id: int):
