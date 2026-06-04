@@ -1486,21 +1486,30 @@ async def get_device_stats(allowed_macs: list[str] | None = None) -> dict:
 # ============================================================
 
 async def add_device_event(mac: str, event_type: str, payload: dict | None = None):
-    """记录一条设备事件（5秒内同MAC同事件类型去重，防止多MQTT连接重复写入）"""
+    """记录一条设备事件（1秒内同MAC+同事件类型+同payload去重，防多连接重复写入）"""
     db = await get_db()
     payload_json = json.dumps(payload, ensure_ascii=False) if payload else None
 
-    # 去重：检查5秒内是否已有相同的 mac+event_type 记录
-    cur = await db.execute(
-        """SELECT id FROM device_events 
-           WHERE mac=? AND event_type=? 
-           AND created_at >= datetime('now', '-5 seconds')
-           LIMIT 1""",
-        (mac, event_type),
-    )
+    # 去重：1秒内相同 mac+event_type+payload 已存在则跳过
+    if payload_json:
+        cur = await db.execute(
+            """SELECT id FROM device_events 
+               WHERE mac=? AND event_type=? AND payload=?
+               AND created_at >= datetime('now', '-1 seconds')
+               LIMIT 1""",
+            (mac, event_type, payload_json),
+        )
+    else:
+        cur = await db.execute(
+            """SELECT id FROM device_events 
+               WHERE mac=? AND event_type=? AND payload IS NULL
+               AND created_at >= datetime('now', '-1 seconds')
+               LIMIT 1""",
+            (mac, event_type),
+        )
     existing = await cur.fetchone()
     if existing:
-        logger.debug(f"[去重] 跳过重复事件: {mac} {event_type}（5秒内已存在）")
+        logger.info(f"[device_event] SKIP 去重(1s): {mac} {event_type} id={existing['id']}")
         return
 
     await db.execute(
@@ -1508,6 +1517,9 @@ async def add_device_event(mac: str, event_type: str, payload: dict | None = Non
         (mac, event_type, payload_json),
     )
     await db.commit()
+    cur2 = await db.execute("SELECT last_insert_rowid()")
+    new_id = (await cur2.fetchone())[0]
+    logger.info(f"[device_event] INSERT: id={new_id} mac={mac} type={event_type}")
 
 
 async def get_device_events(

@@ -734,23 +734,23 @@ async function _refreshTaskFromServer() {
           }
         }
         // ⭐ 同步后端的 selected_row_id + 主表 custom_data（最后推送成功的快照）
-        if (exactLocal && dev.selected_row_id !== undefined) {
+        if (exactLocal) {
           exactLocal.selected_row_id = dev.selected_row_id
 
-          // Case 1: 状态刚转换 sent→success/failed（优先路径，WS回调触发）
-          if (oldStatus === 'sent' && dev.update_status !== 'sent' && dev.selected_row_id) {
+          // 只要状态从 sent → success/failed，或设备已确认回执且有 selected_row_id，就同步主行数据
+          const needsMainSync =
+            (oldStatus === 'sent' && dev.update_status !== 'sent' && dev.selected_row_id) ||
+            (dev.update_status !== 'sent' && dev.selected_row_id && dev.selected_row_id !== selectedRowIds.value[dev.mac])
+
+          if (needsMainSync) {
             selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
-            // 从主表 custom_data 恢复（后端已合并推送成功的子行数据）
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
-            // ⭐ 回执成功后立即保存缓存（防止刷新后用 localstorage 中 selectRow 时的旧状态覆盖）
             _saveTemplateCache()
+            console.log(`[_refreshTaskFromServer] 同步主行: ${dev.mac} → row ${dev.selected_row_id}, status: ${dev.update_status}`)
           }
-          // Case 2: 兜底 — 设备已回执(非sent)且服务端 selected_row_id 与本地不一致时同步
-          else if (dev.update_status !== 'sent' && dev.selected_row_id && dev.selected_row_id !== selectedRowIds.value[dev.mac]) {
-            selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
+          // ⭐ 推送成功后（状态由 sent 变 success），即使 selectedRowIds 没变也更新主行数据
+          else if (dev.custom_data && oldStatus === 'sent' && dev.update_status === 'success') {
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
-            _saveTemplateCache()
-            console.log(`[_refreshTaskFromServer] 兜底同步: ${dev.mac} → row ${dev.selected_row_id}`)
           }
         }
       }

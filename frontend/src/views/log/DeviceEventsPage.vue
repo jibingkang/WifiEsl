@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Activity, Search } from 'lucide-vue-next'
 import { getDeviceEventLogs } from '@/api/logs'
 
@@ -106,6 +106,7 @@ const page = ref(1)
 const pageSize = 30
 const total = ref(0)
 const expandedId = ref<number | null>(null)
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 const filterEventType = ref('')
 const filterMac = ref('')
@@ -199,7 +200,21 @@ function formatTime(t: string): string {
   } catch { return t }
 }
 
-onMounted(() => fetchData())
+onMounted(() => {
+  fetchData()
+  // 每10秒自动刷新设备事件，回到第1页显示最新
+  autoRefreshTimer = setInterval(() => {
+    page.value = 1
+    fetchData()
+  }, 10000)
+})
+
+onBeforeUnmount(() => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = null
+  }
+})
 </script>
 
 <style scoped>

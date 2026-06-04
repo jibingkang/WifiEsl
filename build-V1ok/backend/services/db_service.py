@@ -1500,7 +1500,7 @@ async def add_device_event(mac: str, event_type: str, payload: dict | None = Non
     )
     existing = await cur.fetchone()
     if existing:
-        logger.debug(f"[去重] 跳过重复事件: {mac} {event_type}（5秒内已存在）")
+        logger.info(f"[device_event] SKIP 去重: {mac} {event_type}（5秒内已存在，id={existing['id']}）")
         return
 
     await db.execute(
@@ -1508,6 +1508,9 @@ async def add_device_event(mac: str, event_type: str, payload: dict | None = Non
         (mac, event_type, payload_json),
     )
     await db.commit()
+    cur2 = await db.execute("SELECT last_insert_rowid()")
+    new_id = (await cur2.fetchone())[0]
+    logger.info(f"[device_event] INSERT: id={new_id} mac={mac} type={event_type} payload={payload_json}")
 
 
 async def get_device_events(

@@ -281,18 +281,13 @@ async def get_device_events_logs_api(
     start_time: str = Query("", description="开始时间"),
     end_time: str = Query("", description="结束时间"),
 ):
-    """查询设备事件日志（支持角色权限过滤）"""
-    user_id, role, username = await _get_user_info(request)
-
-    _db = await _get_db()
-    allowed_macs = await _build_allowed_macs(_db, user_id, role)
-
+    """查询设备事件日志（不按MAC权限过滤，事件由当前用户的MQTT连接产生）"""
     items, total = await get_device_events(
         mac=mac if mac else None,
         event_type=event_type if event_type else None,
         page=page,
         page_size=page_size,
-        allowed_macs=allowed_macs,
+        allowed_macs=None,  # 事件日志不过滤MAC，与操作记录逻辑统一
         start_time=start_time,
         end_time=end_time,
     )

@@ -84,78 +84,14 @@
               <span :class="['result-dot', row.result === 'success' ? 'success' : 'fail']" />
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="80" align="center">
+            <template #default="{ row }">
+              <el-button type="primary" link size="small" @click.stop="toggleExpand(row)">详情</el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
-        <!-- 展开详情 -->
-        <Transition name="detail-expand">
-          <div v-if="expandedId !== null && expandedItem" class="expand-panel">
-            <div class="expand-header">
-              <span class="expand-title">操作详情</span>
-              <el-button text size="small" @click="expandedId = null"><X :size="14" /> 关闭</el-button>
-            </div>
-
-            <!-- 推送详情 -->
-            <template v-if="expandedItem.action === 'task_push'">
-              <div class="detail-grid">
-                <div class="detail-field"><label>任务 ID</label><span>{{ expandedItem.target_id }}</span></div>
-                <div class="detail-field"><label>模板</label><span>{{ expandedItem.detail?.templateName || '-' }}</span></div>
-                <div class="detail-field"><label>设备数</label><span>{{ expandedItem.detail?.deviceCount || 0 }}</span></div>
-                <div class="detail-field"><label>发送成功</label><span class="text-success">{{ expandedItem.detail?.sentOk || 0 }}</span></div>
-                <div class="detail-field"><label>发送失败</label><span class="text-danger">{{ expandedItem.detail?.sentFail || 0 }}</span></div>
-                <div class="detail-field"><label>操作者</label><span>{{ expandedItem.username || '-' }}</span></div>
-              </div>
-              <!-- 推送设备明细 -->
-              <div v-if="pushDetailDevices.length > 0" class="push-device-list">
-                <h4>设备推送明细</h4>
-                <el-table :data="pushDetailDevices" size="small" max-height="280">
-                  <el-table-column prop="mac" label="MAC" width="180">
-                    <template #default="{ row }"><code>{{ row.mac }}</code></template>
-                  </el-table-column>
-                  <el-table-column label="推送内容" min-width="200">
-                    <template #default="{ row }">
-                      <span v-if="row.push_data && Object.keys(row.push_data).length > 0" class="push-data-preview">
-                        <template v-for="(v, k) in row.push_data" :key="k">
-                          <el-tag size="small" type="info" class="data-tag">{{ k }}: {{ v }}</el-tag>
-                        </template>
-                      </span>
-                      <span v-else class="text-muted">-</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="结果" width="80" align="center">
-                    <template #default="{ row }">
-                      <el-tag :type="row.result === 'success' ? 'success' : row.result === 'failed' ? 'danger' : 'warning'" size="small">
-                        {{ resultLabel(row.result) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="error_msg" label="错误信息" min-width="150">
-                    <template #default="{ row }">
-                      <span class="text-muted">{{ row.error_msg || '-' }}</span>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-            </template>
-
-            <!-- 设备上下线详情 -->
-            <template v-else-if="expandedItem.action === 'device_online' || expandedItem.action === 'device_offline'">
-              <div class="detail-grid">
-                <div class="detail-field"><label>设备 MAC</label><span><code>{{ expandedItem.target_id }}</code></span></div>
-                <div class="detail-field"><label>事件</label><span>{{ expandedItem.action === 'device_online' ? '上线' : '离线' }}</span></div>
-              </div>
-            </template>
-
-            <!-- 通用详情 -->
-            <template v-else>
-              <div class="detail-raw">
-                <pre>{{ JSON.stringify(expandedItem.detail, null, 2) }}</pre>
-              </div>
-            </template>
-          </div>
-        </Transition>
-      </div>
-
-      <!-- 分页 -->
+        <!-- 分页 -->
       <div v-if="total > pageSize" class="pagination-wrap">
         <el-pagination
           small
@@ -167,6 +103,82 @@
         />
       </div>
     </div>
+
+    </div>
+
+    <!-- 操作详情弹窗 -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="操作详情"
+      width="640px"
+      :close-on-click-modal="true"
+      destroy-on-close
+      class="detail-dialog"
+    >
+      <template v-if="expandedItem">
+        <!-- 推送详情 -->
+        <template v-if="expandedItem.action === 'task_push'">
+          <div class="detail-grid">
+            <div class="detail-field"><label>任务 ID</label><span>{{ expandedItem.target_id }}</span></div>
+            <div class="detail-field"><label>模板</label><span>{{ expandedItem.detail?.templateName || '-' }}</span></div>
+            <div class="detail-field"><label>设备数</label><span>{{ expandedItem.detail?.deviceCount || 0 }}</span></div>
+            <div class="detail-field"><label>发送成功</label><span class="text-success">{{ expandedItem.detail?.sentOk || 0 }}</span></div>
+            <div class="detail-field"><label>发送失败</label><span class="text-danger">{{ expandedItem.detail?.sentFail || 0 }}</span></div>
+            <div class="detail-field"><label>操作者</label><span>{{ expandedItem.username || '-' }}</span></div>
+          </div>
+          <div v-if="pushDetailDevices.length > 0" class="push-device-list">
+            <h4>设备推送明细</h4>
+            <el-table :data="pushDetailDevices" size="small" max-height="280">
+              <el-table-column prop="mac" label="MAC" width="180">
+                <template #default="{ row }"><code>{{ row.mac }}</code></template>
+              </el-table-column>
+              <el-table-column label="推送时间" width="150">
+                <template #default="{ row }">
+                  <span class="time-cell">{{ formatTime(row.sent_at) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="推送内容" min-width="200">
+                <template #default="{ row }">
+                  <span v-if="row.push_data && Object.keys(row.push_data).length > 0" class="push-data-preview">
+                    <template v-for="(v, k) in row.push_data" :key="k">
+                      <el-tag size="small" type="info" class="data-tag">{{ k }}: {{ v }}</el-tag>
+                    </template>
+                  </span>
+                  <span v-else class="text-muted">-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="结果" width="80" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="row.result === 'success' ? 'success' : row.result === 'failed' ? 'danger' : 'warning'" size="small">
+                    {{ resultLabel(row.result) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="error_msg" label="错误信息" min-width="150">
+                <template #default="{ row }">
+                  <span class="text-muted">{{ row.error_msg || '-' }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </template>
+
+        <!-- 设备上下线详情 -->
+        <template v-else-if="expandedItem.action === 'device_online' || expandedItem.action === 'device_offline'">
+          <div class="detail-grid">
+            <div class="detail-field"><label>设备 MAC</label><span><code>{{ expandedItem.target_id }}</code></span></div>
+            <div class="detail-field"><label>事件</label><span>{{ expandedItem.action === 'device_online' ? '上线' : '离线' }}</span></div>
+          </div>
+        </template>
+
+        <!-- 通用详情 -->
+        <template v-else>
+          <div class="detail-raw">
+            <pre>{{ JSON.stringify(expandedItem.detail, null, 2) }}</pre>
+          </div>
+        </template>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -210,7 +222,7 @@ const items = ref<LogItem[]>([])
 const page = ref(1)
 const pageSize = 20
 const total = ref(0)
-const expandedId = ref<number | null>(null)
+const detailDialogVisible = ref(false)
 const pushDetailDevices = ref<PushLogItem[]>([])
 
 // 筛选
@@ -241,6 +253,7 @@ const actionOptions = computed(() => {
   return common
 })
 
+const expandedId = ref<number | null>(null)
 const expandedItem = computed(() => items.value.find(i => i.id === expandedId.value))
 
 async function fetchData() {
@@ -275,12 +288,9 @@ async function fetchPage(p: number) {
 }
 
 async function toggleExpand(row: LogItem) {
-  if (expandedId.value === row.id) {
-    expandedId.value = null
-    return
-  }
   expandedId.value = row.id
   pushDetailDevices.value = []
+  detailDialogVisible.value = true
 
   // 推送类型：加载推送明细
   if (row.action === 'task_push' && row.target_id) {
@@ -534,9 +544,21 @@ onMounted(() => fetchData())
   padding: 16px 0 8px;
 }
 
-.detail-expand-enter-active { transition: all 0.25s ease; }
-.detail-expand-leave-active { transition: all 0.18s ease; }
-.detail-expand-enter-from, .detail-expand-leave-to { opacity: 0; max-height: 0; overflow: hidden; }
+/* 弹窗响应式 */
+@media (max-width: 768px) {
+  .detail-dialog {
+    :deep(.el-dialog) {
+      width: 92% !important;
+      margin-top: 10vh !important;
+    }
+    :deep(.el-dialog__body) {
+      padding: 12px 16px;
+    }
+    .detail-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
 
 :deep(.expanded-row) {
   background: rgba(99, 102, 241, 0.04) !important;
