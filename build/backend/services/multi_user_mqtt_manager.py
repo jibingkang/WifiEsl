@@ -7,6 +7,7 @@ import asyncio
 import logging
 import time
 import json
+import random
 import base64
 import threading
 from typing import Optional, Dict, Any, Set
@@ -103,14 +104,14 @@ class UserMQTTConnection:
                     self.broker_port = 1883
             
             self.broker_host = broker_host
-            
+
             # 打印解析后的连接信息
             logger.info(f"[MQTT连接信息] 解析后的Broker地址: {self.broker_host}:{self.broker_port}")
-            
-            # 创建MQTT客户端
-            client_id = f"wifi-esl-user-{self.user_id}-{int(time.time())}"
+
+            # 创建MQTT客户端（加入随机数确保多服务器部署时Client ID唯一不冲突）
+            client_id = f"wifi-esl-user-{self.user_id}-{int(time.time())}-{random.randint(10000, 99999)}"
             logger.info(f"[MQTT连接信息] Client ID: {client_id}")
-            
+
             self.client = mqtt.Client(
                 callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
                 client_id=client_id,
