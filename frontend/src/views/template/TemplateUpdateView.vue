@@ -735,14 +735,12 @@ async function _refreshTaskFromServer() {
         }
         // ⭐ 同步后端的 selected_row_id + 主表 custom_data（最后推送成功的快照）
         if (exactLocal) {
-          exactLocal.selected_row_id = dev.selected_row_id
-
-          // 只要状态从 sent → success/failed，或设备已确认回执且有 selected_row_id，就同步主行数据
+          // 仅当状态从 sent → success/failed 时同步主行数据，避免轮询期间覆盖用户手动选择的其他子行
           const needsMainSync =
-            (oldStatus === 'sent' && dev.update_status !== 'sent' && dev.selected_row_id) ||
-            (dev.update_status !== 'sent' && dev.selected_row_id && dev.selected_row_id !== selectedRowIds.value[dev.mac])
+            (oldStatus === 'sent' && dev.update_status !== 'sent' && dev.selected_row_id)
 
           if (needsMainSync) {
+            exactLocal.selected_row_id = dev.selected_row_id
             selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: dev.selected_row_id }
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
             _saveTemplateCache()
@@ -750,6 +748,7 @@ async function _refreshTaskFromServer() {
           }
           // ⭐ 推送成功后（状态由 sent 变 success），即使 selectedRowIds 没变也更新主行数据
           else if (dev.custom_data && oldStatus === 'sent' && dev.update_status === 'success') {
+            exactLocal.selected_row_id = dev.selected_row_id
             _restoreOverridesFromMainData(dev.mac, dev.custom_data)
           }
         }
@@ -1422,6 +1421,8 @@ async function handlePushRow(dev: any, row: any) {
     if (data && data.results && data.total > 0) {
       const { success, failed } = data
       if (failed === 0) {
+        // ⭐ 推送发送成功后，立即把选中行设为推送的行（防止轮询期间 radio 跳到旧行）
+        selectedRowIds.value = { ...selectedRowIds.value, [dev.mac]: row.id }
         ElMessage.success(`已向「${name}」发送推送指令`)
         // 启动轮询（不调 loadTaskDetail，避免覆盖 selectedRowIds）
         // selected_row_id 在回执成功后才由后端更新，前端通过轮询同步
