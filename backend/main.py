@@ -182,9 +182,56 @@ async def health_check():
     return {"status": "ok", "service": "wifi-esl-manager"}
 
 
-@app.get("/", tags=["系统"])
-async def root():
-    return {"message": "WIFI标签管理系统后端服务运行中", "version": APP_VERSION}
+# ========== 前端静态文件托管 (一体化生产部署) ==========
+_FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+_STATIC_ENABLED = os.path.isdir(_FRONTEND_DIST) and os.path.isfile(os.path.join(_FRONTEND_DIST, "index.html"))
+
+if _STATIC_ENABLED:
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    # 托管 /assets 目录 (JS / CSS / 字体等)
+    _assets_dir = os.path.join(_FRONTEND_DIST, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="frontend_assets")
+
+    # 如果有根目录下的其他静态文件（如 logo.svg, favicon.ico）
+    for _fname in os.listdir(_FRONTEND_DIST):
+        _fpath = os.path.join(_FRONTEND_DIST, _fname)
+        if os.path.isfile(_fpath) and _fname != "index.html" and not _fname.startswith("."):
+            _route = f"/{_fname}"
+            try:
+                @app.get(_route, include_in_schema=False)
+                async def _serve_static_file(fp: str = _fpath):
+                    return FileResponse(fp)
+            except Exception:
+                pass  # 路由可能已存在
+
+    # 根路径返回前端页面
+    @app.get("/", include_in_schema=False)
+    async def serve_frontend_index():
+        return FileResponse(os.path.join(_FRONTEND_DIST, "index.html"))
+
+    # SPA 回退：所有未匹配的路径返回 index.html
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend_spa(full_path: str):
+        # 排除 API 和 WebSocket 路径（实际上这些已有路由优先）
+        # 检查是否为静态资源
+        _file = os.path.join(_FRONTEND_DIST, full_path)
+        if os.path.isfile(_file) and not full_path.startswith("assets/"):
+            return FileResponse(_file)
+        # SPA fallback
+        return FileResponse(os.path.join(_FRONTEND_DIST, "index.html"))
+
+    logger.info(f"[Static] 前端一体化部署已启用: {_FRONTEND_DIST}")
+    print(f"[Static] 前端一体化部署已启用 - 访问 http://localhost:{settings.backend_port}")
+else:
+    # 无前端构建时回退到纯 API 模式
+    @app.get("/", tags=["系统"])
+    async def root():
+        return {"message": "WIFI标签管理系统后端服务运行中", "version": APP_VERSION}
+
+    logger.info("[Static] 前端目录不存在，以纯 API 模式运行")
 
 
 if __name__ == "__main__":
