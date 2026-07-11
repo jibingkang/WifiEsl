@@ -48,6 +48,11 @@ export function deleteTemplate(tid: string) {
   return request.delete(`/templates/${tid}`)
 }
 
+/** 同步WIFI系统模板 */
+export function syncTemplates() {
+  return request.post('/templates/sync')
+}
+
 /** 获取更新历史记录（分页） */
 export function getUpdateHistory(page = 1, pageSize = 20) {
   return request.get('/update-history', { params: { page, pageSize } })

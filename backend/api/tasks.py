@@ -47,6 +47,16 @@ from services.wifi_connection_manager import wifi_connection_manager
 router = APIRouter(prefix="/tasks", tags=["更新任务"])
 logger = logging.getLogger(__name__)
 
+# 任务推送互斥锁：防止同一任务被同时多次推送
+_task_push_locks: dict[int, asyncio.Lock] = {}
+
+
+async def _get_task_push_lock(task_id: int) -> asyncio.Lock:
+    """获取指定任务的推送锁（惰性创建）"""
+    if task_id not in _task_push_locks:
+        _task_push_locks[task_id] = asyncio.Lock()
+    return _task_push_locks[task_id]
+
 
 async def _refresh_task_summary_db(task_id: int):
     """刷新任务汇总状态（包装 db_service 的函数）"""
@@ -432,6 +442,11 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     if not wifi_token:
         raise HTTPException(status_code=401, detail="未授权")
 
+    # 获取任务推送互斥锁，防止同一任务重复推送
+    push_lock = await _get_task_push_lock(task_id)
+    await push_lock.acquire()
+    logger.info(f"[Task-{task_id}] 获取推送锁，开始执行推送")
+
     # 解析 default_data
     try:
         default_data = json.loads(task.get("default_data") or "{}")
@@ -676,16 +691,20 @@ async def execute_task_push(request: Request, task_id: int, body: dict = None):
     except Exception as log_err:
         logger.warning(f"[Task-{task_id}] 写入操作汇总日志失败: {log_err}")
 
-    return {
-        "code": 20000,
-        "message": f"推送已发出: 成功{sent_ok}, 发送失败{sent_fail} (等待设备回执)",
-        "data": {
-            "total": len(push_devices),
-            "success": sent_ok,
-            "failed": sent_fail,
-            "results": results,
-        },
-    }
+    try:
+        return {
+            "code": 20000,
+            "message": f"推送已发出: 成功{sent_ok}, 发送失败{sent_fail} (等待设备回执)",
+            "data": {
+                "total": len(push_devices),
+                "success": sent_ok,
+                "failed": sent_fail,
+                "results": results,
+            },
+        }
+    finally:
+        push_lock.release()
+        logger.info(f"[Task-{task_id}] 释放推送锁")
 
 
 # ══════════  进度查询  ══════════

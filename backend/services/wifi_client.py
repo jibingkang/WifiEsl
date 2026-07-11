@@ -2,6 +2,7 @@
 WIFI系统HTTP客户端 - 代理转发到真实WIFI标签系统
 使用 httpx 异步客户端封装所有对真实系统的HTTP请求
 """
+import asyncio
 import httpx
 import json
 import logging
@@ -12,45 +13,50 @@ logger = logging.getLogger(__name__)
 
 # 全局异步HTTP客户端缓存，按base_url存储
 _clients: dict[str, httpx.AsyncClient] = {}
+_clients_lock = asyncio.Lock()
 
 
-def get_wifi_client(base_url: str | None = None) -> httpx.AsyncClient:
-    """获取或创建httpx客户端，支持不同base_url"""
+async def get_wifi_client(base_url: str | None = None) -> httpx.AsyncClient:
+    """获取或创建httpx客户端，支持不同base_url（线程安全）"""
     global _clients
-    
+
     # 如果没有指定base_url，使用默认配置
     if base_url is None:
         from config import settings
         base_url = settings.wifi_base_url
-    
-    # 检查是否已有对应base_url的客户端
-    if base_url in _clients:
-        client = _clients[base_url]
-        if not client.is_closed:
-            return client
-        else:
-            # 客户端已关闭，从缓存中移除
-            del _clients[base_url]
-    
-    # 创建新的客户端
-    client = httpx.AsyncClient(
-        base_url=base_url,
-        timeout=httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0),  # 减少超时时间，快速失败
-        headers={"Content-Type": "application/json"},
-        limits=httpx.Limits(max_connections=50, max_keepalive_connections=10),  # 增加连接池限制以支持批量推送
-        follow_redirects=True,  # 启用重定向跟随
-    )
-    _clients[base_url] = client
-    logger.info(f"创建新的WIFI客户端: {base_url}")
-    return client
+
+    async with _clients_lock:
+        # 检查是否已有对应base_url的客户端
+        if base_url in _clients:
+            client = _clients[base_url]
+            if not client.is_closed:
+                return client
+            else:
+                # 客户端已关闭，从缓存中移除
+                del _clients[base_url]
+
+        # 创建新的客户端
+        client = httpx.AsyncClient(
+            base_url=base_url,
+            timeout=httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0),  # 减少超时时间，快速失败
+            headers={"Content-Type": "application/json"},
+            limits=httpx.Limits(max_connections=50, max_keepalive_connections=10),  # 增加连接池限制以支持批量推送
+            follow_redirects=True,  # 启用重定向跟随
+        )
+        _clients[base_url] = client
+        logger.info(f"创建新的WIFI客户端: {base_url}")
+        return client
 
 
 async def close_wifi_client():
-    """关闭HTTP客户端"""
-    global _client
-    if _client and not _client.is_closed:
-        await _client.aclose()
-        _client = None
+    """关闭所有HTTP客户端"""
+    global _clients
+    async with _clients_lock:
+        for url, client in list(_clients.items()):
+            if not client.is_closed:
+                await client.aclose()
+        _clients.clear()
+        logger.info("所有WIFI客户端已关闭")
 
 
 class WifiSystemProxy:
@@ -65,7 +71,7 @@ class WifiSystemProxy:
         代理登录请求
         POST /user/api/login → 返回 {token, apiKey, user}
         """
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 详细的日志记录
         logger.info(f"[登录WIFI系统] ========== 开始登录 ==========")
@@ -118,7 +124,7 @@ class WifiSystemProxy:
         获取设备列表
         GET /user/api/rest/devices
         """
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         params = {"page": page, "page_size": page_size}
         if query:
             params["query"] = query
@@ -184,7 +190,7 @@ class WifiSystemProxy:
     @staticmethod
     async def get_device_by_id(device_id: str, api_key: str, base_url: str | None = None) -> dict:
         """GET /user/api/rest/devices/:id"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 打印API调用信息和token
         logger.info(f"[获取设备详情] 开始调用WIFI系统接口")
@@ -212,7 +218,7 @@ class WifiSystemProxy:
     @staticmethod
     async def get_device_by_mac(mac: str, api_key: str, base_url: str | None = None) -> dict:
         """GET /user/api/rest/devices/mac/:mac"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 打印API调用信息和token
         logger.info(f"[MAC查询设备] 开始调用WIFI系统接口")
@@ -243,7 +249,7 @@ class WifiSystemProxy:
         mac: str, red: int, green: int, blue: int, api_key: str, base_url: str | None = None
     ) -> dict:
         """POST /user/api/mqtt/publish/:mac/led"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 打印API调用信息和token
         logger.info(f"[LED控制] 开始调用WIFI系统接口")
@@ -273,7 +279,7 @@ class WifiSystemProxy:
     @staticmethod
     async def query_battery(mac: str, api_key: str, base_url: str | None = None) -> dict:
         """POST /user/api/mqtt/publish/:mac/battery"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 打印API调用信息和token
         logger.info(f"[电量查询] 开始调用WIFI系统接口")
@@ -301,7 +307,7 @@ class WifiSystemProxy:
     @staticmethod
     async def reboot_device(mac: str, api_key: str, base_url: str | None = None) -> dict:
         """POST /user/api/mqtt/publish/:mac/reboot"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         
         # 打印API调用信息和token
         logger.info(f"[重启设备] 开始调用WIFI系统接口")
@@ -336,7 +342,7 @@ class WifiSystemProxy:
         base_url: str | None = None,
     ) -> dict:
         """POST /user/api/mqtt/publish/:mac/display"""
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         payload: dict = {}
         if imgsrc:
             payload["algorithm"] = algorithm
@@ -387,7 +393,7 @@ class WifiSystemProxy:
             "data": { ...模板变量数据 }
         }
         """
-        client = get_wifi_client(base_url)
+        client = await get_wifi_client(base_url)
         url = f"/user/api/mqtt/publish/{mac}/template/{template_id}"
 
         # 按API文档构造请求体: tid + tname + data
@@ -427,6 +433,66 @@ class WifiSystemProxy:
             import traceback
             logger.error(f"  设备 {mac} 模板推送异常: {type(e).__name__}: {e}\n{traceback.format_exc()}")
             raise Exception(f"模板调用失败: {type(e).__name__}: {e}")
+
+
+    @staticmethod
+    async def list_templates(api_key: str, base_url: str | None = None) -> list:
+        """
+        获取WIFI系统模板列表
+        GET /user/api/rest/templates
+        返回模板列表（与devices接口格式相同：{code:20000, data:{items:[...]}}）
+        """
+        client = await get_wifi_client(base_url)
+        url = "/user/api/rest/templates"
+
+        logger.info(f"[模板同步] 获取模板列表: {client.base_url}{url}")
+        try:
+            resp = await client.get(url, headers=_headers(api_key))
+            resp.raise_for_status()
+            result = resp.json()
+            logger.info(f"[模板同步] 原始响应类型: {type(result).__name__}, 前300字符: {str(result)[:300]}")
+
+            # 解析响应，支持多种格式
+            templates = []
+            if isinstance(result, dict):
+                data = result.get("data", [])
+                if isinstance(data, dict):
+                    templates = data.get("items", data.get("list", []))
+                elif isinstance(data, list):
+                    templates = data
+            elif isinstance(result, list):
+                templates = result
+
+            logger.info(f"[模板同步] 解析到 {len(templates)} 个模板")
+            return templates
+        except Exception as e:
+            logger.error(f"[模板同步] 获取模板列表失败: {e}")
+            raise
+
+    @staticmethod
+    async def get_template_detail(template_id: str, api_key: str, base_url: str | None = None) -> dict | None:
+        """
+        获取WIFI系统单个模板详情
+        GET /user/api/rest/templates/{id}
+        返回模板完整信息（含name, data字段），格式：{code:20000, data:{...}}
+        """
+        client = await get_wifi_client(base_url)
+        url = f"/user/api/rest/templates/{template_id}"
+
+        logger.info(f"[模板同步] 获取模板详情: {client.base_url}{url}")
+        try:
+            resp = await client.get(url, headers=_headers(api_key))
+            resp.raise_for_status()
+            result = resp.json()
+            logger.info(f"[模板同步] 详情原始响应类型: {type(result).__name__}, 前300字符: {str(result)[:300]}")
+            # 提取 data 字段（WIFI系统返回 {code:20000, data:{...}}）
+            data = result.get("data") if isinstance(result, dict) else result
+            if isinstance(data, dict):
+                logger.info(f"[模板同步] 模板详情获取成功: {data.get('name', template_id)}")
+            return data
+        except Exception as e:
+            logger.error(f"[模板同步] 获取模板 {template_id} 详情失败: {e}")
+            return None
 
 
 def _headers(api_key: str) -> dict:

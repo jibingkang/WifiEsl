@@ -51,6 +51,9 @@ async def get_db() -> aiosqlite.Row:
             print(f"[DB] 启用外键约束...")
             await _db.execute("PRAGMA foreign_keys = ON")
             print(f"[DB] 外键约束已启用")
+            # 启用WAL模式，支持读写并发
+            await _db.execute("PRAGMA journal_mode=WAL")
+            print(f"[DB] WAL模式已启用")
             logger.info(f"数据库已连接: {db_path}")
         except Exception as e:
             print(f"[DB] 连接失败: {e}")
@@ -228,6 +231,10 @@ async def init_db():
             tname       TEXT    NOT NULL,
             description TEXT    DEFAULT '',
             screen_type TEXT    DEFAULT '',
+            image       TEXT    DEFAULT '',
+            screen_width INTEGER DEFAULT 0,
+            screen_height INTEGER DEFAULT 0,
+            remote_updated_at TEXT DEFAULT '',
             status      TEXT    NOT NULL DEFAULT 'active',
             created_at  TEXT    DEFAULT (datetime('now','localtime')),
             updated_at  TEXT    DEFAULT (datetime('now','localtime'))
@@ -514,6 +521,26 @@ async def init_db():
         await db.commit()
     except Exception as e:
         logger.warning(f"[DB] 检查/添加 task_device_rows 兼容列失败（可忽略）: {e}")
+    
+    # 检查并添加 templates 表的 image 列
+    try:
+        existing = await (await db.execute("PRAGMA table_info(templates)")).fetchall()
+        tpl_col_names = {row[1] for row in existing}
+        if 'image' not in tpl_col_names:
+            await db.execute("ALTER TABLE templates ADD COLUMN image TEXT DEFAULT ''")
+            print("[DB] 已添加列 templates.image")
+        if 'screen_width' not in tpl_col_names:
+            await db.execute("ALTER TABLE templates ADD COLUMN screen_width INTEGER DEFAULT 0")
+            print("[DB] 已添加列 templates.screen_width")
+        if 'screen_height' not in tpl_col_names:
+            await db.execute("ALTER TABLE templates ADD COLUMN screen_height INTEGER DEFAULT 0")
+            print("[DB] 已添加列 templates.screen_height")
+        if 'remote_updated_at' not in tpl_col_names:
+            await db.execute("ALTER TABLE templates ADD COLUMN remote_updated_at TEXT DEFAULT ''")
+            print("[DB] 已添加列 templates.remote_updated_at")
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"[DB] 检查/添加 templates 兼容列失败（可忽略）: {e}")
     
     # 检查并添加users表的新字段
     try:
@@ -1228,7 +1255,7 @@ async def get_all_templates() -> list[dict]:
     """获取所有模板(含字段列表) — 返回前端期望的格式"""
     db = await get_db()
     cursor = await db.execute(
-        "SELECT id, tid, tname, description, screen_type, status, created_at, updated_at FROM templates WHERE status='active' ORDER BY id"
+        "SELECT id, tid, tname, description, screen_type, image, screen_width, screen_height, remote_updated_at, status, created_at, updated_at FROM templates WHERE status='active' ORDER BY id"
     )
     tpl_rows = await cursor.fetchall()
     result = []
@@ -1372,6 +1399,127 @@ async def delete_template(tid: str):
     db = await get_db()
     await db.execute("DELETE FROM templates WHERE tid=?", (tid,))
     await db.commit()
+
+
+async def sync_template_from_remote(tid: str, tname: str, fabric_data: str, image_url: str = "", remote_updated_at: str = "") -> int:
+    """
+    从WIFI系统同步模板到本地数据库。
+    fabric_data: WIFI系统返回的 data 字段（JSON字符串，含 fabric.js objects）
+    image_url: 模板预览图URL
+    remote_updated_at: WIFI系统模板最后修改时间
+    自动解析 fabric objects 的 id 和 type 生成 template_fields
+    返回模板的内部 id
+    """
+    db = await get_db()
+    
+    # 解析 fabric.js JSON，提取字段和分辨率
+    fields = _extract_fields_from_fabric(fabric_data)
+    screen_w, screen_h = _extract_canvas_size(fabric_data)
+    
+    # 检查是否已存在
+    cur = await db.execute("SELECT id FROM templates WHERE tid=?", (tid,))
+    existing = await cur.fetchone()
+    
+    if existing:
+        tpl_id = existing["id"]
+        await db.execute(
+            """UPDATE templates SET tname=?, image=?, screen_width=?, screen_height=?,
+               remote_updated_at=?, updated_at=datetime('now','localtime') WHERE id=?""",
+            (tname, image_url or "", screen_w, screen_h, remote_updated_at or "", tpl_id),
+        )
+        # 删除旧字段，重新插入
+        await db.execute("DELETE FROM template_fields WHERE template_id=?", (tpl_id,))
+    else:
+        cur = await db.execute(
+            """INSERT INTO templates (tid, tname, description, screen_type, image,
+               screen_width, screen_height, remote_updated_at, status)
+               VALUES (?, ?, '', '', ?, ?, ?, ?, 'active')""",
+            (tid, tname, image_url or "", screen_w, screen_h, remote_updated_at or ""),
+        )
+        tpl_id = cur.lastrowid
+    
+    # 插入字段
+    for idx, f in enumerate(fields):
+        await db.execute(
+            """INSERT INTO template_fields (template_id, field_key, field_label, field_type, 
+               required, default_value, placeholder, options, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?, '', '[]', ?)""",
+            (tpl_id, f["key"], f["label"], f["type"], f.get("required", 0),
+             f.get("default_value", ""), idx),
+        )
+    
+    await db.commit()
+    logger.info(f"[模板同步] 模板 {tid} ({tname}) 同步成功, {len(fields)} 个字段")
+    return tpl_id
+
+
+def _extract_fields_from_fabric(fabric_data: str) -> list[dict]:
+    """
+    从 fabric.js JSON 中提取字段定义。
+    跳过非数据字段（如 text-3 这类无意义的占位文本）
+    """
+    try:
+        data = json.loads(fabric_data) if isinstance(fabric_data, str) else fabric_data
+    except (json.JSONDecodeError, TypeError):
+        logger.warning(f"[模板同步] 无法解析 fabric data")
+        return []
+    
+    objects = data.get("objects", [])
+    if not objects:
+        return []
+    
+    # fabric type → field_type 映射
+    type_map = {
+        "textbox": "text",
+        "text": "text",
+        "qrcode": "qrcode",
+        "image": "image",
+        "rect": "rect",
+        "circle": "circle",
+        "line": "line",
+        "group": "group",
+    }
+    
+    # 跳过无意义的占位 ID（如 text-3 这种）
+    import re
+    skip_pattern = re.compile(r"^text-\d+$")
+    
+    fields = []
+    seen_keys = set()
+    
+    for obj in objects:
+        fid = obj.get("id", "").strip()
+        ftype = obj.get("type", "textbox")
+        
+        if not fid or fid in seen_keys:
+            continue
+        if skip_pattern.match(fid):
+            continue
+        
+        seen_keys.add(fid)
+        mapped_type = type_map.get(ftype, "text")
+        default_text = obj.get("text", "")
+        
+        fields.append({
+            "key": fid,
+            "label": fid,
+            "type": mapped_type,
+            "required": 0,
+            "default_value": default_text,
+        })
+    
+    return fields
+
+
+def _extract_canvas_size(fabric_data: str) -> tuple[int, int]:
+    """从 fabric.js JSON 中提取画布分辨率 (width, height)"""
+    try:
+        data = json.loads(fabric_data) if isinstance(fabric_data, str) else fabric_data
+        w = int(data.get("width", 0))
+        h = int(data.get("height", 0))
+        return w, h
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return 0, 0
 
 
 # ============================================================
@@ -1951,7 +2099,7 @@ async def update_device_status_by_mac(
 ) -> int:
     """
     根据 MAC 地址批量更新所有任务中该设备的状态（display_reply 回调）
-    只更新 update_status='sent' 的记录（避免重复标记已完成的设备）
+    只更新 update_status='sent' 且 sent_at 在最近 120 秒内的记录
     使用 pending_reply_row_id 精确匹配回执到推送时指定的子行
     status: success / failed
     Returns: 更新的行数
@@ -1959,17 +2107,25 @@ async def update_device_status_by_mac(
     db = await get_db()
 
     # ⭐ 先获取每条 sent 记录的 pending_reply_row_id，用于精确匹配子行
+    # 增加 sent_at 时间窗过滤：仅处理最近 120 秒内的 sent 记录
     cur_info = await db.execute(
-        "SELECT id, pending_reply_row_id FROM task_devices WHERE mac=? AND update_status='sent'",
+        """SELECT id, pending_reply_row_id FROM task_devices
+           WHERE mac=? AND update_status='sent'
+           AND sent_at >= datetime('now','localtime','-120 seconds')""",
         (mac,),
     )
     sent_records = await cur_info.fetchall()
+
+    if not sent_records:
+        logger.warning(f"[display_reply] MAC {mac}: 无有效 sent 记录（可能回执已超时，超过120秒）")
+        return 0
 
     await db.execute(
         """UPDATE task_devices SET update_status=?, error_msg=?,
            finished_at=datetime('now','localtime'),
            pending_reply_row_id=NULL
-           WHERE mac=? AND update_status='sent'""",
+           WHERE mac=? AND update_status='sent'
+           AND sent_at >= datetime('now','localtime','-120 seconds')""",
         (status, error_msg or "", mac),
     )
     await db.commit()

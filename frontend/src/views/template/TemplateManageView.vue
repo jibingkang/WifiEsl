@@ -24,6 +24,23 @@
         <el-button type="info" @click="showJsonInputDialog">
           <el-icon><EditPen /></el-icon>手动输入JSON
         </el-button>
+        <el-button type="warning" @click="handleSyncTemplates" :loading="syncing">
+          <el-icon><Refresh /></el-icon>同步模板
+        </el-button>
+        <el-upload
+          class="upload-btn"
+          :show-file-list="false"
+          :on-change="handleJsonUpload"
+          accept=".json"
+          :before-upload="() => false"
+        >
+          <el-button type="success">
+            <el-icon><Upload /></el-icon>导入JSON文件
+          </el-button>
+        </el-upload>
+        <el-button type="info" @click="showJsonInputDialog">
+          <el-icon><EditPen /></el-icon>手动输入JSON
+        </el-button>
       </div>
     </div>
 
@@ -44,11 +61,37 @@
           class="template-card"
           shadow="hover"
         >
+          <!-- 预览图区域（放卡片顶部最醒目） -->
+          <div class="card-preview">
+            <el-image
+              v-if="tpl.image"
+              :src="tpl.image"
+              fit="contain"
+              style="width:100%;height:160px;"
+              lazy
+            >
+              <template #error>
+                <div class="preview-error">
+                  <Picture />
+                  <span>无法加载图片</span>
+                </div>
+              </template>
+            </el-image>
+            <div v-else class="preview-noimg">
+              <Picture />
+              <span>无预览图</span>
+            </div>
+          </div>
+
           <template #header>
             <div class="card-header">
               <div class="title-section">
                 <h3>{{ tpl.tname }}</h3>
                 <el-tag v-if="tpl.screen_type" size="small">{{ tpl.screen_type }}</el-tag>
+                <el-tag v-if="tpl.screen_width && tpl.screen_height" size="small" type="success" effect="plain">
+                  {{ tpl.screen_width }}×{{ tpl.screen_height }}
+                </el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">分辨率未知</el-tag>
               </div>
               <div class="actions">
                 <el-button type="primary" text size="small" @click="showEditDialog(tpl)">
@@ -64,6 +107,9 @@
           <div class="card-content">
             <p class="desc" v-if="tpl.description">{{ tpl.description }}</p>
             <p class="desc" v-else style="color: #999;">无描述</p>
+            <p class="update-time">
+              最后更新: {{ tpl.remote_updated_at ? tpl.remote_updated_at.slice(0, 16).replace('T', ' ') : '未知' }}
+            </p>
             
             <div class="fields-info">
               <el-tag size="small" type="info">
@@ -300,12 +346,15 @@ import {
   Document,
   Grid,
   Delete,
+  Refresh,
+  Picture,
 } from '@element-plus/icons-vue'
 import {
   getTemplateList,
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  syncTemplates,
 } from '@/api/template'
 
 // 辅助函数：处理模板API响应（因为拦截器会提取data字段）
@@ -347,6 +396,10 @@ interface TemplateInfo {
   tname: string
   description?: string
   screen_type?: string
+  image?: string
+  screen_width?: number
+  screen_height?: number
+  remote_updated_at?: string
   fields?: TemplateField[]
 }
 
@@ -357,6 +410,7 @@ const dialogVisible = ref(false)
 const jsonDialogVisible = ref(false)
 const submitting = ref(false)
 const jsonProcessing = ref(false)
+const syncing = ref(false)
 const formRef = ref<FormInstance>()
 const jsonInput = ref('')
 const isEditing = ref(false)
@@ -535,6 +589,23 @@ const handleDelete = (tpl: TemplateInfo) => {
   }).catch(() => {})
 }
 
+const handleSyncTemplates = async () => {
+  syncing.value = true
+  try {
+    const result = await handleTemplateApiCall(syncTemplates())
+    if (result.success) {
+      ElMessage.success(result.message || '模板同步成功')
+      await fetchTemplates()
+    } else {
+      ElMessage.error(result.message || '模板同步失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '同步失败')
+  } finally {
+    syncing.value = false
+  }
+}
+
 const handleJsonUpload = (file: UploadFile) => {
   if (!file.raw) return
   
@@ -680,12 +751,39 @@ onMounted(() => {
 
 .template-card {
   transition: all 0.3s ease;
-  
+  overflow: hidden;
+
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
   }
-  
+
+  .card-preview {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+    overflow: hidden;
+
+    .el-image {
+      display: block;
+    }
+
+    .preview-error,
+    .preview-noimg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 160px;
+      color: #ccc;
+      font-size: 13px;
+      gap: 6px;
+
+      .el-icon {
+        font-size: 24px;
+      }
+    }
+  }
+
   .card-header {
     display: flex;
     justify-content: space-between;
@@ -713,8 +811,14 @@ onMounted(() => {
     .desc {
       font-size: 14px;
       line-height: 1.6;
-      margin: 0 0 16px;
+      margin: 0 0 8px;
       color: var(--el-text-color-primary);
+    }
+
+    .update-time {
+      font-size: 12px;
+      color: #999;
+      margin: 0 0 16px;
     }
     
     .fields-info {
