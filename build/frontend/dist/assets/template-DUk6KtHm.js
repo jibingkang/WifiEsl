@@ -1,0 +1,1 @@
+import{U as t}from"./index-CYVg3WFq.js";function n(){return t.get("/templates")}function p(e){return t.post("/templates",e)}function r(e,s){return t.put(`/templates/${e}`,s)}function u(e){return t.delete(`/templates/${e}`)}function l(){return t.post("/templates/sync")}export{p as c,u as d,n as g,l as s,r as u};

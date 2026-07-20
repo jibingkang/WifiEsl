@@ -72,13 +72,13 @@ async def get_userinfo(request: Request):
 @router.post("/logout")
 async def logout(request: Request):
     """登出（清理session）"""
-    from services.auth_service import _sessions
+    from services.auth_service import _del_session
 
     auth_header = request.headers.get("authorization", "")
     token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
 
-    if token and token in _sessions:
-        del _sessions[token]
+    if token:
+        await _del_session(token)
 
     return {"code": 20000, "message": "已退出登录", "data": None}
 

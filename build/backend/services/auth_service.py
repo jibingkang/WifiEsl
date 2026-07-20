@@ -5,6 +5,7 @@
 - 生成JWT token给前端
 - Session映射仍保留在内存中(可后续迁移到Redis)
 """
+import asyncio
 import jwt
 import time
 import logging
@@ -20,6 +21,20 @@ logger = logging.getLogger(__name__)
 
 # 内存session存储: {jwt_token_str: session_info_dict}
 _sessions: dict[str, dict] = {}
+_sessions_lock = asyncio.Lock()
+
+
+async def _set_session(token: str, data: dict):
+    """线程安全地写入session"""
+    async with _sessions_lock:
+        _sessions[token] = data
+
+
+async def _del_session(token: str):
+    """线程安全地删除session"""
+    async with _sessions_lock:
+        if token in _sessions:
+            del _sessions[token]
 
 
 async def proxy_login(username: str, password: str, ip: str = "") -> dict:
@@ -150,7 +165,7 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
     token = _create_jwt_token(username, api_key, user)
 
     # Step 4: 存储内存 session（包含WIFI配置）
-    _sessions[token] = {
+    await _set_session(token, {
         "username": username,
         "api_key": api_key,
         "role": user.get("role", "operator"),
@@ -162,7 +177,7 @@ async def proxy_login(username: str, password: str, ip: str = "") -> dict:
         },
         "created_at": time.time(),
         "expires_at": time.time() + settings.jwt_expire_hours * 3600,
-    }
+    })
 
     # Step 5: 异步初始化用户的WIFI连接和MQTT（不阻塞登录）
     user_id = user.get("id")
@@ -218,28 +233,29 @@ def verify_token(token: str) -> tuple[bool, Optional[str]]:
                     "parent_user_id": payload.get("parent_user_id", 0)
                 }
                 
-                _sessions[token] = {
+                # 使用锁保护session重建
+                import asyncio
+                asyncio.get_event_loop().create_task(_set_session(token, {
                     "username": payload.get("sub", "unknown"),
                     "api_key": api_key_from_jwt,
                     "role": payload.get("role", "operator"),
                     "created_at": time.time(),
                     "expires_at": payload["exp"],
                     "wifi_config": wifi_config
-                }
+                }))
                 logger.info(f"自动重建session: {payload.get('sub')}")
                 logger.info(f"   WIFI配置: {wifi_config}")
                 return True, api_key_from_jwt
             return False, None
 
         if time.time() > session["expires_at"]:
-            del _sessions[token]
+            asyncio.get_event_loop().create_task(_del_session(token))
             return False, None
 
         return True, session["api_key"]
 
     except jwt.ExpiredSignatureError:
-        if token in _sessions:
-            del _sessions[token]
+        asyncio.get_event_loop().create_task(_del_session(token))
         return False, None
     except jwt.InvalidTokenError:
         return False, None
@@ -348,10 +364,11 @@ def _create_jwt_token(username: str, api_key: str, user_info: dict = None) -> st
 
 def cleanup_expired_sessions():
     """清理过期session"""
+    import asyncio
     now = time.time()
     expired_tokens = [t for t, s in _sessions.items() if now > s.get("expires_at", 0)]
     for t in expired_tokens:
-        del _sessions[t]
+        asyncio.get_event_loop().create_task(_del_session(t))
     if expired_tokens:
         logger.info(f"清理了 {len(expired_tokens)} 个过期session")
 
